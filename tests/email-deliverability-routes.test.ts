@@ -156,11 +156,11 @@ describe("deliverability read operation", () => {
     await expect(multiple.ops.read(multiple.session, { workspace: "fixture-a", mailbox: slOnlyRef, detail: "placement" })).rejects.toMatchObject({ status: 502 });
   });
 
-  it("reports Smartlead detail as not configured without a report reader", async () => {
+  it("returns retained test history without requiring a retired provider reader", async () => {
     const session = harness({ data: single("sl-only@a.test") }).session;
     const response = await createEmailDeliverabilityOperations({ now: () => now }).read(session, { workspace: "fixture-a", mailbox: slOnlyRef, detail: "placement" });
-    expect(response.mailboxes[0]!.placement.detail!.map(item => item.status)).toEqual(["not_configured", "not_configured", "not_configured"]);
-    expect(response.warnings.map(item => item.code)).toEqual(["placement_detail_not_configured"]);
+    expect(response.mailboxes[0]!.placement.detail!.map(item => item.status)).toEqual(["no_report", "no_report", "no_report"]);
+    expect(response.warnings).toEqual([]);
   });
 });
 

@@ -34,8 +34,6 @@ export interface ServiceConfig {
   accounts?: Omit<AccountConnectionSettings, "fetchImpl"> | null;
   /** Mailivery warmup (LIF-989). Null keeps warmup start closed. */
   mailivery?: MailiverySettings | null;
-  /** SmartDelivery report reads for deliverability detail (LIF-1042). Null reports detail as not configured. */
-  smartleadApiKey?: string | null;
   warmupSetup?: WarmupSetupSettings | null;
   trigger: {
     apiUrl: string;
@@ -197,9 +195,6 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
   const mailiveryKey = environment.MAILIVERY_API_KEY?.trim();
   if (mailiveryKey && (mailiveryKey.length < 16 || mailiveryKey.length > 512 || /\s/.test(mailiveryKey))) throw new Error("MAILIVERY_API_KEY must be a single token of 16 to 512 characters.");
   if (mailiveryKey && [emailKey, linkedinKey, crmKey, publishableKey].includes(mailiveryKey)) throw new Error("MAILIVERY_API_KEY must be distinct from LIFTY service keys.");
-  const smartleadKey = environment.SMARTLEAD_API_KEY?.trim();
-  if (smartleadKey && (smartleadKey.length < 16 || smartleadKey.length > 512 || /\s/.test(smartleadKey))) throw new Error("SMARTLEAD_API_KEY must be a single token of 16 to 512 characters.");
-  if (smartleadKey && [emailKey, linkedinKey, crmKey, publishableKey, mailiveryKey].includes(smartleadKey)) throw new Error("SMARTLEAD_API_KEY must be distinct from other keys.");
   const setupEnabled = environment.LIFTY_WARMUP_SETUP_ENABLED === "true";
   const googleClientId = environment.LIFTY_WARMUP_GOOGLE_CLIENT_ID?.trim();
   const googleClientSecret = environment.LIFTY_WARMUP_GOOGLE_CLIENT_SECRET?.trim();
@@ -221,7 +216,6 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
     crm: crmKey ? { serverKey: crmKey, readOnly: [environment.DASHBOARD_READ_ONLY_MODE, environment.CONSUMER_READ_ONLY_MODE].some(value => value === "1" || value?.toLowerCase() === "true") } : null,
     dashboardOrigin: dashboardUrl.origin,
     mailivery: mailiveryKey ? { apiKey: mailiveryKey } : null,
-    smartleadApiKey: smartleadKey || null,
     warmupSetup: setupEnabled && emailKey && mailiveryKey && googleClientId && googleClientSecret ? {
       serverKey:emailKey, publicBaseUrl:warmupBaseUrl.origin, supabaseUrl:supabaseUrl.toString().replace(/\/$/, ""), publishableKey,
       googleClientId, googleClientSecret, mailivery:{apiKey:mailiveryKey},

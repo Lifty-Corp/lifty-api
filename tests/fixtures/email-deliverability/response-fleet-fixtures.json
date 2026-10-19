@@ -246,7 +246,7 @@
       "total": 10
      },
      "families": null,
-     "detail_available": true
+     "detail_available": false
     },
     "recent_tests": [
      {
@@ -270,7 +270,7 @@
        "total": 10
       },
       "families": null,
-      "detail_available": true
+      "detail_available": false
      },
      {
       "test_ref": "smartlead:900022",
@@ -293,7 +293,7 @@
        "total": 10
       },
       "families": null,
-      "detail_available": true
+      "detail_available": false
      },
      {
       "test_ref": "smartlead:900021",
@@ -316,7 +316,7 @@
        "total": 10
       },
       "families": null,
-      "detail_available": true
+      "detail_available": false
      }
     ],
     "detail": null
@@ -523,7 +523,7 @@
       "total": 12
      },
      "families": null,
-     "detail_available": true
+     "detail_available": false
     },
     "recent_tests": [
      {
@@ -547,7 +547,7 @@
        "total": 12
       },
       "families": null,
-      "detail_available": true
+      "detail_available": false
      }
     ],
     "detail": null
@@ -678,7 +678,7 @@
       "total": 12
      },
      "families": null,
-     "detail_available": true
+     "detail_available": false
     },
     "recent_tests": [
      {
@@ -702,7 +702,7 @@
        "total": 12
       },
       "families": null,
-      "detail_available": true
+      "detail_available": false
      },
      {
       "test_ref": "smartlead:900003",
@@ -725,7 +725,7 @@
        "total": 12
       },
       "families": null,
-      "detail_available": true
+      "detail_available": false
      },
      {
       "test_ref": "smartlead:900002",
@@ -748,7 +748,7 @@
        "total": 10
       },
       "families": null,
-      "detail_available": true
+      "detail_available": false
      }
     ],
     "detail": null
@@ -1332,7 +1332,7 @@
       "total": 10
      },
      "families": null,
-     "detail_available": true
+     "detail_available": false
     },
     "recent_tests": [
      {
@@ -1356,7 +1356,7 @@
        "total": 10
       },
       "families": null,
-      "detail_available": true
+      "detail_available": false
      }
     ],
     "detail": null
