@@ -63,10 +63,10 @@
     "generated_sha256": "3df349f176f450b9a408b7f50adb498fdc3262fd806baa2ad38aae05b53dae09"
   },
   {
-    "source_commit": "0033f88d735f01ae593875e12862e5a132d165d7",
+    "source_commit": "911bfd0b9baee1b9aed966fd12733b75e36e8d3c",
     "source": "lib/crm-source-catalog.ts",
     "target": "src/generated/crm-source-catalog.ts",
-    "source_sha256": "76eb2852dae1b394bd6569c47156fdf5c5b0406beadd89bf02542ab8dc171173",
-    "generated_sha256": "9aad633bb4b2621b032ce76329f31e976e07ca3f9a085eaee9f96d870594f916"
+    "source_sha256": "8817ed52f90020b01e3513ba0fe2f2de5b67e377da35c41c0bb4ddaaa815b4b0",
+    "generated_sha256": "977ed3f7126873cb17447b915e08fcc2c9798f77358c0e3d9a4f8a9b6f388b38"
   }
 ]
