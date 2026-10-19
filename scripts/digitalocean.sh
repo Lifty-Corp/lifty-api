@@ -71,6 +71,27 @@ validate_target() {
     || fail "branch is not the approved staging source"
 }
 
+# Only these retired integration credentials may be removed from the live spec.
+# The remaining spec, including every other encrypted value, passes through.
+prepare_deployment_spec() {
+  jq -cS '
+    def retire:
+      map(select(.key != "INSTANTLY_API_KEY" and .key != "HEYREACH_API_KEY"
+        and .key != "SMARTLEAD_API_KEY" and .key != "SMARTDELIVERY_API_KEY"));
+    .[0].spec |
+    (if has("envs") then .envs |= retire else . end) |
+    .services |= map(if has("envs") then .envs |= retire else . end)
+  '
+}
+
+retired_environment_count() {
+  jq -r '
+    [.[0].spec | (.envs[]?, .services[]?.envs[]?) |
+      select(.key == "INSTANTLY_API_KEY" or .key == "HEYREACH_API_KEY"
+        or .key == "SMARTLEAD_API_KEY" or .key == "SMARTDELIVERY_API_KEY")] | length
+  '
+}
+
 show_status() {
   require_command doctl
   require_command jq
@@ -211,6 +232,7 @@ deploy_app() {
 
   local expected_commit="${1:-}" app_id app_json repository branch
   local remote_commit deployment_id deployment_json active_commit
+  local deployment_spec retired_count
   [[ "$expected_commit" =~ ^[0-9a-fA-F]{40}$ ]] \
     || fail "deploy requires the full 40-character expected commit SHA"
   expected_commit="$(printf '%s' "$expected_commit" | tr '[:upper:]' '[:lower:]')"
@@ -229,7 +251,16 @@ deploy_app() {
   [[ "$remote_commit" == "$expected_commit" ]] \
     || fail "remote $repository#$branch is $remote_commit, expected $expected_commit"
 
-  if [[ "${2:-}" == "--force-rebuild" ]]; then
+  retired_count="$(retired_environment_count <<<"$app_json")"
+  if [[ "$retired_count" != "0" ]]; then
+    [[ "${2:-}" != "--force-rebuild" ]] \
+      || fail "retired environment cleanup requires one source/spec deployment; rerun without --force-rebuild"
+    deployment_spec="$(prepare_deployment_spec <<<"$app_json")"
+    # Updating sources and the filtered spec is the deployment. Do not also
+    # create a second deployment; never print the spec or its encrypted values.
+    doctl apps update "$app_id" --spec - --update-sources --wait -o json \
+      <<<"$deployment_spec" >/dev/null
+  elif [[ "${2:-}" == "--force-rebuild" ]]; then
     doctl apps create-deployment "$app_id" --force-rebuild --wait -o json >/dev/null
   else
     doctl apps create-deployment "$app_id" --wait -o json >/dev/null
@@ -243,6 +274,14 @@ deploy_app() {
     <<<"$deployment_json")"
   [[ "$active_commit" == "$expected_commit" ]] \
     || fail "active deployment is $active_commit, expected $expected_commit"
+  if [[ "$retired_count" != "0" ]]; then
+    jq -e '.[0].spec | type == "object"' <<<"$deployment_json" >/dev/null \
+      || fail "active deployment did not return its spec for environment verification"
+    [[ "$(retired_environment_count <<<"$app_json")" == "0" \
+      && "$(retired_environment_count <<<"$deployment_json")" == "0" ]] \
+      || fail "retired provider credentials remain in the configured or active deployment"
+    printf 'Retired provider environment entries removed: %s\n' "$retired_count"
+  fi
 
   show_status
   run_smoke

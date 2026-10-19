@@ -5,6 +5,8 @@
 # validates the app spec still points at this repo#main, confirms remote main
 # is exactly this commit, creates the deployment, waits for it to go ACTIVE,
 # verifies the active deployment's source commit, and runs the smoke checks.
+# If retired integration env entries remain, the script deploys the filtered
+# live spec and current source together instead of creating another deployment.
 # The deployed version is therefore always the head of main — a run whose
 # commit has been superseded by a newer push fails validation and the newer
 # run deploys instead.

@@ -25,15 +25,21 @@ result for unchanged inputs instead of rerunning before each commit.
 
 `do:deploy` is pinned to `lifty-api-staging`, its single `api` component, the
 LIFTY API GitHub repository, and `main`. It verifies that the supplied SHA is
-the current remote branch head, starts a dedicated deployment without
-reapplying the app spec, waits, verifies the exact active commit, and runs the
-public smoke suite. It does not upload unpushed local changes. An optional
+the current remote branch head, starts one deployment, waits, verifies the
+exact active commit, and runs the public smoke suite. If retired-provider API
+keys remain in the app or API component environment, it removes only those
+entries and deploys the filtered live spec with current source in that same
+deployment; otherwise it creates the deployment without reapplying the spec.
+Other environment entries, including encrypted values, are preserved. It does
+not upload unpushed local changes. An optional
 `LIFTY_DO_APP_ID` is treated as an assertion and must match the app resolved by
 name.
 
 Build reuse is enabled by default. Use `do:deploy -- <full-sha> --force-rebuild`
 only when diagnosing a stale build/cache or when a clean rebuild is explicitly
-required. Unknown deploy flags are rejected. A successful `do:deploy` already
+required. While retired environment cleanup is pending, `--force-rebuild` is
+rejected before mutation because the source/spec update is the single deployment.
+Unknown deploy flags are rejected. A successful `do:deploy` already
 includes status and smoke checks; do not repeat them immediately afterward.
 
 `do:logs` intentionally accepts only bounded `--tail N` and `--type TYPE`
