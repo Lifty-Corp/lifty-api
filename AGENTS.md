@@ -205,3 +205,19 @@ suppression tasks. Source choice is separate from connection and provider
 grants; existing connections do not imply consent. Optional choice/status
 reads that are unavailable stay unknown, and no release here bumps the
 installed client contract.
+
+## Notification configuration
+
+LIF-1464 step 3: notification configuration is read and written through the
+`notifications` schema's customer-edge functions (`get_configuration`,
+`save_slack_destination`, `set_subscription`) with the caller's session and the
+workspace UUID resolved from `get_lifty_workspace_status`; Slack state still
+comes from `get_lifty_slack_connection`. The legacy `*_lifty_notification_*`
+RPCs and the Jobs `notification-delivery` task are no longer called. Test sends
+trigger `notifications-test` in the notifications service's own Trigger.dev
+project, so set `NOTIFICATIONS_TRIGGER_SECRET_KEY` (distinct from
+`TRIGGER_SECRET_KEY`) on the app before deploying this revision: startup
+refuses without it. The response shapes changed without a client-contract
+change; the CLI prints responses verbatim and agents read the schemas from
+`/v1/context/notifications`. Type codes are checked by shape, so a new catalog
+type needs no API release.

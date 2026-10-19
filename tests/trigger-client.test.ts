@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";import { createCrmSyncTrigger, createCrmMappingTrigger, createFirstRunTrigger, createNotificationDeliveryTrigger } from "../src/trigger-client.js";
+import { describe, expect, it } from "vitest";import { createCrmSyncTrigger, createCrmMappingTrigger, createFirstRunTrigger, createNotificationTestTrigger } from "../src/trigger-client.js";
 
 const settings = {
   apiUrl: "https://api.trigger.test",
@@ -98,26 +98,32 @@ describe("crm mapping replay trigger client", () => {
   });
 });
 
-describe("notification delivery trigger client", () => {
-  it("enqueues the exact delivery with a delivery-scoped idempotency key", async () => {
-    const requests: Array<{ url: string; body: unknown }> = [];
-    const enqueue = createNotificationDeliveryTrigger({
-      ...settings,
+describe("notification test trigger client", () => {
+  it("triggers notifications-test with its own key and a workspace-scoped request key", async () => {
+    const requests: Array<{ url: string; authorization: string | null; body: unknown }> = [];
+    const enqueue = createNotificationTestTrigger({
+      apiUrl: "https://notifications.trigger.test/",
+      secretKey: "tr_prod_notifications_key",
       fetchImpl: (async (url: RequestInfo | URL, init?: RequestInit) => {
-        requests.push({ url: String(url), body: JSON.parse(String(init?.body)) });
-        return jsonResponse(200, { id: "run_notification" });
+        requests.push({ url: String(url), authorization: new Headers(init?.headers).get("authorization"), body: JSON.parse(String(init?.body)) });
+        return jsonResponse(200, { id: "run_notification_test" });
       }) as typeof fetch,
     });
-    const deliveryId = "64300000-0000-4000-a000-000000000012";
+    const request = {
+      workspaceId: "64300000-0000-4000-a000-000000000001",
+      destinationId: "64300000-0000-4000-a000-000000000010",
+      requestId: "64300000-0000-4000-a000-000000000012",
+    };
 
-    await enqueue(deliveryId);
+    await expect(enqueue(request)).resolves.toEqual({ id: "run_notification_test" });
 
     expect(requests).toEqual([{
-      url: "https://api.trigger.test/api/v1/tasks/notification-delivery/trigger",
+      url: "https://notifications.trigger.test/api/v1/tasks/notifications-test/trigger",
+      authorization: "Bearer tr_prod_notifications_key",
       body: {
-        payload: { deliveryId },
+        payload: request,
         options: {
-          idempotencyKey: `notification-delivery:${deliveryId}`,
+          idempotencyKey: `notifications-test:${request.workspaceId}:${request.requestId}`,
           idempotencyKeyTTL: "1h",
         },
       },

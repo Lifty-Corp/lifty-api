@@ -42,8 +42,8 @@ import {
   createSupabaseAuthenticator,
   createSupabaseReadinessCheck,
 } from "./supabase-auth.js";
-import { createAcquisitionVerificationTrigger, createCrmSyncTrigger, createCrmMappingTrigger, createFirstRunTrigger, createIntegrationRevocationTrigger, createNotificationDeliveryTrigger, createWarmupVerifyTrigger } from "./trigger-client.js";
-import { confirmRunReview, disconnectIntegration, getCrmSyncStatus, getRunStatus, getWorkspaceStatus, getNotificationConfig, listSlackNotificationChannels, upsertNotificationDestination, setNotificationRoute, enqueueNotificationTest, startCrmSyncRun, startRun } from "./workspace-operations.js";
+import { createAcquisitionVerificationTrigger, createCrmSyncTrigger, createCrmMappingTrigger, createFirstRunTrigger, createIntegrationRevocationTrigger, createNotificationTestTrigger, createWarmupVerifyTrigger } from "./trigger-client.js";
+import { confirmRunReview, disconnectIntegration, getCrmSyncStatus, getRunStatus, getWorkspaceStatus, getNotificationConfig, listSlackNotificationChannels, upsertNotificationDestination, setNotificationRoute, sendNotificationTest, startCrmSyncRun, startRun } from "./workspace-operations.js";
 
 export function createProductionApp(config: ServiceConfig) {
   const emailKey = config.serverKeys?.email ?? null;
@@ -55,6 +55,7 @@ export function createProductionApp(config: ServiceConfig) {
     ? createWarmupSetup(config.warmupSetup, { verifyWarmup: createWarmupVerifyTrigger(config.trigger),
       ...(identifyWarmupMailbox?{identifyMailbox:identifyWarmupMailbox}:{}) }) : null;
   const placement = createEmailConnectionPlacementOperations();
+  const notificationTest = createNotificationTestTrigger(config.notificationsTrigger);
   const warmup = createEmailWarmupOperations({ ...(warmupSetup ? {issueSetupLink:warmupSetup.issue} : {}) });
   // Reads use the caller's session; only report reads for authorized tests use the server-side key.
   const deliverability = createEmailDeliverabilityOperations({
@@ -122,14 +123,15 @@ export function createProductionApp(config: ServiceConfig) {
     enqueueCrmSync: createCrmSyncTrigger(config.trigger),
     disconnectIntegration,
     enqueueIntegrationRevocation: createIntegrationRevocationTrigger(config.trigger),
-    enqueueNotificationDelivery: createNotificationDeliveryTrigger(config.trigger),
     getNotificationConfig,
     listSlackNotificationChannels,
     companyMapping: createCompanyMapping(config.crm ?? null),
     runCrmMapping: createCrmMapping(config.crm ? { ...config.crm, enqueue: createCrmMappingTrigger(config.trigger) } : null),
     upsertNotificationDestination,
     setNotificationRoute,
-    enqueueNotificationTest,
+    // Test sends reach the notifications service's own Trigger project only.
+    sendNotificationTest: (session, destinationRef) =>
+      sendNotificationTest(session, destinationRef, notificationTest),
     startHubspotConnect: hubspot.startConnect,
     getHubspotConnection: hubspot.getConnection,
     completeHubspotCallback: hubspot.completeCallback,

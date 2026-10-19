@@ -11,7 +11,7 @@ const emailKey = "e".repeat(40), linkedinKey = "l".repeat(40);
 const env = {
   SUPABASE_URL: "https://project.supabase.co", SUPABASE_PUBLISHABLE_KEY: "sb_public",
   SUPABASE_JWKS_URL: "https://project.supabase.co/auth/v1/.well-known/jwks.json",
-  HUBSPOT_CLIENT_ID: "client", HUBSPOT_CLIENT_SECRET: "secret", PUBLIC_BASE_URL: "https://api.lifty.test", TRIGGER_SECRET_KEY: "trigger",
+  HUBSPOT_CLIENT_ID: "client", HUBSPOT_CLIENT_SECRET: "secret", PUBLIC_BASE_URL: "https://api.lifty.test", TRIGGER_SECRET_KEY: "trigger", NOTIFICATIONS_TRIGGER_SECRET_KEY: "notifications-trigger",
   LIFTY_EMAIL_SERVER_KEY: emailKey, LIFTY_LINKEDIN_SERVER_KEY: linkedinKey,
   UNIPILE_V2_ACCESS_TOKEN: "v2-secret", UNIPILE_V2_APPLICATION_ID: "app_test", UNIPILE_V2_HOSTED_AUTH_ORIGINS: "https://connect.lifty.test",
 };

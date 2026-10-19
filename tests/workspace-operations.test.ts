@@ -1,5 +1,8 @@
-import { enqueueNotificationTest, getCrmSyncStatus, getNotificationConfig, getRunStatus, getWorkspaceStatus, listSlackNotificationChannels, setNotificationRoute, startCrmSyncRun, startRun, upsertNotificationDestination } from "../src/workspace-operations.js";
-import { describe, expect, it } from "vitest";
+import { getCrmSyncStatus, getNotificationConfig, getRunStatus, getWorkspaceStatus, listSlackNotificationChannels, sendNotificationTest, setNotificationRoute, startCrmSyncRun, startRun, upsertNotificationDestination } from "../src/workspace-operations.js";
+import type { NotificationTestRequest } from "../src/trigger-client.js";
+import { describe, expect, it, vi } from "vitest";
+import { connectedSlack, createdRef, emailRef, notificationsDatabase, ownerEmail, readyWorkspace, slackChannel, slackRef, storedTypes, workspaceRef,
+  type NotificationsDatabaseOptions, type StoredDestination } from "./notification-fixtures.js";
 
 describe("workspace RPC operations", () => {
   it("reads status through the authenticated request-scoped client", async () => {
@@ -58,63 +61,129 @@ describe("workspace RPC operations", () => {
 });
 
 describe("notification configuration operations", () => {
-  const destinationRef = "64300000-0000-4000-a000-000000000010";
-  const config = {
-    workspace_ref: "64300000-0000-4000-a000-000000000001",
-    notification_types: [
-      "reply.requires_action" as const,
-      "meeting.booked" as const,
-      "sending_account.needs_reconnect" as const,
-      "system.test" as const,
-    ],
-    slack: {
-      status: "connected" as const,
-      team_id: "T643TEAM",
-      team_name: "Example Robotics",
-      reconnect_required: false,
-    },
-    destinations: [{
-      destination_ref: destinationRef,
-      provider: "slack" as const,
-      external_id: "C643CHANNEL",
-      display_name: "client-alerts",
-      status: "active" as const,
-    }],
-    routes: [{
-      route_ref: "64300000-0000-4000-a000-000000000011",
-      notification_type: "reply.requires_action" as const,
-      destination_ref: destinationRef,
-      enabled: true,
-    }],
-  };
+  const session = (database: ReturnType<typeof notificationsDatabase>) => ({ userId: "founder-123", client: database.client });
+  const publishedSlack = { status: "connected", team_id: "T643TEAM", team_name: "Example Robotics", reconnect_required: false };
 
-  it("uses the authenticated request client for reads without forwarding identity", async () => {
-    const calls: Array<{ kind: string; name: string; args?: unknown }> = [];
-    const client = {
-      rpc: async (name: string, args?: unknown) => {
-        calls.push({ kind: "rpc", name, args });
-        return { data: config, error: null };
-      },
-      functions: {
-        invoke: async (name: string, args?: unknown) => {
-          calls.push({ kind: "function", name, args });
-          return {
-            data: { channels: [{ id: "C643CHANNEL", name: "client-alerts", is_private: false }] },
-            error: null,
-          };
-        },
-      },
-    };
-    const session = { userId: "founder-123", client };
+  it("reads the resolved workspace's configuration and Slack state, publishing only the contract fields", async () => {
+    const database = notificationsDatabase({ destinations: [
+      { ...ownerEmail(), created_at: "2026-10-15T00:00:00Z" } as StoredDestination,
+      { ...slackChannel(), name: null },
+    ] });
 
-    await expect(getNotificationConfig(session)).resolves.toEqual(config);
-    await expect(listSlackNotificationChannels(session)).resolves.toEqual({
-      channels: [{ id: "C643CHANNEL", name: "client-alerts", is_private: false }],
+    await expect(getNotificationConfig(session(database))).resolves.toEqual({
+      workspace_ref: workspaceRef,
+      slack: publishedSlack,
+      types: storedTypes().map(({ code, name, channels, default_on, paused, email_fallback }) => ({ code, name, channels, default_on, paused, email_fallback })),
+      destinations: [
+        { destination_ref: emailRef, channel: "email", address: null, name: null, active: true, types: ["sending_account.needs_reconnect"] },
+        { destination_ref: slackRef, channel: "slack", address: "C643CHANNEL", name: null, active: true, types: ["meeting.booked", "sending_account.needs_reconnect"] },
+      ],
     });
-    expect(calls).toEqual([
-      { kind: "rpc", name: "get_lifty_notification_config", args: undefined },
-      { kind: "function", name: "lifty-slack-channels", args: { method: "POST" } },
+    // The workspace UUID is resolved through the session's selection; the
+    // notifications functions never see the x-lifty-workspace header.
+    expect(database.calls).toEqual([
+      { schema: "public", name: "get_lifty_workspace_status" },
+      { schema: "notifications", name: "get_configuration", args: { p_workspace_id: workspaceRef } },
+      { schema: "public", name: "get_lifty_slack_connection" },
     ]);
+    // Empty arrays arrive as JSON null.
+    await expect(getNotificationConfig(session(notificationsDatabase({ types: [], destinations: [], slack: { provider: "slack", status: "not_connected" } }))))
+      .resolves.toEqual({ workspace_ref: workspaceRef, slack: { status: "not_connected" }, types: [], destinations: [] });
+  });
+
+  it("keeps the workspace selection errors and refuses an unusable workspace before the notifications functions", async () => {
+    const cases: Array<[NotificationsDatabaseOptions, { status: number; code: string }]> = [
+      [{ errors: { "public.get_lifty_workspace_status": { code: "PT409", message: "lifty_workspace_ambiguous" } } }, { status: 409, code: "WORKSPACE_SELECTION_REQUIRED" }],
+      [{ errors: { "public.get_lifty_workspace_status": { code: "PT403", message: "lifty_workspace_forbidden" } } }, { status: 403, code: "WORKSPACE_FORBIDDEN" }],
+      [{ workspace: { state: "needs_workspace", workspace: null, next_action: "provision_workspace" } }, { status: 409, code: "WORKSPACE_MISSING" }],
+      [{ workspace: { ...readyWorkspace, workspace: { workspace_ref: "ws_opaque", name: "Example" } } }, { status: 502, code: "SUPABASE_INVALID_RESPONSE" }],
+    ];
+    for (const [options, expected] of cases) {
+      const database = notificationsDatabase(options);
+      await expect(getNotificationConfig(session(database))).rejects.toMatchObject(expected);
+      expect(database.calls.some(call => call.schema === "notifications")).toBe(false);
+    }
+    const forbidden = notificationsDatabase({ errors: { "notifications.get_configuration": { code: "42501", message: "Not allowed to configure this workspace" } } });
+    await expect(getNotificationConfig(session(forbidden))).rejects.toMatchObject({ status: 403, code: "WORKSPACE_FORBIDDEN",
+      diagnostics: { upstream_operation: "notifications.get_configuration", upstream_code: "42501" } });
+    const malformedSlack = notificationsDatabase({ slack: { ...connectedSlack, team_name: "" } });
+    await expect(getNotificationConfig(session(malformedSlack))).rejects.toMatchObject({ status: 502, code: "SUPABASE_INVALID_RESPONSE" });
+  });
+
+  it("saves a Slack channel only while Slack is usable and returns the destination it re-reads", async () => {
+    for (const [slack, code] of [
+      [{ provider: "slack", status: "not_connected" }, "SLACK_NOT_CONNECTED"],
+      [{ ...connectedSlack, reconnect_required: true }, "SLACK_RECONNECT_REQUIRED"],
+    ] as const) {
+      const database = notificationsDatabase({ slack });
+      await expect(upsertNotificationDestination(session(database), { channel_id: "C643CHANNEL", channel_name: "client-alerts" }))
+        .rejects.toMatchObject({ status: 409, code });
+      expect(database.calls.some(call => call.name === "save_slack_destination")).toBe(false);
+    }
+
+    const database = notificationsDatabase();
+    await expect(upsertNotificationDestination(session(database), { channel_id: "G643PRIVATE", channel_name: "founders" })).resolves.toEqual({
+      destination_ref: createdRef, channel: "slack", address: "G643PRIVATE", name: "founders", active: true,
+      types: ["meeting.booked", "sending_account.needs_reconnect"],
+    });
+    expect(database.calls.find(call => call.name === "save_slack_destination")).toEqual({ schema: "notifications", name: "save_slack_destination",
+      args: { p_workspace_id: workspaceRef, p_channel_id: "G643PRIVATE", p_name: "founders", p_active: true } });
+
+    const invalid = notificationsDatabase({ errors: { "notifications.save_slack_destination": { code: "22023", message: "A Slack destination needs a channel ID" } } });
+    await expect(upsertNotificationDestination(session(invalid), { channel_id: "C643CHANNEL", channel_name: "client-alerts" }))
+      .rejects.toMatchObject({ status: 400, code: "INVALID_REQUEST" });
+  });
+
+  it("checks the destination, type and channel against the configuration before subscribing", async () => {
+    const route = (notification_type: string, destination_ref: string, enabled = true) => ({ notification_type, destination_ref, enabled });
+    for (const [input, expected] of [
+      [route("meeting.booked", "64300000-0000-4000-a000-000000000099"), { status: 404, code: "DESTINATION_NOT_FOUND" }],
+      [route("pipeline.deal_won", slackRef), { status: 400, code: "NOTIFICATION_TYPE_UNKNOWN" }],
+      [route("meeting.booked", emailRef), { status: 409, code: "NOTIFICATION_CHANNEL_UNSUPPORTED" }],
+    ] as const) {
+      const database = notificationsDatabase();
+      await expect(setNotificationRoute(session(database), input)).rejects.toMatchObject(expected);
+      expect(database.calls.some(call => call.name === "set_subscription")).toBe(false);
+    }
+
+    // The owner email destination is configurable like any other.
+    const database = notificationsDatabase();
+    await expect(setNotificationRoute(session(database), route("prospecting.search_low", emailRef))).resolves.toEqual({
+      destination_ref: emailRef, channel: "email", address: null, name: null, active: true,
+      types: ["prospecting.search_low", "sending_account.needs_reconnect"],
+    });
+    expect(database.calls.find(call => call.name === "set_subscription")).toEqual({ schema: "notifications", name: "set_subscription",
+      args: { p_destination_id: emailRef, p_type_code: "prospecting.search_low", p_subscribed: true } });
+
+    // A change between the check and the write gets the same answer as the check.
+    for (const [error, expected] of [
+      [{ code: "42501", message: "Not allowed to configure this workspace" }, { status: 404, code: "DESTINATION_NOT_FOUND" }],
+      [{ code: "23514", message: "type not available on channel" }, { status: 409, code: "NOTIFICATION_CHANNEL_UNSUPPORTED" }],
+      [{ code: "23503", message: "Unknown notification type" }, { status: 400, code: "NOTIFICATION_TYPE_UNKNOWN" }],
+    ] as const) {
+      const raced = notificationsDatabase({ errors: { "notifications.set_subscription": error } });
+      await expect(setNotificationRoute(session(raced), route("meeting.booked", slackRef, false))).rejects.toMatchObject(expected);
+    }
+  });
+
+  it("queues a test only for this workspace's Slack destination while Slack is usable", async () => {
+    const refusals: Array<[string, NotificationsDatabaseOptions, { status: number; code: string }]> = [
+      ["64300000-0000-4000-a000-000000000099", {}, { status: 404, code: "DESTINATION_NOT_FOUND" }],
+      [emailRef, {}, { status: 409, code: "DESTINATION_NOT_TESTABLE" }],
+      [slackRef, { slack: { provider: "slack", status: "not_connected" } }, { status: 409, code: "SLACK_NOT_CONNECTED" }],
+      [slackRef, { slack: { ...connectedSlack, reconnect_required: true } }, { status: 409, code: "SLACK_RECONNECT_REQUIRED" }],
+    ];
+    for (const [destinationRef, options, expected] of refusals) {
+      const enqueue = vi.fn(async () => ({ id: "run_test" }));
+      await expect(sendNotificationTest(session(notificationsDatabase(options)), destinationRef, enqueue)).rejects.toMatchObject(expected);
+      expect(enqueue).not.toHaveBeenCalled();
+    }
+
+    // Lifty stopped posting to this channel; a test still checks it.
+    const enqueue = vi.fn(async (_request: NotificationTestRequest) => ({ id: "run_test" }));
+    const result = await sendNotificationTest(session(notificationsDatabase({ destinations: [ownerEmail(), { ...slackChannel(), active: false }] })), slackRef, enqueue);
+    expect(enqueue).toHaveBeenCalledExactlyOnceWith({ workspaceId: workspaceRef, destinationId: slackRef, requestId: result.request_ref });
+    expect(result).toEqual({ destination_ref: slackRef, request_ref: expect.stringMatching(/^[0-9a-f-]{36}$/), status: "queued" });
   });
 
   it("reports a missing Slack grant as a setup step, not a transient failure", async () => {
@@ -145,68 +214,18 @@ describe("notification configuration operations", () => {
     await expect(listSlackNotificationChannels({ userId: "founder-123", client: unreadable })).rejects.toMatchObject({ status: 502, code: "SLACK_CHANNELS_UNAVAILABLE" });
   });
 
-  it("maps every write to the audited notification RPC contract", async () => {
-    const calls: Array<{ name: string; args?: unknown }> = [];
-    const client = {
-      rpc: async (name: string, args?: unknown) => {
-        calls.push({ name, args });
-        if (name === "upsert_lifty_notification_destination") {
-          return { data: config.destinations[0], error: null };
-        }
-        if (name === "set_lifty_notification_route") {
-          return { data: config.routes[0], error: null };
-        }
-        return {
-          data: {
-            delivery_ref: "64300000-0000-4000-a000-000000000012",
-            destination_ref: destinationRef,
-            status: "queued",
-          },
-          error: null,
-        };
-      },
-    };
-    const session = { userId: "founder-123", client };
-
-    await upsertNotificationDestination(session, {
-      channel_id: "C643CHANNEL",
-      channel_name: "client-alerts",
+  it("lists Slack channels through the session's edge function call", async () => {
+    const calls: unknown[] = [];
+    const client = { functions: { invoke: async (name: string, args?: unknown) => {
+      calls.push({ name, args });
+      return { data: { channels: [{ id: "C643CHANNEL", name: "client-alerts", is_private: false },
+        { id: "G643PRIVATE", name: "private-alerts", is_private: true }] }, error: null };
+    } } };
+    await expect(listSlackNotificationChannels({ userId: "founder-123", client })).resolves.toEqual({
+      channels: [{ id: "C643CHANNEL", name: "client-alerts", is_private: false },
+        { id: "G643PRIVATE", name: "private-alerts", is_private: true }],
     });
-    await setNotificationRoute(session, {
-      notification_type: "reply.requires_action",
-      destination_ref: destinationRef,
-      enabled: true,
-    });
-    await enqueueNotificationTest(session, destinationRef);
-
-    expect(calls).toEqual([
-      {
-        name: "upsert_lifty_notification_destination",
-        args: { p_external_id: "C643CHANNEL", p_display_name: "client-alerts" },
-      },
-      {
-        name: "set_lifty_notification_route",
-        args: {
-          p_notification_type: "reply.requires_action",
-          p_destination_id: destinationRef,
-          p_enabled: true,
-        },
-      },
-      {
-        name: "enqueue_lifty_notification_test",
-        args: { p_destination_id: destinationRef },
-      },
-    ]);
-  });
-
-  it("rejects a malformed or secret-bearing response at the boundary", async () => {
-    const client = {
-      rpc: async () => ({ data: { ...config, bot_token: "xoxb-never-forward" }, error: null }),
-    };
-
-    await expect(
-      getNotificationConfig({ userId: "founder-123", client }),
-    ).rejects.toMatchObject({ status: 502, code: "SUPABASE_INVALID_RESPONSE" });
+    expect(calls).toEqual([{ name: "lifty-slack-channels", args: { method: "POST" } }]);
   });
 
   it("maps channel lookup failures to a stable secret-free error", async () => {

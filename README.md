@@ -103,11 +103,13 @@ through one table in `src/rpc-errors.ts`; an unknown code is a 502
 
 - `GET /slack/start` — redirect a connect intent to Slack consent
 - `GET /slack/callback` — validate Slack authorization and persist the grant
-- `GET /v1/notifications` — notification configuration
+- `GET /v1/notifications` — notification types, destinations (Slack channels and the owner email) with the types each receives, and Slack status; reads `notifications.get_configuration` for the resolved workspace and `public.get_lifty_slack_connection`
 - `GET /v1/notifications/slack/channels` — available Slack destinations
-- `PUT /v1/notifications/destinations/slack` — configure a Slack destination
-- `PUT /v1/notifications/routes` — configure notification routing
-- `POST /v1/notifications/destinations/{destination_ref}/test` — test a destination
+- `PUT /v1/notifications/destinations/slack` — save, rename or reactivate a Slack channel destination while Slack is connected; `notifications.save_slack_destination`
+- `PUT /v1/notifications/routes` — subscribe or unsubscribe one destination to one notification type; `notifications.set_subscription`
+- `POST /v1/notifications/destinations/{destination_ref}/test` — queue one test message to a Slack destination through the notifications service's `notifications-test` task
+
+Notification configuration lives in the private `notifications` schema (LIF-1464); its functions take the workspace UUID, which the API resolves from the session's selection first. Type codes are checked by shape only, so new catalog types need no API release. Test sends use the notifications service's own Trigger.dev project: set `NOTIFICATIONS_TRIGGER_SECRET_KEY` (distinct from `TRIGGER_SECRET_KEY`; startup refuses otherwise) and optionally `NOTIFICATIONS_TRIGGER_API_URL` (see RUNBOOK).
 
 Slack disconnect deletes the stored Slack authorization directly; it has no HubSpot revocation job.
 

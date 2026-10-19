@@ -9,7 +9,9 @@ const FIRST_RUN_TASK_ID = "lifty-first-run";
 const CRM_SYNC_TASK_ID = "lifty-crm-sync";
 const CRM_MAPPING_TASK_ID = "lifty-crm-mapping-sync";
 const INTEGRATION_REVOKE_TASK_ID = "lifty-integration-revoke";
-const NOTIFICATION_DELIVERY_TASK_ID = "notification-delivery";
+// Owned by the notifications service's own Trigger project, reached with its
+// own key (NOTIFICATIONS_TRIGGER_SECRET_KEY), never the Jobs project's.
+const NOTIFICATIONS_TEST_TASK_ID = "notifications-test";
 const WARMUP_VERIFY_TASK_ID = "lifty-email-warmup-verify";
 const WARMUP_VERIFY_TIMEOUT_MS = 5000;
 const IDEMPOTENCY_TTL = "1h";
@@ -108,19 +110,24 @@ export function createIntegrationRevocationTrigger(
     );
 }
 
-export type EnqueueNotificationDelivery = (
-  deliveryId: string,
-) => Promise<{ id: string }>;
+export interface NotificationTestRequest {
+  workspaceId: string;
+  destinationId: string;
+  /** The caller's operation ID: retrying the same ID never posts twice. */
+  requestId: string;
+}
+export type EnqueueNotificationTest = (request: NotificationTestRequest) => Promise<{ id: string }>;
 
-export function createNotificationDeliveryTrigger(
+/** One test message to one Slack destination. A 2xx is acceptance, not delivery. */
+export function createNotificationTestTrigger(
   settings: TriggerClientSettings,
-): EnqueueNotificationDelivery {
-  return async (deliveryId) =>
+): EnqueueNotificationTest {
+  return async ({ workspaceId, destinationId, requestId }) =>
     triggerTask(
       settings,
-      NOTIFICATION_DELIVERY_TASK_ID,
-      { deliveryId },
-      `${NOTIFICATION_DELIVERY_TASK_ID}:${deliveryId}`,
+      NOTIFICATIONS_TEST_TASK_ID,
+      { workspaceId, destinationId, requestId },
+      `${NOTIFICATIONS_TEST_TASK_ID}:${workspaceId}:${requestId}`,
     );
 }
 

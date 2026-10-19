@@ -31,6 +31,10 @@ describe("production service composition", () => {
         apiUrl: "https://api.trigger.test",
         secretKey: "tr_prod_test_key",
       },
+      notificationsTrigger: {
+        apiUrl: "https://notifications.trigger.test",
+        secretKey: "tr_prod_notifications_test_key",
+      },
     });
 
     const response = await app.request("/v1/workspace", {
@@ -62,6 +66,7 @@ describe("production service composition", () => {
       SLACK_CLIENT_SECRET: "slack-client-secret",
       PUBLIC_BASE_URL: "https://api.lifty.test",
       TRIGGER_SECRET_KEY: "tr_prod_test_key",
+      NOTIFICATIONS_TRIGGER_SECRET_KEY: "tr_prod_notifications_test_key",
     });
 
     const response = await app.request("/healthz");
@@ -91,6 +96,7 @@ describe("production service composition", () => {
       HUBSPOT_CLIENT_SECRET: "client-secret",
       PUBLIC_BASE_URL: "https://api.lifty.test",
       TRIGGER_SECRET_KEY: "tr_prod_test_key",
+      NOTIFICATIONS_TRIGGER_SECRET_KEY: "tr_prod_notifications_test_key",
     });
 
     const response = await app.request("/healthz");

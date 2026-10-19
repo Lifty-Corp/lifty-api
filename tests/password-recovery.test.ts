@@ -63,7 +63,7 @@ describe("shared OAuth login and consent", () => {
   it("serves the production consent surface with Auth-only CSP and a validated authorization ID", async () => {
     const app = createDeploymentApp({ SUPABASE_URL: options.supabaseUrl, SUPABASE_PUBLISHABLE_KEY: options.publishableKey,
       SUPABASE_JWKS_URL: options.supabaseUrl + "/auth/v1/.well-known/jwks.json", PUBLIC_BASE_URL: options.publicBaseUrl,
-      HUBSPOT_CLIENT_ID: "client", HUBSPOT_CLIENT_SECRET: "secret", TRIGGER_SECRET_KEY: "fixture", LIFTY_MCP_ENABLED: "true" });
+      HUBSPOT_CLIENT_ID: "client", HUBSPOT_CLIENT_SECRET: "secret", TRIGGER_SECRET_KEY: "fixture", NOTIFICATIONS_TRIGGER_SECRET_KEY: "notifications-fixture", LIFTY_MCP_ENABLED: "true" });
     const response = await app.request("/oauth/consent?authorization_id=" + authorizationId + "&returnTo=https://evil.test&port=4444");
     expect(response.status).toBe(200);
     expect(response.headers.get("content-security-policy")).toContain("connect-src " + options.supabaseUrl);
@@ -155,7 +155,7 @@ describe("password recovery public routes",()=>{
   });
   it("production composition uses configured canonical origin and fresh nonce, never request host",async()=>{
     const app=createDeploymentApp({SUPABASE_URL:options.supabaseUrl,SUPABASE_PUBLISHABLE_KEY:options.publishableKey,
-      SUPABASE_JWKS:JSON.stringify({keys:[{kty:"EC",crv:"P-256",x:"x",y:"y"}]}),HUBSPOT_CLIENT_ID:"fixture-client",HUBSPOT_CLIENT_SECRET:"fixture-secret",PUBLIC_BASE_URL:options.publicBaseUrl,TRIGGER_SECRET_KEY:"tr_fixture"});
+      SUPABASE_JWKS:JSON.stringify({keys:[{kty:"EC",crv:"P-256",x:"x",y:"y"}]}),HUBSPOT_CLIENT_ID:"fixture-client",HUBSPOT_CLIENT_SECRET:"fixture-secret",PUBLIC_BASE_URL:options.publicBaseUrl,TRIGGER_SECRET_KEY:"tr_fixture",NOTIFICATIONS_TRIGGER_SECRET_KEY:"tr_notifications_fixture"});
     const first=await app.request("https://evil.test/auth/password-reset");const second=await app.request("/auth/password-update");
     expect(first.status).toBe(200);expect(second.status).toBe(200);const html=await first.text();
     expect(html).toContain('"redirectTo":"https://api.lifty.test/auth/password-update"');expect(html).not.toContain("evil.test");

@@ -224,16 +224,15 @@ export const IntegrationConnectionStatusSchema = z.union([
   AttioConnectionStatusSchema,
 ]);
 
-export const NotificationTypeSchema = z.enum([
-  "reply.requires_action",
-  "meeting.booked",
-  "sending_account.needs_reconnect",
-  "system.test",
-]);
+// Notification configuration lives in the private notifications schema
+// (LIF-1464). The database owns the catalog: a type code is validated by shape
+// only, so a new catalog type never makes this API reject a request or a read.
+export const NotificationTypeCodeSchema = z.string().max(100).regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/);
+export const NotificationChannelSchema = z.enum(["slack", "email"]);
 
 export const SlackNotificationChannelSchema = z
   .object({
-    id: z.string().regex(/^C[A-Z0-9]{2,31}$/),
+    id: z.string().regex(/^[CG][A-Z0-9]{2,31}$/),
     name: z.string().min(1).max(80),
     is_private: z.boolean(),
   })
@@ -243,22 +242,29 @@ export const SlackNotificationChannelsSchema = z
   .object({ channels: z.array(SlackNotificationChannelSchema) })
   .strict();
 
-export const NotificationDestinationSchema = z
+/** One catalog type and the channels that can render it. */
+export const NotificationCatalogTypeSchema = z
   .object({
-    destination_ref: z.uuid(),
-    provider: z.literal("slack"),
-    external_id: z.string().regex(/^C[A-Z0-9]{2,31}$/),
-    display_name: z.string().min(1).max(80),
-    status: z.enum(["active", "unavailable", "archived"]),
+    code: NotificationTypeCodeSchema,
+    name: z.string(),
+    channels: z.array(NotificationChannelSchema),
+    default_on: z.boolean(),
+    paused: z.boolean(),
+    // Reaches the owner email only while no active Slack destination is subscribed.
+    email_fallback: z.boolean(),
   })
   .strict();
 
-export const NotificationRouteSchema = z
+/** A Slack channel (address = channel ID) or the workspace owner's email
+ * (address and name null), with the type codes it is subscribed to. */
+export const NotificationDestinationSchema = z
   .object({
-    route_ref: z.uuid(),
-    notification_type: NotificationTypeSchema,
     destination_ref: z.uuid(),
-    enabled: z.boolean(),
+    channel: NotificationChannelSchema,
+    address: z.string().nullable(),
+    name: z.string().nullable(),
+    active: z.boolean(),
+    types: z.array(NotificationTypeCodeSchema),
   })
   .strict();
 
@@ -277,32 +283,33 @@ const NotificationSlackStatusSchema = z.discriminatedUnion("status", [
 export const NotificationConfigSchema = z
   .object({
     workspace_ref: z.uuid(),
-    notification_types: z.array(NotificationTypeSchema),
     slack: NotificationSlackStatusSchema,
+    types: z.array(NotificationCatalogTypeSchema),
     destinations: z.array(NotificationDestinationSchema),
-    routes: z.array(NotificationRouteSchema),
   })
   .strict();
 
 export const UpsertNotificationDestinationRequestSchema = z
   .object({
-    channel_id: z.string().trim().regex(/^C[A-Z0-9]{2,31}$/),
+    channel_id: z.string().trim().regex(/^[CG][A-Z0-9]{2,31}$/),
     channel_name: z.string().trim().min(1).max(80),
   })
   .strict();
 
+/** Subscribe (enabled) or unsubscribe one destination to one notification type. */
 export const SetNotificationRouteRequestSchema = z
   .object({
-    notification_type: NotificationTypeSchema,
+    notification_type: NotificationTypeCodeSchema,
     destination_ref: z.uuid(),
     enabled: z.boolean(),
   })
   .strict();
 
+/** Trigger.dev accepted the test send; it is not proof of delivery. */
 export const NotificationTestResultSchema = z
   .object({
-    delivery_ref: z.uuid(),
     destination_ref: z.uuid(),
+    request_ref: z.uuid(),
     status: z.literal("queued"),
   })
   .strict();
@@ -375,10 +382,8 @@ export type IntegrationConnectionStatus = z.infer<typeof IntegrationConnectionSt
 export type DisconnectResult = z.infer<typeof DisconnectResultSchema>;
 export type StartCrmSyncResult = z.infer<typeof StartCrmSyncResultSchema>;
 export type CrmSyncStatus = z.infer<typeof CrmSyncStatusSchema>;
-export type NotificationType = z.infer<typeof NotificationTypeSchema>;
 export type SlackNotificationChannels = z.infer<typeof SlackNotificationChannelsSchema>;
 export type NotificationDestination = z.infer<typeof NotificationDestinationSchema>;
-export type NotificationRoute = z.infer<typeof NotificationRouteSchema>;
 export type NotificationConfig = z.infer<typeof NotificationConfigSchema>;
 export type UpsertNotificationDestinationRequest = z.infer<
   typeof UpsertNotificationDestinationRequestSchema

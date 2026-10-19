@@ -41,6 +41,11 @@ export interface ServiceConfig {
     apiUrl: string;
     secretKey: string;
   };
+  /** The notifications service's own Trigger.dev project (test sends, LIF-1464). */
+  notificationsTrigger: {
+    apiUrl: string;
+    secretKey: string;
+  };
 }
 
 const FORBIDDEN_SECRET_NAMES = [
@@ -206,6 +211,10 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
     throw new Error("Google warmup setup public base URL must be an HTTPS origin without credentials, port, path, query or fragment.");
   }
   if (crmKey && [emailKey, linkedinKey, publishableKey, environment.HUBSPOT_CLIENT_SECRET, attioClientSecret, environment.TRIGGER_SECRET_KEY].includes(crmKey)) throw new Error("CRM requires a distinct dedicated server key.");
+  // Notifications is its own Trigger.dev project; the Jobs key must never reach it.
+  const triggerKey = required(environment, "TRIGGER_SECRET_KEY");
+  const notificationsTriggerKey = required(environment, "NOTIFICATIONS_TRIGGER_SECRET_KEY");
+  if (notificationsTriggerKey === triggerKey) throw new Error("NOTIFICATIONS_TRIGGER_SECRET_KEY must be distinct from TRIGGER_SECRET_KEY.");
   return {
     mcp,
     ...(openAiAppsChallenge === undefined ? {} : { openAiAppsChallenge }),
@@ -263,7 +272,16 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
       )
         .toString()
         .replace(/\/$/, ""),
-      secretKey: required(environment, "TRIGGER_SECRET_KEY"),
+      secretKey: triggerKey,
+    },
+    notificationsTrigger: {
+      apiUrl: secureUrl(
+        environment.NOTIFICATIONS_TRIGGER_API_URL?.trim() || "https://api.trigger.dev",
+        "NOTIFICATIONS_TRIGGER_API_URL",
+      )
+        .toString()
+        .replace(/\/$/, ""),
+      secretKey: notificationsTriggerKey,
     },
   };
 }
