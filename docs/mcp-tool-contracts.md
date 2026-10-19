@@ -41,6 +41,9 @@ operation, including persisted provider maintenance and enabled scheduled work.
 | `sending_accounts_resume` | false / true / true | Resumes an existing account; already active approved Campaigns may automatically send pending work to external recipients. |
 | `campaigns_review_settings_patch` | false / true / true | Saves channel review choices; send-and-sample enables future unflagged drafts to send automatically under existing Campaign and safety gates. Existing pending drafts remain held. |
 | `notifications_connect` | false / true / false | Starts a Slack consent attempt and supersedes earlier unused pending links; does not replace the existing grant or post messages. |
+| `notifications_destination_upsert` | false / true / false | Saves a Slack channel destination, or renames and reactivates the saved one, while Slack is connected. A new destination receives every default-on type Slack can show; a type that falls back to email stops reaching the owner's email while an active Slack channel receives it. Posts nothing. |
+| `notifications_route_set` | false / true / false | Subscribes or unsubscribes one destination, a Slack channel or the owner email, to one notification type; affects future notifications only. |
+| `notifications_test` | false / true / true | Asks the notifications service to post one visible test message in a saved Slack channel. The returned `request_ref` is acceptance, not delivery. |
 
 ## Description and schema boundaries
 
@@ -70,6 +73,10 @@ operation, including persisted provider maintenance and enabled scheduled work.
   discovery names this operation `notifications_connect`; cached
   `notifications_post` calls remain compatible through the same route and
   strict input/authentication checks. HTTP/CLI POST is unchanged.
+- Notification type codes are validated by shape, not by a fixed list: the
+  `notifications` schema owns the catalog, refuses unknown codes and refuses a
+  type on a channel that cannot show it. Route and test writes check the
+  destination against `notifications.get_configuration` first.
 - The research target RPC accepts one-to-nine-digit positive integers before
   checking the workspace's plan limit. The API maximum is therefore
   `999999999`, not the wider PostgreSQL integer bound; `null` still follows the
@@ -117,6 +124,11 @@ Account resumption is implemented by
 consumed by `20261004130000_lif1188_native_runtime.sql` and Jobs' scheduled
 `lifty-email` dispatch. All existing readiness, suppression, incident and final
 send fences still apply.
+
+Notification configuration (LIF-1464) uses the `notifications` schema's
+customer-edge functions `get_configuration`, `save_slack_destination` and
+`set_subscription`, owned by lift-gtm-services migrations; test sends are its
+`notifications-test` Trigger task.
 
 Channel review choices and future automatic approvals are implemented in
 `20261007190200_lif1287_channel_review_policy.sql`; LIF-1360's subsequent

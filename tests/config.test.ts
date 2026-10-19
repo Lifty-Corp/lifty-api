@@ -13,6 +13,7 @@ const validEnvironment = {
   SLACK_CLIENT_SECRET: "slack-client-secret",
   PUBLIC_BASE_URL: "https://api.liftygtm.com",
   TRIGGER_SECRET_KEY: "tr_prod_test_key",
+  NOTIFICATIONS_TRIGGER_SECRET_KEY: "tr_prod_notifications_test_key",
 };
 
 describe("service configuration", () => {
@@ -146,6 +147,11 @@ describe("service configuration", () => {
     [{ ...validEnvironment, HUBSPOT_CLIENT_ID: undefined }, /HUBSPOT_CLIENT_ID/],
     [{ ...validEnvironment, HUBSPOT_CLIENT_SECRET: undefined }, /HUBSPOT_CLIENT_SECRET/],
     [{ ...validEnvironment, TRIGGER_SECRET_KEY: undefined }, /TRIGGER_SECRET_KEY/],
+    [{ ...validEnvironment, NOTIFICATIONS_TRIGGER_SECRET_KEY: undefined }, /NOTIFICATIONS_TRIGGER_SECRET_KEY is required/],
+    [
+      { ...validEnvironment, NOTIFICATIONS_TRIGGER_API_URL: "http://attacker.example" },
+      /NOTIFICATIONS_TRIGGER_API_URL/,
+    ],
     [
       { ...validEnvironment, TRIGGER_API_URL: "http://attacker.example" },
       /TRIGGER_API_URL/,
@@ -158,6 +164,13 @@ describe("service configuration", () => {
   ])("fails closed for an invalid environment", (environment, message) => {
     expect(() => loadConfig(environment)).toThrow(message);
   });
+});
+
+it("reaches the notifications Trigger project only with its own distinct key", () => {
+  expect(loadConfig(validEnvironment).notificationsTrigger).toEqual({ apiUrl: "https://api.trigger.dev", secretKey: "tr_prod_notifications_test_key" });
+  expect(loadConfig({ ...validEnvironment, NOTIFICATIONS_TRIGGER_API_URL: "https://notifications.trigger.test/" }).notificationsTrigger.apiUrl)
+    .toBe("https://notifications.trigger.test");
+  expect(() => loadConfig({ ...validEnvironment, NOTIFICATIONS_TRIGGER_SECRET_KEY: validEnvironment.TRIGGER_SECRET_KEY })).toThrow(/distinct from TRIGGER_SECRET_KEY/);
 });
 
 it("CRM capability is optional but must be bounded and dedicated", () => {

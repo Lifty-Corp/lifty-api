@@ -94,20 +94,19 @@ describe("generated MCP stage operations", () => {
   });
 
   it("preserves notification handlers and the CLI PATCH while fixing each MCP write's scope", async () => {
-    const destination = { destination_ref: "44444444-4444-4444-8444-444444444444", provider: "slack" as const,
-      external_id: "C123CHANNEL", display_name: "review-alerts", status: "active" as const };
-    const savedRoute = { route_ref: "55555555-5555-4555-8555-555555555555", notification_type: "reply.requires_action" as const,
-      destination_ref: destination.destination_ref, enabled: true };
+    const destination = { destination_ref: "44444444-4444-4444-8444-444444444444", channel: "slack" as const,
+      address: "C123CHANNEL", name: "review-alerts", active: true, types: ["meeting.booked"] };
+    const routed = { ...destination, types: ["meeting.booked", "reply.requires_action"] };
     const upsertNotificationDestination = vi.fn(async () => destination);
-    const setNotificationRoute = vi.fn(async () => savedRoute);
-    const startSlackConnect = vi.fn(); const enqueueNotificationTest = vi.fn();
+    const setNotificationRoute = vi.fn(async () => routed);
+    const startSlackConnect = vi.fn(); const sendNotificationTest = vi.fn();
     const app = createApp({ authenticate: async request => request.headers.get("authorization") === "Bearer founder"
       ? { ok: true, session: { userId: "founder", client: {} } } : { ok: false, reason: "invalid_session" },
       getWorkspace: async () => ({ state: "ready_for_connections", workspace, next_action: null }),
-      upsertNotificationDestination, setNotificationRoute, startSlackConnect, enqueueNotificationTest, log: () => {} });
+      upsertNotificationDestination, setNotificationRoute, startSlackConnect, sendNotificationTest, log: () => {} });
     const dispatch = vi.fn((route: string, init: RequestInit) => Promise.resolve(app.request(route, init)));
-    const destinationInput = { channel_id: destination.external_id, channel_name: destination.display_name };
-    const routeInput = { notification_type: savedRoute.notification_type, destination_ref: destination.destination_ref, enabled: true };
+    const destinationInput = { channel_id: destination.address, channel_name: destination.name };
+    const routeInput = { notification_type: "reply.requires_action", destination_ref: destination.destination_ref, enabled: true };
     for (const [name, operation, body] of [
       ["notifications_destination_upsert", "destination", destinationInput],
       ["notifications_route_set", "route", routeInput],
@@ -115,7 +114,7 @@ describe("generated MCP stage operations", () => {
       const denied = await callStageMcpTool(name, { body }, new Request("https://example.test/mcp"), dispatch);
       expect(denied.structuredContent.status).toBe(401);
       const result = await callStageMcpTool(name, { workspace: "example", body }, incoming(), dispatch);
-      expect(result.structuredContent).toMatchObject({ status: 200, data: operation === "destination" ? destination : savedRoute });
+      expect(result.structuredContent).toMatchObject({ status: 200, data: operation === "destination" ? destination : routed });
       const [path, init] = dispatch.mock.calls.at(-1)!;
       expect(path).toBe("/v1/workspace/notifications");
       expect(init.method).toBe("PATCH");
@@ -138,7 +137,7 @@ describe("generated MCP stage operations", () => {
     ] as const) expect((await callStageMcpTool(name, { body }, incoming(), dispatch)).isError).toBe(true);
     expect(dispatch).toHaveBeenCalledTimes(calls);
     expect(startSlackConnect).not.toHaveBeenCalled();
-    expect(enqueueNotificationTest).not.toHaveBeenCalled();
+    expect(sendNotificationTest).not.toHaveBeenCalled();
   });
 
   it("keeps authentication, current contract, validation and the shared mutation limiter in the owning REST route", async () => {

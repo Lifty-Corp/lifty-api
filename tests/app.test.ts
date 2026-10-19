@@ -7,6 +7,8 @@ import { HubspotCallbackError } from "../src/hubspot-connect.js";
 import { sealHubspotConnectIntent } from "../src/hubspot-state.js";
 import { SlackCallbackError } from "../src/slack-connect.js";
 import { sealSlackConnectIntent } from "../src/slack-state.js";
+import { getNotificationConfig, setNotificationRoute } from "../src/workspace-operations.js";
+import { notificationsDatabase, ownerEmail, slackChannel, slackRef, storedTypes } from "./notification-fixtures.js";
 
 const SECRET_FIELD_NAME = /token$|api_?key|secret|credential/i;
 
@@ -706,178 +708,72 @@ describe("LIFTY API crm sync endpoints", () => {
 });
 
 describe("LIFTY API notification configuration", () => {
-  const authenticate = async () => ({
-    ok: true as const,
-    session: { userId: "founder-123", client: { kind: "scoped" } },
-  });
-  const destinationRef = "64300000-0000-4000-a000-000000000010";
-  const config = {
-    workspace_ref: "64300000-0000-4000-a000-000000000001",
-    notification_types: [
-      "reply.requires_action",
-      "meeting.booked",
-      "sending_account.needs_reconnect",
-      "system.test",
-    ] as Array<
-      | "reply.requires_action"
-      | "meeting.booked"
-      | "sending_account.needs_reconnect"
-      | "system.test"
-    >,
-    slack: {
-      status: "connected" as const,
-      team_id: "T643TEAM",
-      team_name: "Example",
-      reconnect_required: false,
-    },
-    destinations: [{
-      destination_ref: destinationRef,
-      provider: "slack" as const,
-      external_id: "C643CHANNEL",
-      display_name: "client-alerts",
-      status: "active" as const,
-    }],
-    routes: [{
-      route_ref: "64300000-0000-4000-a000-000000000011",
-      notification_type: "reply.requires_action" as const,
-      destination_ref: destinationRef,
-      enabled: true,
-    }],
-  };
+  const headers = { authorization: "Bearer valid-token", "content-type": "application/json" };
 
-  it("reads the secret-free routing matrix and live invited Slack channels", async () => {
+  it("serves the stored configuration end to end, including types this API has never seen and unnamed channels", async () => {
+    const database = notificationsDatabase({
+      types: [...storedTypes(), { code: "pipeline.deal_won", name: "Deal won", channels: ["slack", "email"], email_fallback: false, default_on: false, paused: false }],
+      destinations: [ownerEmail(), { ...slackChannel(), name: null }],
+    });
     const app = createApp({
-      authenticate,
-      getNotificationConfig: async () => config,
-      listSlackNotificationChannels: async () => ({
-        channels: [
-          { id: "C643CHANNEL", name: "client-alerts", is_private: false },
-          { id: "C643PRIVATE", name: "founders", is_private: true },
-        ],
-      }),
+      authenticate: async () => ({ ok: true as const, session: { userId: "founder-123", client: database.client } }),
+      getNotificationConfig, setNotificationRoute,
     });
 
-    const configResponse = await app.request("/v1/notifications", {
-      headers: { authorization: "Bearer valid-token" },
-    });
-    const channelsResponse = await app.request(
-      "/v1/notifications/slack/channels",
-      { headers: { authorization: "Bearer valid-token" } },
-    );
+    const read = await app.request("/v1/notifications", { headers });
+    expect(read.status).toBe(200);
+    const config = await read.json();
+    expect(config.types.map((type: { code: string }) => type.code)).toContain("pipeline.deal_won");
+    expect(config.destinations[1]).toEqual({ destination_ref: slackRef, channel: "slack", address: "C643CHANNEL", name: null, active: true,
+      types: ["meeting.booked", "sending_account.needs_reconnect"] });
+    expect(JSON.stringify(config)).not.toMatch(/bot_user_id|scopes|xoxb|secret/i);
 
-    expect(configResponse.status).toBe(200);
-    expect(await configResponse.json()).toEqual(config);
-    expect(channelsResponse.status).toBe(200);
-    expect(await channelsResponse.json()).toEqual({
-      channels: [
-        { id: "C643CHANNEL", name: "client-alerts", is_private: false },
-        { id: "C643PRIVATE", name: "founders", is_private: true },
-      ],
-    });
-    expect(JSON.stringify(config)).not.toMatch(/bot_token|xoxb|secret/i);
-  });
-
-  it("upserts a destination and toggles a registered route", async () => {
-    const calls: unknown[] = [];
-    const app = createApp({
-      authenticate,
-      upsertNotificationDestination: async (_session, input) => {
-        calls.push({ destination: input });
-        return config.destinations[0]!;
-      },
-      setNotificationRoute: async (_session, input) => {
-        calls.push({ route: input });
-        return config.routes[0]!;
-      },
-    });
-
-    const destination = await app.request("/v1/notifications/destinations/slack", {
-      method: "PUT",
-      headers: {
-        authorization: "Bearer valid-token",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ channel_id: "C643CHANNEL", channel_name: "client-alerts" }),
-    });
-    const route = await app.request("/v1/notifications/routes", {
-      method: "PUT",
-      headers: {
-        authorization: "Bearer valid-token",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        notification_type: "reply.requires_action",
-        destination_ref: destinationRef,
-        enabled: true,
-      }),
-    });
-
-    expect(destination.status).toBe(200);
+    const route = await app.request("/v1/notifications/routes", { method: "PUT", headers,
+      body: JSON.stringify({ notification_type: "pipeline.deal_won", destination_ref: slackRef, enabled: true }) });
     expect(route.status).toBe(200);
-    expect(calls).toEqual([
-      { destination: { channel_id: "C643CHANNEL", channel_name: "client-alerts" } },
-      {
-        route: {
-          notification_type: "reply.requires_action",
-          destination_ref: destinationRef,
-          enabled: true,
-        },
-      },
-    ]);
+    expect((await route.json()).types).toEqual(["meeting.booked", "pipeline.deal_won", "sending_account.needs_reconnect"]);
   });
 
-  it("enqueues system.test delivery immediately after the RPC creates it", async () => {
-    const enqueued: string[] = [];
+  it("validates notification writes by shape before any operation", async () => {
+    const calls: unknown[] = [];
+    const saved = { destination_ref: slackRef, channel: "slack" as const, address: "G643PRIVATE", name: "founders", active: true, types: [] };
     const app = createApp({
-      authenticate,
-      enqueueNotificationTest: async () => ({
-        delivery_ref: "64300000-0000-4000-a000-000000000012",
-        destination_ref: destinationRef,
-        status: "queued" as const,
-      }),
-      enqueueNotificationDelivery: async (deliveryRef) => {
-        enqueued.push(deliveryRef);
-        return { id: "run_notification" };
-      },
+      authenticate: async () => ({ ok: true as const, session: { userId: "founder-123", client: {} } }),
+      upsertNotificationDestination: async (_session, input) => { calls.push(input); return saved; },
+      setNotificationRoute: async (_session, input) => { calls.push(input); return saved; },
+      sendNotificationTest: async () => { throw new Error("must not run"); },
     });
+    const put = (path: string, body: unknown) => app.request(path, { method: "PUT", headers, body: JSON.stringify(body) });
 
-    const response = await app.request(
-      `/v1/notifications/destinations/${destinationRef}/test`,
-      { method: "POST", headers: { authorization: "Bearer valid-token" } },
-    );
+    for (const notification_type of ["Invented Event", "meeting", "meeting.Booked", "meeting..booked"]) {
+      expect((await put("/v1/notifications/routes", { notification_type, destination_ref: slackRef, enabled: true })).status, notification_type).toBe(400);
+    }
+    expect((await put("/v1/notifications/destinations/slack", { channel_id: "D643DIRECT", channel_name: "dm" })).status).toBe(400);
+    expect((await app.request("/v1/notifications/destinations/not-a-uuid/test", { method: "POST", headers })).status).toBe(400);
+    expect(calls).toEqual([]);
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
-      delivery_ref: "64300000-0000-4000-a000-000000000012",
-      destination_ref: destinationRef,
-      status: "queued",
-    });
-    expect(enqueued).toEqual(["64300000-0000-4000-a000-000000000012"]);
+    // Private channels (G…) are valid destinations.
+    const destination = await put("/v1/notifications/destinations/slack", { channel_id: "G643PRIVATE", channel_name: "founders" });
+    expect(destination.status).toBe(200);
+    expect(await destination.json()).toEqual(saved);
+    expect(calls).toEqual([{ channel_id: "G643PRIVATE", channel_name: "founders" }]);
   });
 
-  it("rejects an unknown notification type before the write RPC", async () => {
-    let called = false;
+  it("returns the accepted test request and holds test posts to the shared mutation budget", async () => {
+    const result = { destination_ref: slackRef, request_ref: "64300000-0000-4000-a000-000000000012", status: "queued" as const };
+    const tests: string[] = [];
     const app = createApp({
-      authenticate,
-      setNotificationRoute: async () => {
-        called = true;
-        throw new Error("must not run");
-      },
+      authenticate: async () => ({ ok: true as const, session: { userId: "founder-123", client: {} } }),
+      sendNotificationTest: async (_session, destinationRef) => { tests.push(destinationRef); return result; },
     });
-    const response = await app.request("/v1/notifications/routes", {
-      method: "PUT",
-      headers: {
-        authorization: "Bearer valid-token",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        notification_type: "invented.event",
-        destination_ref: destinationRef,
-        enabled: true,
-      }),
-    });
+    const post = () => app.request(`/v1/notifications/destinations/${slackRef}/test`, { method: "POST", headers });
 
-    expect(response.status).toBe(400);
-    expect(called).toBe(false);
+    const first = await post();
+    expect(first.status).toBe(200);
+    expect(await first.json()).toEqual(result);
+    for (let i = 1; i < 10; i++) expect((await post()).status).toBe(200);
+    const limited = await post();
+    expect(limited.status).toBe(429);
+    expect(tests).toHaveLength(10);
   });
 });

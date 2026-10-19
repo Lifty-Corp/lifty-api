@@ -38,6 +38,10 @@ describe("HTTP server bootstrap", () => {
           apiUrl: "https://api.trigger.test",
           secretKey: "tr_prod_test_key",
         },
+        notificationsTrigger: {
+          apiUrl: "https://notifications.trigger.test",
+          secretKey: "tr_prod_notifications_test_key",
+        },
       },
       serve,
     );

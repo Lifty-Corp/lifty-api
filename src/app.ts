@@ -36,8 +36,8 @@ import { CLIENT_UPGRADE_MESSAGE, STAGE_CLIENT_CONTRACT, SUPPORTED_CLIENT_CONTRAC
 import { readContextDrafts } from "./context-drafts.js";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { DisconnectResponseSchema, IntegrationConnectionStatusSchema, NotificationConfigSchema, NotificationDestinationSchema, NotificationRouteSchema, NotificationTestResultSchema, SetNotificationRouteRequestSchema, SlackNotificationChannelsSchema, UpsertNotificationDestinationRequestSchema, ProviderConnectStartSchema, LegacyProviderConnectStartSchema, SlackConnectLinkSchema, type SlackConnectLink, ProviderSchema, StartCrmSyncResultSchema, CrmSyncStatusSchema, type DisconnectResult, type HubspotConnectStart, type HubspotConnectionStatus, type AttioConnectStart, type AttioConnectionStatus, type NotificationConfig, type NotificationDestination, type NotificationRoute, type NotificationTestResult, type SetNotificationRouteRequest, type SlackNotificationChannels, type UpsertNotificationDestinationRequest, type Provider, type SlackConnectStart, type SlackConnectionStatus, type RunStatus, type StartRunResult, type StartCrmSyncResult, type CrmSyncStatus, WorkspaceStatusSchema, type WorkspaceStatus } from "./contracts.js";
-import { type EnqueueCrmSync, type EnqueueFirstRun, type EnqueueIntegrationRevocation, type EnqueueNotificationDelivery } from "./trigger-client.js";
+import { DisconnectResponseSchema, IntegrationConnectionStatusSchema, NotificationConfigSchema, NotificationDestinationSchema, NotificationTestResultSchema, SetNotificationRouteRequestSchema, SlackNotificationChannelsSchema, UpsertNotificationDestinationRequestSchema, ProviderConnectStartSchema, LegacyProviderConnectStartSchema, SlackConnectLinkSchema, type SlackConnectLink, ProviderSchema, StartCrmSyncResultSchema, CrmSyncStatusSchema, type DisconnectResult, type HubspotConnectStart, type HubspotConnectionStatus, type AttioConnectStart, type AttioConnectionStatus, type NotificationConfig, type NotificationDestination, type NotificationTestResult, type SetNotificationRouteRequest, type SlackNotificationChannels, type UpsertNotificationDestinationRequest, type Provider, type SlackConnectStart, type SlackConnectionStatus, type RunStatus, type StartRunResult, type StartCrmSyncResult, type CrmSyncStatus, WorkspaceStatusSchema, type WorkspaceStatus } from "./contracts.js";
+import { type EnqueueCrmSync, type EnqueueFirstRun, type EnqueueIntegrationRevocation } from "./trigger-client.js";
 import { PublicError } from "./errors.js";
 import { listAdminWorkspaces, type AdminWorkspace } from "./admin-onboarding.js";
 import {
@@ -72,7 +72,8 @@ const rateLimitedPaths = new Set([
   "/v1/workspace/crm", "/v1/workspace/notifications", "/v1/workspace/senders", "/v1/workspace/sending-accounts/connect",
   "/v1/workspace/crm/mapping/apply", "/v1/workspace/crm/mapping/property_create", "/v1/workspace/crm/mapping/sync", "/v1/integrations/hubspot/sync", "/v1/integrations/attio/sync", "/v1/workspace/crm/sync",
 ]);
-const rateLimitedPatterns = [/^\/v1\/workspace\/sending-accounts\/[^/]+\/(?:reconnect|disconnect)$/, /^\/v1\/workspace\/senders\/[^/]+\/delete$/];
+const rateLimitedPatterns = [/^\/v1\/workspace\/sending-accounts\/[^/]+\/(?:reconnect|disconnect)$/, /^\/v1\/workspace\/senders\/[^/]+\/delete$/,
+  /^\/v1\/notifications\/destinations\/[^/]+\/test$/];
 const RequestIdSchema = z.uuid();
 const SubmissionRefSchema = z.uuid();
 const DestinationRefSchema = z.uuid();
@@ -143,6 +144,7 @@ export interface AppDependencies {
   enqueueCrmSync: EnqueueCrmSync;
   disconnectIntegration(session: AuthSession, provider: Provider): Promise<DisconnectResult>;
   enqueueIntegrationRevocation: EnqueueIntegrationRevocation;
+  /** Notification configuration in the notifications schema (LIF-1464). */
   getNotificationConfig(session: AuthSession): Promise<NotificationConfig>;
   companyMapping: CompanyMappingOperation;
   listSlackNotificationChannels(session: AuthSession): Promise<SlackNotificationChannels>;
@@ -150,15 +152,16 @@ export interface AppDependencies {
     session: AuthSession,
     input: UpsertNotificationDestinationRequest,
   ): Promise<NotificationDestination>;
+  /** Subscribes or unsubscribes one destination to one type; returns it. */
   setNotificationRoute(
     session: AuthSession,
     input: SetNotificationRouteRequest,
-  ): Promise<NotificationRoute>;
-  enqueueNotificationTest(
+  ): Promise<NotificationDestination>;
+  /** Queues one test message to a saved Slack destination. */
+  sendNotificationTest(
     session: AuthSession,
     destinationRef: string,
   ): Promise<NotificationTestResult>;
-  enqueueNotificationDelivery: EnqueueNotificationDelivery;
   startHubspotConnect(session: AuthSession): Promise<HubspotConnectStart>;
   getHubspotConnection(session: AuthSession): Promise<HubspotConnectionStatus>;
   completeHubspotCallback(
@@ -483,6 +486,7 @@ function registerOpenApi(app: OpenAPIHono<AppEnvironment>): void {
     responses: {
       200: JsonResponse(NotificationConfigSchema),
       401: JsonResponse(ErrorResponseSchema),
+      403: JsonResponse(ErrorResponseSchema),
       409: JsonResponse(ErrorResponseSchema),
       502: JsonResponse(ErrorResponseSchema),
     },
@@ -550,6 +554,7 @@ function registerOpenApi(app: OpenAPIHono<AppEnvironment>): void {
       200: JsonResponse(NotificationDestinationSchema),
       400: JsonResponse(ErrorResponseSchema),
       401: JsonResponse(ErrorResponseSchema),
+      403: JsonResponse(ErrorResponseSchema),
       409: JsonResponse(ErrorResponseSchema),
       502: JsonResponse(ErrorResponseSchema),
     },
@@ -566,10 +571,12 @@ function registerOpenApi(app: OpenAPIHono<AppEnvironment>): void {
       },
     },
     responses: {
-      200: JsonResponse(NotificationRouteSchema),
+      200: JsonResponse(NotificationDestinationSchema),
       400: JsonResponse(ErrorResponseSchema),
       401: JsonResponse(ErrorResponseSchema),
+      403: JsonResponse(ErrorResponseSchema),
       404: JsonResponse(ErrorResponseSchema),
+      409: JsonResponse(ErrorResponseSchema),
       502: JsonResponse(ErrorResponseSchema),
     },
   });
@@ -589,7 +596,10 @@ function registerOpenApi(app: OpenAPIHono<AppEnvironment>): void {
       200: JsonResponse(NotificationTestResultSchema),
       400: JsonResponse(ErrorResponseSchema),
       401: JsonResponse(ErrorResponseSchema),
+      403: JsonResponse(ErrorResponseSchema),
+      404: JsonResponse(ErrorResponseSchema),
       409: JsonResponse(ErrorResponseSchema),
+      429: JsonResponse(ErrorResponseSchema),
       502: JsonResponse(ErrorResponseSchema),
     },
   });
@@ -771,11 +781,8 @@ const defaultDependencies: AppDependencies = {
   setNotificationRoute: async () => {
     throw new Error("setNotificationRoute is not configured");
   },
-  enqueueNotificationTest: async () => {
-    throw new Error("enqueueNotificationTest is not configured");
-  },
-  enqueueNotificationDelivery: async () => {
-    throw new Error("enqueueNotificationDelivery is not configured");
+  sendNotificationTest: async () => {
+    throw new Error("sendNotificationTest is not configured");
   },
   startHubspotConnect: async () => {
     throw new Error("startHubspotConnect is not configured");
@@ -1317,7 +1324,7 @@ export function createApp(
       context.get("authSession"),
       input.data,
     );
-    return context.json(NotificationRouteSchema.parse(result));
+    return context.json(NotificationDestinationSchema.parse(result));
   });
 
   app.post(
@@ -1334,11 +1341,10 @@ export function createApp(
           "The notification destination reference must be a UUID.",
         );
       }
-      const result = await dependencies.enqueueNotificationTest(
+      const result = await dependencies.sendNotificationTest(
         context.get("authSession"),
         destinationRef.data,
       );
-      await dependencies.enqueueNotificationDelivery(result.delivery_ref);
       return context.json(NotificationTestResultSchema.parse(result));
     },
   );
