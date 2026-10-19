@@ -645,46 +645,73 @@ printf '%s\\t%s\\n' '${expectedCommit}' 'refs/heads/main'
     expect(result.stderr).toContain("deploy accepts only <full-sha> [--force-rebuild]");
   });
 
-  it.each([false, true])("deploys and verifies the expected source (force rebuild: %s)", (forceRebuild) => {
+  it.each([
+    { forceRebuild: false, retired: false, activeLeak: false },
+    { forceRebuild: true, retired: false, activeLeak: false },
+    { forceRebuild: false, retired: true, activeLeak: false },
+    { forceRebuild: true, retired: true, activeLeak: false },
+    { forceRebuild: false, retired: true, activeLeak: true },
+  ])("deploys once with exact source and retired-environment checks: %j", (options) => {
     const fakeBin = mkdtempSync(join(tmpdir(), "lifty-doctl-test-"));
     const fakeDoctl = join(fakeBin, "doctl");
     const fakeCurl = join(fakeBin, "curl");
     const fakeGit = join(fakeBin, "git");
     const calls = join(fakeBin, "doctl-calls.log");
-    writeFileSync(
-      fakeDoctl,
-      `#!/usr/bin/env bash
+    const appFile = join(fakeBin, "app.json");
+    const submittedSpec = join(fakeBin, "submitted-spec.json");
+    const keptAppEnv = { key: "WORKSPACE_MODE", value: "production", scope: "RUN_TIME" };
+    const keptServiceEnv = { key: "MAILIVERY_API_KEY", value: "keep-mailivery-private", type: "SECRET", scope: "RUN_TIME" };
+    const spec = {
+      name: "lifty-api-staging",
+      envs: [keptAppEnv, ...(options.retired ? [
+        { key: "INSTANTLY_API_KEY", value: "retired-secret-instantly", type: "SECRET" },
+        { key: "HEYREACH_API_KEY", value: "retired-secret-heyreach", type: "SECRET" },
+      ] : [])],
+      services: [{
+        name: "api", git: { repo_clone_url: expectedRepository, branch: "main" },
+        envs: [keptServiceEnv, ...(options.retired ? [
+          { key: "SMARTLEAD_API_KEY", value: "retired-secret-smartlead", type: "SECRET", scope: "RUN_TIME" },
+          { key: "SMARTDELIVERY_API_KEY", value: "retired-secret-smartdelivery", type: "SECRET" },
+        ] : [])],
+      }],
+    };
+    writeFileSync(appFile, JSON.stringify([{ id: "app-123", spec,
+      region: { slug: "sfo" }, default_ingress: "https://api.example.test",
+      active_deployment: { id: "dep-789", phase: "ACTIVE" },
+    }]));
+    writeFileSync(fakeDoctl, `#!/usr/bin/env bash
 set -euo pipefail
 printf '%s\\n' "$*" >> "$FAKE_DOCTL_CALLS"
 if [[ "$1 $2" == "apps list" ]]; then
   printf '%s' '[{"id":"app-123","spec":{"name":"lifty-api-staging"}}]'
 elif [[ "$1 $2" == "apps create-deployment" ]]; then
-  printf '%s' '[{"id":"app-123","active_deployment":{"id":"dep-789","phase":"ACTIVE"}}]'
+  printf '%s' '[]'
+elif [[ "$1 $2" == "apps update" ]]; then
+  cat > "$FAKE_SUBMITTED_SPEC"
+  jq --slurpfile spec "$FAKE_SUBMITTED_SPEC" '.[0].spec = $spec[0]' "$FAKE_APP_FILE" > "$FAKE_APP_FILE.next"
+  mv "$FAKE_APP_FILE.next" "$FAKE_APP_FILE"
+  printf '%s' '[]'
 elif [[ "$1 $2" == "apps get" ]]; then
-  printf '%s' '[{"id":"app-123","spec":{"name":"lifty-api-staging","services":[{"name":"api","git":{"repo_clone_url":"${expectedRepository}","branch":"main"}}]},"region":{"slug":"sfo"},"default_ingress":"https://api.example.test","active_deployment":{"id":"dep-789","phase":"ACTIVE"}}]'
+  cat "$FAKE_APP_FILE"
 elif [[ "$1 $2" == "apps get-deployment" ]]; then
-  printf '%s' '[{"id":"dep-789","phase":"ACTIVE","services":[{"name":"api","source_commit_hash":"${expectedCommit}"}]}]'
+  jq --arg commit '${expectedCommit}' --arg leak "$FAKE_ACTIVE_LEAK" '
+    [.[0] | {id:"dep-789",phase:"ACTIVE",spec:.spec,services:[{name:"api",source_commit_hash:$commit}]} |
+      if $leak == "true" then .spec.services[0].envs += [{key:"SMARTLEAD_API_KEY",value:"retired-secret-still-active"}] else . end]
+  ' "$FAKE_APP_FILE"
 else
   printf 'unexpected doctl invocation: %s\\n' "$*" >&2
   exit 64
 fi
-`,
-    );
-    writeFileSync(
-      fakeGit,
-      `#!/usr/bin/env bash
+`);
+    writeFileSync(fakeGit, `#!/usr/bin/env bash
 set -euo pipefail
 if [[ "$1" == "ls-remote" && "$2" == "${expectedRepository}" && "$3" == "refs/heads/main" ]]; then
   printf '%s\\t%s\\n' '${expectedCommit}' 'refs/heads/main'
 else
-  printf 'unexpected git invocation: %s\\n' "$*" >&2
   exit 64
 fi
-`,
-    );
-    writeFileSync(
-      fakeCurl,
-      `#!/usr/bin/env bash
+`);
+    writeFileSync(fakeCurl, `#!/usr/bin/env bash
 set -euo pipefail
 url="\${!#}"
 case "$url" in
@@ -705,33 +732,44 @@ case "$url" in
     ;;
   *) exit 22 ;;
 esac
-`,
-    );
-    chmodSync(fakeDoctl, 0o755);
-    chmodSync(fakeCurl, 0o755);
-    chmodSync(fakeGit, 0o755);
-
+`);
+    for (const executable of [fakeDoctl, fakeCurl, fakeGit]) chmodSync(executable, 0o755);
     try {
-      const result = spawnSync("bash", [script, "deploy", expectedCommit, ...(forceRebuild ? ["--force-rebuild"] : [])], {
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          FAKE_DOCTL_CALLS: calls,
+      const result = spawnSync("bash", [script, "deploy", expectedCommit, ...(options.forceRebuild ? ["--force-rebuild"] : [])], {
+        encoding: "utf8", env: {
+          ...process.env, FAKE_DOCTL_CALLS: calls, FAKE_APP_FILE: appFile,
+          FAKE_SUBMITTED_SPEC: submittedSpec, FAKE_ACTIVE_LEAK: String(options.activeLeak),
           PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
         },
       });
-
+      const doctlCalls = readFileSync(calls, "utf8");
+      const mutations = doctlCalls.trim().split("\n").filter(call => /^apps (update|create-deployment) /.test(call));
+      expect(result.stdout + result.stderr).not.toMatch(/retired-secret|keep-mailivery-private/);
+      if (options.retired && options.forceRebuild) {
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain("rerun without --force-rebuild");
+        expect(mutations).toEqual([]);
+        return;
+      }
+      expect(mutations).toEqual([options.retired
+        ? "apps update app-123 --spec - --update-sources --wait -o json"
+        : `apps create-deployment app-123${options.forceRebuild ? " --force-rebuild" : ""} --wait -o json`]);
+      if (options.retired) {
+        expect(JSON.parse(readFileSync(submittedSpec, "utf8"))).toEqual({
+          ...spec, envs: [keptAppEnv], services: [{ ...spec.services[0], envs: [keptServiceEnv] }],
+        });
+      }
+      if (options.activeLeak) {
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain("retired provider credentials remain");
+        expect(result.stdout).not.toContain("Smoke checks passed");
+        return;
+      }
       expect(result.status).toBe(0);
       expect(result.stdout).toContain("Deployment: dep-789 (ACTIVE)");
       expect(result.stdout).toContain(`Commit: ${expectedCommit}`);
-      expect(result.stdout).toContain(
-        "Smoke checks passed: https://api.example.test",
-      );
-      const doctlCalls = readFileSync(calls, "utf8");
-      expect(doctlCalls).toContain(
-        `apps create-deployment app-123${forceRebuild ? " --force-rebuild" : ""} --wait -o json`,
-      );
-      expect(doctlCalls).not.toContain("apps update");
+      expect(result.stdout).toContain("Smoke checks passed: https://api.example.test");
+      if (options.retired) expect(result.stdout).toContain("Retired provider environment entries removed: 4");
     } finally {
       rmSync(fakeBin, { recursive: true, force: true });
     }

@@ -59,7 +59,7 @@ export function createProductionApp(config: ServiceConfig) {
   const warmup = createEmailWarmupOperations({ ...(warmupSetup ? {issueSetupLink:warmupSetup.issue} : {}) });
   // Reads use the caller's session; only report reads for authorized tests use the server-side key.
   const deliverability = createEmailDeliverabilityOperations({
-    readPlacementDetails: createPlacementReportReader({ smartleadApiKey: config.smartleadApiKey ?? null }) });
+    readPlacementDetails: createPlacementReportReader() });
   const hubspot = createHubspotConnectOperations(config.hubspot);
   const attioSettings = config.attio ?? null;
   const attio = attioSettings ? createAttioConnectOperations(attioSettings) : null;

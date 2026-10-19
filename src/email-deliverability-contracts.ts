@@ -379,7 +379,7 @@ export const WorkspaceHealth = z.object({
 }).strict();
 
 export const DeliverabilityWarning = z.object({
-  code: Code, source: z.enum(["smartdelivery", "placement_detail", "database"]), mailbox_ref: Ref.nullable(), message: Text(300),
+  code: Code, source: z.enum(["placement_detail", "database"]), mailbox_ref: Ref.nullable(), message: Text(300),
 }).strict();
 
 export const DeliverabilityResponse = z.object({

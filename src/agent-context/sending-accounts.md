@@ -40,8 +40,7 @@ never report an account as disconnected or missing from a failed read.
    automation tool; for email, a mailbox they already use or a dedicated
    sending mailbox), then opens the sign-in. Google and Microsoft 365/Outlook
    are offered for new mailboxes. Use the owner’s primary mailbox; aliases and shared/delegated
-   mailboxes are not supported. Connecting never resumes outreach or switches
-   away from Smartlead. A sender has at most one LinkedIn account
+   mailboxes are not supported. Connecting never resumes outreach. A sender has at most one LinkedIn account
    (`LINKEDIN_ALREADY_CONNECTED`: reconnect that one instead).
 3. Use the returned `progress` before presenting the next step. For
    `declaration_required`, `preparing` or `sign_in_required`, show
@@ -125,7 +124,7 @@ must authorize the same mailbox. Microsoft consent opens in another tab;
 keep the Lifty confirmation page open until it verifies warmup is running.
 An organization may require Microsoft administrator approval. A canceled or
 blocked consent does not mean warmup is running; read the same attempt's status.
-Preserve existing Smartlead warmup during a migration until the replacement is
+Preserve existing warmup evidence during a migration until the replacement is
 verified; connecting does not transfer warmup age or resume outreach.
 Never request an App Password or route the founder to a password form.
 

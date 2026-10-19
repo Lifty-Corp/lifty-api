@@ -310,11 +310,10 @@ GET /v1/email/deliverability?scope=fleet            # LIFT admins only
 The API calls `public.deliverability_read` (LIF-1041) with the caller's
 session. The database authorizes the workspace, fleet scope, sender, mailbox
 and cursor; omitting `workspace` never grants the fleet. `detail=placement`
-reads stored provider reports for at most the three newest completed tests of
-the one authorized inbox. It never creates tests, sends seeds or changes
-sending. Set `SMARTLEAD_API_KEY` to read SmartDelivery reports; without it the
-detail reports `not_configured`. A report that times out becomes a warning and
-the rest of the inbox is still returned.
+projects stored placement samples for at most the three newest completed tests
+of the one authorized inbox. It never contacts retired providers, creates tests,
+sends seeds or changes sending. Historical tests retain their provider and
+result; detail reports `no_report` when no sample was stored.
 
 The presentation keeps the canonical rules separate: warmup running is not
 the same as a completed warmup period, which is not the same as being allowed

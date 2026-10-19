@@ -10,7 +10,7 @@ import {
   type SourceCampaign, type SourceConnection, type SourceMailbox, type SourceMailivery, type SourceSending, type SourceTest, type State,
   type WarmupSource,
 } from "./email-deliverability-contracts.js";
-import type { PlacementReportReader } from "./email-deliverability-placement.js";
+import { createPlacementReportReader, type PlacementReportReader } from "./email-deliverability-placement.js";
 
 // Canonical rules this presentation explains; none of them is decided here.
 /** lifty_email_warmup_unlocked / outreach_email_warmup_status: 24-hour evidence. */
@@ -92,7 +92,6 @@ function presentTest(test: SourceTest, now: Date): PlacementTest {
     gmail: test.families.gmail ? counts(test.families.gmail) : null,
     outlook: test.families.o365 ? counts(test.families.o365) : null,
   } : null;
-  const smartleadReport = test.provider === "smartlead" && /^[0-9]{1,15}$/.test(test.provider_test_ref ?? "");
   return {
     test_ref: test.test_ref,
     provider: /^[a-z][a-z0-9_-]{0,39}$/.test(test.provider) ? test.provider : "other",
@@ -100,7 +99,7 @@ function presentTest(test: SourceTest, now: Date): PlacementTest {
     tested_at: iso(ms(test.tested_at)), completed_at: test.completed_at ? iso(ms(test.completed_at)) : null,
     age_days: Math.max(0, Math.floor((now.getTime() - ms(test.completed_at ?? test.tested_at)) / DAY)),
     policy_version: n(test.policy_version), counts: counts(test.counts), families,
-    detail_available: execution.execution_status === "completed" && (smartleadReport || Boolean(families?.gmail || families?.outlook)),
+    detail_available: execution.execution_status === "completed" && Boolean(families?.gmail || families?.outlook),
   };
 }
 
@@ -627,7 +626,7 @@ interface RpcClient { rpc(name: string, args: Record<string, unknown>): Promise<
 
 export interface EmailDeliverabilityDependencies {
   now?: () => Date;
-  /** Reads existing provider reports for authorized tests; absent reports every Smartlead detail as not configured. */
+  /** Projects retained placement samples for authorized tests without provider I/O. */
   readPlacementDetails?: PlacementReportReader;
 }
 
@@ -676,13 +675,11 @@ export function createEmailDeliverabilityOperations(dependencies: EmailDeliverab
         const mailbox = source.mailboxes[0]!;
         // Only authorized, completed tests; the newest few, never caller-chosen ids.
         const tests = mailbox.placement.recent_tests.filter(test => test.execution_status === "completed").slice(0, DELIVERABILITY_DETAIL_MAX_REPORTS);
-        const read = dependencies.readPlacementDetails;
-        const results = read ? await read(tests, mailbox.email) : tests.map(test => test.provider === "smartlead"
-          ? { test_ref: test.test_ref, status: "not_configured" as const, message: "Provider placement reports are not configured on this server.", providers: [], auth: null, blacklisted: null }
-          : { test_ref: test.test_ref, status: "no_report" as const, message: "This test stored no per-provider placement.", providers: [], auth: null, blacklisted: null });
+        const read = dependencies.readPlacementDetails ?? createPlacementReportReader();
+        const results = await read(tests, mailbox.email);
         details.set(mailbox.mailbox_ref, results);
         for (const result of results) {
-          if (result.status === "unavailable") warnings.push({ code: "placement_detail_unavailable", source: "smartdelivery", mailbox_ref: mailbox.mailbox_ref, message: result.message });
+          if (result.status === "unavailable") warnings.push({ code: "placement_detail_unavailable", source: "placement_detail", mailbox_ref: mailbox.mailbox_ref, message: result.message });
         }
         if (results.some(result => result.status === "not_configured")) {
           warnings.push({ code: "placement_detail_not_configured", source: "placement_detail", mailbox_ref: mailbox.mailbox_ref, message: "Provider placement reports are not configured on this server." });

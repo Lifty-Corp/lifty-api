@@ -155,11 +155,18 @@ npm run do:deploy -- <full-40-character-sha>
 
 The deploy command resolves the app by name and validates its ID, single API
 component, GitHub repository, and `main` branch before mutation. It requires
-the supplied SHA to match the remote branch head, creates a dedicated App
-Platform deployment without reapplying the live app spec, waits, verifies the
-exact active commit, and runs health, readiness, OpenAPI, and unauthenticated
-fail-closed checks. Eligible builds can be reused; append `--force-rebuild`
-only when a clean rebuild is required or to diagnose stale build/cache state.
+the supplied SHA to match the remote branch head, starts one App Platform
+deployment, waits, verifies the exact active commit, and runs health, readiness,
+OpenAPI, and unauthenticated fail-closed checks. When retired integration keys
+(`INSTANTLY_API_KEY`, `HEYREACH_API_KEY`, `SMARTLEAD_API_KEY`,
+`SMARTDELIVERY_API_KEY`) remain at app or API component scope, it filters only
+those entries from the live spec and deploys that spec with the current source
+using `apps update --update-sources`. It preserves all other fields and verifies
+the keys are absent from both configured and active specs. Otherwise it uses
+`apps create-deployment` without reapplying the live spec. Eligible builds can be
+reused; append `--force-rebuild` only when a clean rebuild is required or to
+diagnose stale build/cache state. That flag fails before mutation while retired
+environment cleanup is pending; use the normal release command first.
 Unknown flags are rejected. It never prints environment values or uploads local files.
 
 Agents need `doctl`, `jq`, and `curl`, plus an authenticated DigitalOcean
