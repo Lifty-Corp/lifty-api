@@ -48,14 +48,15 @@ export type DiscoverySource = {
  * design: adding a column here is a deliberate decision, not a schema reflection.
  *
  * Excluded on purpose (do NOT add):
- *  - ids / FKs: id, workspace_id, sender_id, apollo_id, crm_*_id,
- *    heyreach_lead_id, heyreach_conversation_id — workspace-internal or CRM-side keys.
- *  - funnel state: funnel_stage, qualification_status, suppression_reason,
+ *  - ids / FKs: id, workspace_id, sender_id, apollo_id, crm_*_id —
+ *    workspace-internal or CRM-side keys.
+ *  - funnel state: funnel_stage, suppression_reason,
  *    email_status, phone_status — machine-managed pipeline state.
+ *  - retired columns: qualification_status stays denied for stale mappings.
  *  - timestamps: *_at columns (discovered_at, synced_at, qualified_at, …) and
  *    created_at / updated_at — bookkeeping, not contact attributes.
  *  - internal bookkeeping: tag, tags, apollo_action, sequence_name,
- *    heyreach_campaign, soft_bounce_count, icp_score,
+ *    soft_bounce_count, icp_score,
  *    phone*, email — channel/ops internals or PII handled elsewhere.
  */
 export const DISCOVERY_SOURCES: readonly DiscoverySource[] = [
@@ -85,8 +86,6 @@ export const EXCLUDED_LEAD_COLUMNS: readonly string[] = [
   "sender_id",
   "apollo_id",
   "crm_contact_id",
-  "heyreach_lead_id",
-  "heyreach_conversation_id",
   // funnel / state
   "funnel_stage",
   "qualification_status",
@@ -113,7 +112,6 @@ export const EXCLUDED_LEAD_COLUMNS: readonly string[] = [
   "tags",
   "apollo_action",
   "sequence_name",
-  "heyreach_campaign",
   "soft_bounce_count",
   "icp_score",
   "email",
