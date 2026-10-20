@@ -2,6 +2,15 @@ import { z } from "zod";
 import type { IdentityDefinition, IdentityInput } from "./identity-operations.js";
 import * as c from "./outreach-contracts.js";
 
+function replyDecision(body: unknown) {
+  const request = c.ReplyTurnReviewSchema.parse(body);
+  return { decisionId: request.decision_id, expectedVersion: request.expected_version, surface: "api",
+    action: request.action === "send" ? request.text === undefined ? "approve" : "edit"
+      : request.action === "skip" ? "suppress" : request.action,
+    ...(request.text === undefined ? {} : { text: request.text }),
+  };
+}
+
 const Empty = z.object({}).strict();
 function operation(key: string, method: IdentityDefinition["method"], route: string, rpc: string,
   response: z.ZodType, description: string,
@@ -12,7 +21,7 @@ function operation(key: string, method: IdentityDefinition["method"], route: str
     args: input => ({ ...(input.path.message_ref ? { p_message_id: input.path.message_ref } : {}),
       ...(input.path.turn_ref ? { p_turn_id: input.path.turn_ref } : {}),
       ...(input.path.lead_ref ? { p_lead_id: input.path.lead_ref } : {}),
-      ...(options.query ? { p_query: input.query } : {}), ...(options.request ? { p_payload: input.body } : {}) }),
+      ...(options.query ? { p_query: input.query } : {}), ...(options.request ? key === "reply_review_post" ? { p_decision: replyDecision(input.body) } : { p_payload: input.body } : {}) }),
     description,
   };
 }
@@ -32,8 +41,8 @@ export const memberReviewOperationDefinitions = {
     "Read waiting replies and due requested follow-ups with their exact turn version, saved draft, original account and conversation. Shares the same reply turn as Slack; no duplicate approval store.", { query: c.ReviewPageQuerySchema }),
   reply_get: operation("reply_get", "GET", "reply-turns/{turn_ref}", "get_lifty_reply_turn", c.ReplyTurnResultSchema,
     "Read one exact reply turn and its confirmed, queued or uncertain delivery evidence. Unknown routing is never permission to send.", { path: c.ReplyTurnPathSchema }),
-  reply_review_post: operation("reply_review_post", "POST", "reply-turns/{turn_ref}/review", "review_lifty_reply_turn", c.ReplyTurnResultSchema,
-    "Send or skip one reply with expected_version and source_digest. Optional edited text answers in the original LinkedIn conversation or mailbox thread. Shares Slack's claim and send fence; queued or uncertain is not sent and must not be repeated.", { path: c.ReplyTurnPathSchema, request: c.ReplyTurnReviewSchema, success: 202 }),
+  reply_review_post: operation("reply_review_post", "POST", "reply-turns/{turn_ref}/review", "decide_reply_turn", c.ReplyDecisionResultSchema,
+    "Decide a reply with its expected_version and a caller-generated decision_id reused for retries of identical intent. Send approves the saved draft or edits with optional trimmed text; skip suppresses this turn. Recover/retry use the same command only when view.actions permits. Render returned view label/detail/actions verbatim. Stale is a normal receipt with the current view and no dispatch; queued or uncertain is not sent.", { path: c.ReplyTurnPathSchema, request: c.ReplyTurnReviewSchema, success: 202 }),
   message_rewrite_post: operation("message_rewrite_post", "POST", "campaign-messages/{message_ref}/rewrite", "rewrite_lifty_campaign_message", c.CampaignMessageResultSchema,
     "Request a new pending draft from one exact pending source_digest with an idempotent request_ref. Preserves earlier bytes and provenance and never approves. Read the source message's rewrite_work until it supplies the exact replacement or a bounded failure; never restart an uncertain job blindly.", { path: c.CampaignMessagePathSchema, request: c.CampaignMessageRewriteSchema, success: 202 }),
   lead_stop_post: operation("lead_stop_post", "POST", "leads/{lead_ref}/stop-outreach", "stop_lifty_lead_outreach", c.StopLeadOutreachResultSchema,
@@ -67,15 +76,16 @@ export function memberReviewReceiptMatches(action: string, input: IdentityInput,
       const { turns } = c.ReplyTurnsSchema.parse(value);
       return turns.length <= (query.limit ?? 100) && turns.every(turn => !query.channel || turn.channel === query.channel);
     }
-    case "reply_get":
+    case "reply_get": return c.ReplyTurnResultSchema.parse(value).turn.turn_ref === input.path.turn_ref;
     case "reply_review_post": {
-      const { turn } = c.ReplyTurnResultSchema.parse(value);
-      if (turn.turn_ref !== input.path.turn_ref) return false;
-      if (action === "reply_get") return true;
+      const receipt = c.ReplyDecisionResultSchema.parse(value);
       const request = c.ReplyTurnReviewSchema.parse(input.body);
-      return turn.version > request.expected_version && (request.action === "skip" ? turn.state === "suppressed"
-        : turn.account_id !== null && (request.text === undefined || turn.draft === request.text)
-          && ["processing", "sending", "queued", "sent", "uncertain"].includes(turn.state));
+      // SQL owns the current view, including after a replay or stale click.
+      // Recovery may leave the version unchanged; a replay can already be sent.
+      return receipt.turn.turn_ref === input.path.turn_ref
+        && Object.keys(receipt.view).every(key => JSON.stringify(receipt.view[key as keyof typeof receipt.view])
+          === JSON.stringify(receipt.turn.view[key as keyof typeof receipt.view]))
+        && (receipt.dispatch === null || (request.action === "send" && receipt.dispatch === request.decision_id));
     }
     case "message_rewrite_post": {
       const receipt = c.CampaignMessageResultSchema.parse(value);
