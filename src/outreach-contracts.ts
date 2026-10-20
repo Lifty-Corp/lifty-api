@@ -394,19 +394,33 @@ export const MessageRatingResultSchema = z.object({ ...Workspace, feedback: z.ob
 }).strict() }).strict();
 export const ReviewCountSchema = z.object({ ...Workspace, count: z.number().int().nonnegative() }).strict();
 export const ReplyTurnPathSchema = z.object({ turn_ref: Ref }).strict();
+export const ReplyViewSchema = z.object({
+  turnId: Ref, channel: z.enum(["email", "linkedin"]), version: z.number().int().nonnegative(),
+  status: z.enum(["received", "awaiting_action", "queued", "processing", "sent", "suppressed", "superseded", "uncertain", "recovery"]),
+  label: z.string().refine(value => value.trim().length > 0), cause: z.string().nullable(), detail: z.string().nullable(),
+  actions: z.array(z.enum(["approve", "edit", "suppress", "recover", "retry"])),
+  draft: z.string().nullable(), approvedText: z.string().nullable(),
+  decidedAt: Timestamp.nullable(), sentAt: Timestamp.nullable(), nextAttemptAt: Timestamp.nullable(), overdueAt: Timestamp.nullable(),
+}).strict();
 export const ReplyTurnSchema = z.object({ turn_ref: Ref, version: z.number().int().nonnegative(), lead_ref: Ref,
   channel: z.enum(["email", "linkedin"]), state: z.enum(["pending", "processing", "sending", "queued", "sent", "suppressed", "uncertain", "failed", "superseded"]),
   source_digest: Digest, draft: z.string(), account_id: Ref.nullable(), sender_id: Ref.nullable(),
   sender_name: z.string().nullable(), lead_name: z.string().nullable(), lead_email: z.string().nullable(),
   lead_linkedin_url: z.string().nullable(), campaign_ref: Ref.nullable(), inbound_text: z.string(), inbound_at: Timestamp,
   follow_up_due_at: Timestamp.nullable(), created_at: Timestamp, sent_at: Timestamp.nullable(),
-  history: z.array(CampaignMessageSchema).max(100), history_complete: z.boolean(),
-}).strip().refine(turn => turn.state !== "sent" || turn.sent_at !== null, "A sent reply requires a confirmed receipt.");
+  history: z.array(CampaignMessageSchema).max(100), history_complete: z.boolean(), view: ReplyViewSchema,
+}).strict().refine(turn => turn.view.turnId === turn.turn_ref && turn.view.channel === turn.channel && turn.view.version === turn.version,
+  "The reply view must describe this turn.")
+  .refine(turn => turn.state !== "sent" || turn.sent_at !== null, "A sent reply requires a confirmed receipt.");
 export const ReplyTurnsSchema = z.object({ ...Workspace, turns: z.array(ReplyTurnSchema).max(100), next_after: Ref.nullable() }).strict();
 export const ReplyTurnResultSchema = z.object({ ...Workspace, turn: ReplyTurnSchema }).strict();
-export const ReplyTurnReviewSchema = z.object({ expected_version: z.number().int().nonnegative(), source_digest: Digest,
-  action: z.enum(["send", "skip"]), text: text(20000).optional(),
-}).strict().refine(value => value.action !== "skip" || value.text === undefined, "Skipping never sends edited text.");
+export const ReplyDecisionResultSchema = z.object({ ...Workspace, turn: ReplyTurnSchema,
+  outcome: z.enum(["accepted", "replayed", "stale"]), dispatch: Ref.nullable(), view: ReplyViewSchema,
+}).strict().refine(receipt => receipt.outcome !== "stale" || receipt.dispatch === null,
+  "A stale decision never dispatches.");
+export const ReplyTurnReviewSchema = z.object({ decision_id: Ref, expected_version: z.number().int().nonnegative(),
+  action: z.enum(["send", "skip", "recover", "retry"]), text: z.string().trim().pipe(text(20000)).optional(),
+}).strict().refine(value => value.action === "send" || value.text === undefined, "Only send accepts edited text.");
 export const CampaignMessageRewriteSchema = z.object({ request_ref: Ref, source_digest: Digest,
   expected_review_status: z.literal("pending"),
 }).strict();
