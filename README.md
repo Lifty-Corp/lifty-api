@@ -179,6 +179,14 @@ converge on the same attempt through the trusted
 `lifty_sending_account_provider` RPC (`src/account-connection.ts`). Connecting
 never activates a campaign.
 
+After email or LinkedIn sign-in returns, the confirmation page waits for the
+provider's signed authorization and verified identity on the same attempt.
+While that evidence is pending, it does not offer the already used sign-in
+link again. A bounded wait ends with a status check for the same attempt;
+reloads keep waiting, and late verification shows the connected result.
+The preparation page still offers the initial sign-in action, and explicit
+provider refusals keep their stated recovery steps.
+
 Disconnect and sender delete commit the local block first, then request access
 removal at the provider within one 20-second budget per request
 (`REVOCATION_BUDGET_MS`). 200 means every affected account has

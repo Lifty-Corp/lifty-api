@@ -251,6 +251,41 @@ it('prepares a sending-account link once after the shell, then offers a same-att
   expect(page.elements['confirmation-reference']!.textContent).toContain('11111111-1111-4111-8111-111111111111');
   expect(page.elements['confirmation-check']!.hidden).toBe(false);
 });
+it.each(['email','linkedin'])('waits for delayed %s authorization after return without reopening the used sign-in',async channel=>{
+  vi.useFakeTimers();let connected=false;
+  const requests:{path:string;body:unknown}[]=[];
+  const fetchImpl=vi.fn(async(input:unknown,init?:RequestInit)=>{
+    requests.push({path:String(input),body:JSON.parse(String(init!.body))});
+    return Response.json(connected?{status:'connected',account:null}
+      :{status:'pending',progress:{stage:'sign_in_required'},reference:'11111111-1111-4111-8111-111111111111'});
+  }) as typeof fetch;
+  const returned=(href:string)=>{
+    const page=browser(href,fetchImpl);
+    page.elements.confirmation!.dataset.retry=`/connect/${channel}`;
+    page.elements.confirmation!.dataset.label=channel==='email'?'email':'LinkedIn';
+    return page;
+  };
+  const page=returned(`https://api.lifty.test/connect/${channel}/return?intent=capability&account_id=acc_private`);
+  const work=page.run();await vi.advanceTimersByTimeAsync(1);
+  expect(page.elements['confirmation-title']!.textContent).toBe('Checking your connection');
+  expect(page.elements['confirmation-actions']!.hidden).toBe(true);
+  expect(page.elements['confirmation-spinner']!.hidden).toBe(false);
+  await vi.runAllTimersAsync();await work;
+  expect(page.elements['confirmation-title']!.textContent).toBe('Still checking');
+  expect(page.elements['confirmation-check']!.hidden).toBe(false);
+  expect(page.elements['confirmation-actions']!.hidden).toBe(true);
+  expect(page.location.href).not.toContain('acc_private');
+
+  const reload=returned(page.location.href),again=reload.run();await vi.advanceTimersByTimeAsync(1);
+  expect(reload.elements['confirmation-title']!.textContent).toBe('Checking your connection');
+  expect(reload.elements['confirmation-actions']!.hidden).toBe(true);
+  connected=true;await vi.runAllTimersAsync();await again;
+  expect(reload.elements['confirmation-title']!.textContent).toBe(channel==='email'?'email is connected':'LinkedIn is connected');
+  expect(reload.elements['confirmation-actions']!.hidden).toBe(true);
+  expect(requests.every(request=>request.path.endsWith('/status'))).toBe(true);
+  expect(requests.every(request=>Object.keys(request.body as object).join() === 'state')).toBe(true);
+  expect(requests.length).toBeLessThan(40);
+});
 it('waits for one preparation and keeps checking until a sign-in that could not open opens',async()=>{
   vi.useFakeTimers();let open=false;const requests:string[]=[];let processDone=false,statusDuringProcess=false;
   const unavailable={status:'pending',progress:{stage:'preparing'},reference:'11111111-1111-4111-8111-111111111111'};

@@ -83,6 +83,8 @@ var errorDetail=errorType==='api/already_exists'&&/^acc_[A-Za-z0-9_-]{1,251}$/.t
 var title=document.getElementById('confirmation-title'),detail=document.getElementById('confirmation-detail'),spinner=document.getElementById('confirmation-spinner');
 var actions=document.getElementById('confirmation-actions'),retry=document.getElementById('confirmation-retry'),check=document.getElementById('confirmation-check'),reference=document.getElementById('confirmation-reference');
 var prepare=root.dataset.prepare==='true',lastProgress='',polling=false;
+// A provider return can precede its signed authorization. Only preparation may reopen sign-in.
+var returnedSignIn=!!root.dataset.retry&&!prepare&&!errorType&&!denied&&!code;
 var label=root.dataset.label,warmup=root.dataset.warmup==='true',finished=false,shown='',until=Date.now()+90000,delay=1000,cap=8000;
 url.search='';url.searchParams.set(key,body.state);if(errorType)url.searchParams.set('error_type',errorType);if(errorDetail)url.searchParams.set('error_detail',errorDetail);if(prepare)url.searchParams.set('prepare','1');history.replaceState(null,'',url.pathname+url.search);
 var notes={
@@ -113,7 +115,8 @@ function attend(attention){
 }
 function progress(p,ref){
  if(!p||typeof p.stage!=='string')return;
- lastProgress=p.stage;
+ var waitingForAuthorization=returnedSignIn&&p.stage==='sign_in_required';
+ lastProgress=waitingForAuthorization?'verifying':p.stage;
  if(typeof ref==='string'&&/^[a-f0-9-]{36}$/i.test(ref)){reference.textContent='Connection reference: '+ref;reference.hidden=false;}
  if(shown===p.stage+(p.reason||''))return;shown=p.stage+(p.reason||'');
  actions.hidden=true;spinner.hidden=true;
@@ -121,7 +124,10 @@ function progress(p,ref){
  function resume(text){if(path){retry.textContent=text;retry.href=path+'?'+key+'='+encodeURIComponent(body.state);actions.hidden=false;}}
  if(p.stage==='declaration_required'){title.textContent='A confirmation is needed';detail.textContent='Continue to the connection page and confirm how you use this account.';resume('Continue');}
  else if(p.stage==='preparing'){title.textContent='Preparing sign-in';detail.textContent='Lifty is preparing the secure sign-in page. Sign-in has not finished yet.';spinner.hidden=false;}
- else if(p.stage==='sign_in_required'){title.textContent='Ready to sign in';detail.textContent='Continue to sign in to your '+label+' account. Lifty will verify it after you finish.';resume('Continue to sign in');}
+ else if(p.stage==='sign_in_required'){
+  if(waitingForAuthorization){title.textContent='Checking your connection';detail.textContent='Lifty is checking the result of your sign-in. This page will update when the account is verified.';spinner.hidden=false;}
+  else{title.textContent='Ready to sign in';detail.textContent='Continue to sign in to your '+label+' account. Lifty will verify it after you finish.';resume('Continue to sign in');}
+ }
  else if(p.stage==='verifying'){title.textContent='Checking your connection';detail.textContent='Lifty received the authorization and is verifying the account.';spinner.hidden=false;}
 }
 function placement(p){
