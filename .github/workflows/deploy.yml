@@ -1,7 +1,10 @@
 # Deploy lifty-api to the DigitalOcean App Platform app (lifty-api-staging).
 #
 # On push to main: verify (typecheck + tests + build), then run
-# scripts/digitalocean.sh deploy <sha>. The script is the safety net: it
+# scripts/digitalocean.sh deploy <sha>. Verify is skipped only when a
+# same-repository pull request run of verify.yml passed on this exact tree
+# (no branch protection requires up-to-date branches, so a merge can produce
+# a tree no pull request run tested; that tree is verified here). The script is the safety net: it
 # validates the app spec still points at this repo#main, confirms remote main
 # is exactly this commit, creates the deployment, waits for it to go ACTIVE,
 # verifies the active deployment's source commit, and runs the smoke checks.
@@ -38,6 +41,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read # find the pull request Verify run for this tree
 
 jobs:
   deploy:
@@ -49,15 +53,40 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Reuse a passing pull request Verify run for this tree
+        id: reuse
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tree=$(git rev-parse 'HEAD^{tree}')
+          runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=verified-tree-$tree" \
+            --jq '[.artifacts[] | select(.expired | not)
+                   | select(.workflow_run.head_repository_id == .workflow_run.repository_id)
+                   | .workflow_run.id] | unique | .[]')
+          for run in $runs; do
+            passed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" \
+              --jq 'select(.path == ".github/workflows/verify.yml" and .event == "pull_request"
+                           and .conclusion == "success") | .html_url')
+            if [ -n "$passed" ]; then
+              echo "Tree $tree already passed Verify: $passed"
+              echo "verified=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "No passing pull request Verify run for tree $tree; verifying here."
+
       - uses: actions/setup-node@v4
+        if: steps.reuse.outputs.verified != 'true'
         with:
           node-version: 22
           cache: npm
 
       - name: Install dependencies
+        if: steps.reuse.outputs.verified != 'true'
         run: npm ci
 
       - name: Verify (typecheck + tests + build)
+        if: steps.reuse.outputs.verified != 'true'
         run: npm run verify
 
       - uses: digitalocean/action-doctl@v2

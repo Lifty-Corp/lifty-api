@@ -36,3 +36,18 @@ jobs:
 
       - name: Verify
         run: npm run verify
+
+      # Deploy reuses this result when main's tree is identical to the tree
+      # verified here (the pull request merge commit), so it records it.
+      - name: Record the verified tree
+        id: tree
+        run: |
+          git rev-parse 'HEAD^{tree}' | tee "$RUNNER_TEMP/verified-tree"
+          echo "sha=$(cat "$RUNNER_TEMP/verified-tree")" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-tree-${{ steps.tree.outputs.sha }}
+          path: ${{ runner.temp }}/verified-tree
+          retention-days: 7
+          overwrite: true

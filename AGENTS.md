@@ -15,7 +15,8 @@ npm run do:deploy -- <full-40-character-sha>
 These are alternatives for the relevant operation, not a checklist to run on
 every release. Merging runtime changes to `main` already starts the `Deploy`
 workflow: follow that run instead of invoking `do:deploy` again. The workflow
-runs `npm run verify`, checks the exact active commit and runs the public smoke
+runs `npm run verify` (or reuses a passing pull request Verify run on the
+identical tree), checks the exact active commit and runs the public smoke
 suite. Reuse that evidence; add a focused authenticated/compatibility probe only
 when the changed behavior requires it. Preserve any database-first dependency.
 Human documentation-only pushes do not deploy; packaged Markdown under `src/`
