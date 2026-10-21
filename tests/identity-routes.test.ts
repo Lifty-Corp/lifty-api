@@ -45,6 +45,24 @@ function harness(rpc: Rpc, connector: Partial<AccountConnector> = {}) {
 const dbError = (code: string, message: string, details?: unknown) => Object.assign(new Error(message), { code, message, details: details === undefined ? null : JSON.stringify(details) });
 
 describe("Identity member routes", () => {
+  it("requires confirmation and preserves per-campaign resume outcomes without provider work", async () => {
+    const result = { workspace, account: account(accountId, { channel: "linkedin",
+      disconnect_pause: { count: 1, can_resume: true } }), resumed: 1,
+      results: [{ campaign_ref: senderId, outcome: "resumed", reason: null },
+        { campaign_ref: otherAccount, outcome: "blocked", reason: "target_stopped" }] };
+    const h = harness(() => result);
+    const path = `/v1/workspace/sending-accounts/${accountId}/resume-campaigns`;
+    expect((await h.request("POST", path, {})).status).toBe(400);
+    expect(h.calls).toEqual([]);
+    const response = await h.request("POST", path, { confirm: true });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(result);
+    expect(h.calls).toEqual([{ name: "resume_lifty_disconnected_campaigns",
+      args: { p_workspace_id: null, p_account_id: accountId, p_payload: { confirm: true } } }]);
+    expect(h.effects.reconcileAttempt).not.toHaveBeenCalled();
+    expect(h.effects.revoke).not.toHaveBeenCalled();
+  });
+
   it("call the documented RPCs with named arguments and the database-resolved workspace", async () => {
     const h = harness(name => ({
       get_lifty_senders: { workspace, senders: [sender] },

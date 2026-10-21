@@ -554,3 +554,18 @@ validation, copied-account prebinding and a permitted live pilot. Sources:
 [provider features](https://developer.unipile.com/v2.0/docs/list-provider-features),
 and the official [Unipile SDK](https://github.com/unipile/unipile-node) schemas at
 `f839654cf7c8856635b9dae6032d00a91489560b`.
+
+
+### LinkedIn disconnect recovery (LIF-1592)
+
+`sending-accounts.resume_campaigns` exposes the confirmed member action as
+`POST /v1/workspace/sending-accounts/{id}/resume-campaigns` and
+`lifty post sending-accounts resume-campaigns`. The installed CLI discovers the
+operation from this API's catalog; no client-contract change is required.
+
+Deploy this API **before** Functions migration
+`20261021180000_lif1592_disconnect_campaign_resume.sql`: existing strict account
+readers reject the new `disconnect_pause` field. This revision accepts both
+shapes. Recovery becomes usable when that migration is active; deploy the
+compatible dashboard after both. Reconnecting and account Resume remain
+separate from explicit campaign recovery.

@@ -1,9 +1,8 @@
 # Sending accounts
 
-A sending account is one LinkedIn account or mailbox owned by one sender
-(`senders` guide). Every workspace uses the same operations; send the chosen
-workspace as `references.common` describes. Customers never see the provider
-behind Lifty's connection pages; do not name it.
+A sending account is a sender’s LinkedIn profile or mailbox (`senders` guide).
+Select the workspace as `references.common` describes. Do not name the provider
+behind Lifty’s connection pages.
 
 ## Read
 
@@ -42,32 +41,24 @@ never report an account as disconnected or missing from a failed read.
    are offered for new mailboxes. Use the owner’s primary mailbox; aliases and shared/delegated
    mailboxes are not supported. Connecting never resumes outreach. A sender has at most one LinkedIn account
    (`LINKEDIN_ALREADY_CONNECTED`: reconnect that one instead).
-3. Use the returned `progress` before presenting the next step. For
-   `declaration_required`, `preparing` or `sign_in_required`, show
-   `connection_url` as a clickable link and say whose account it connects. Do
-   not open it yourself. `preparing` means the questions are answered and the
-   page opens the sign-in when the person opens the link (it retries by
-   itself if the sign-in cannot open yet); it is not verifying an account.
-   A live attempt is reused (`created:false`); a different-looking URL with
-   the same `id` is still the same attempt. An expired attempt never blocks a
-   new connect.
-   `verifying` means authorization was received: read that attempt instead of
-   asking the person to sign in again. `complete` also needs the attempt read
-   to report its verified result.
-4. After the person finishes, read `sending_accounts_attempt` with
-   `path.id` = the returned `id`, with bounded backoff. `connected` gives the
-   new `account_id`. A failed or timed-out read is unknown, not failure: poll
-   the same attempt with bounded backoff, then report that its result is still
-   unconfirmed. While pending, follow `progress` as above; do not say an account
-   is being verified when sign-in has not opened. `failed` reasons: `canceled` (sign-in not
-   finished; offer a new connect when ready), `account_in_use` (the account is
-   live in another workspace; another link will not fix it), `identity_mismatch`
-   (another mailbox/profile signed in), `provider_rejected` (offer one new
-   attempt, then ask for LIFT review). `expired`: start a new connect.
-   When the sign-in is refused, the return page says why and offers "Try
-   again" with the same link until the attempt expires. If it says an earlier
-   Lifty connection still held the account, Lifty already removed that old
-   link; the person signs in again with the same account.
+3. For `declaration_required`, `preparing` or `sign_in_required`, show
+   `connection_url` as a clickable link naming the account owner. Do not open
+   it yourself. `preparing` means the browser can open sign-in, not that an
+   account is being verified. `created:false` and the same `id` mean the same
+   attempt even if its URL changes. Expired attempts never block a new one.
+   For `verifying` or `complete`, read the attempt for its authoritative result;
+   do not ask the person to sign in again.
+4. Read `sending_accounts_attempt` with `path.id` = the attempt `id` and
+   bounded backoff. `connected` returns `account_id`. A failed or timed-out
+   read means unknown: retry the same read, then report unconfirmed if needed.
+   Pending reads follow `progress` above. Failure reasons:
+   `canceled` — offer a new attempt when ready;
+   `account_in_use` — another workspace owns it; another link cannot fix this;
+   `identity_mismatch` — sign in with the intended profile/mailbox;
+   `provider_rejected` — offer one retry, then LIFT review.
+   Expired attempts need a new connect. The return page explains refusals and
+   offers "Try again" on the same link until expiry. If it reports removal of
+   an old Lifty connection, sign in again with the same account.
 
 Connecting never activates a campaign or sends anything.
 
@@ -270,3 +261,14 @@ campaign. A connected account does not authorize any email, message or
 invitation: use campaign previews and explicit approval/activation.
 Connection can proceed while the sample or new research waits for the weekly
 reset.
+
+
+## Resume campaigns after disconnect
+
+Read `disconnect_pause.count` and `can_resume`. Once the same LinkedIn profile
+is connected, active and free of holds, obtain explicit confirmation for
+`sending_accounts_resume_campaigns` (`lifty post sending-accounts resume-campaigns`):
+`{"path":{"id":"ACCOUNT_UUID"},"body":{"confirm":true}}`.
+Report each blocked result; other pauses stay. First steps become due now;
+follow-ups keep receipt-relative timing. Retries reuse actions. An absent count
+means recovery is unavailable, not zero.

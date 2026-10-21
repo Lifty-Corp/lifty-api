@@ -98,6 +98,14 @@ export const identityOperationDefinitions = {
     },
     pause: accountAction("pause", "Pause this account: nothing new is done with it until resumed; in-flight sends settle and its connection stays. Idempotent. Other accounts and campaigns are unchanged."),
     resume: accountAction("resume", "Resume this account (state active). An already active approved campaign may automatically send to external recipients through it, including pending work, when its connection and all existing readiness, schedule and incident gates allow. Does not approve or activate a campaign or release separate sending holds. Refused with ACCOUNT_DISCONNECTED when disconnected: reconnect first. Idempotent."),
+    resume_campaigns: {
+      method: "POST", route: `${accountsRoute}/{id}/resume-campaigns`, cli: { operation: "resume-campaigns" },
+      rpc: "resume_lifty_disconnected_campaigns", path: contracts.IdPath, query: Empty,
+      request: contracts.DisconnectSchema, invalid: invalidRequest,
+      response: contracts.CampaignResumeResultSchema, success: 200,
+      args: input => ({ p_account_id: path(input), p_payload: input.body }),
+      description: "Explicitly resume LinkedIn campaigns recorded as paused by disconnect, with confirm:true. Requires the same verified identity, active account and no hold. Rechecks approval and safety per campaign; returns resumed/blocked results. Other pauses stay. Retries reuse actions. First pending steps become due now; follow-ups keep receipt-relative timing. Read disconnect_pause first. This permits sends.",
+    },
     disconnect: {
       method: "POST", route: `${accountsRoute}/{id}/disconnect`, cli: { operation: "disconnect" }, rpc: "disconnect_lifty_sending_account",
       path: contracts.IdPath, query: Empty, request: contracts.DisconnectSchema, invalid: invalidRequest,

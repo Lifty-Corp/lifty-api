@@ -28,14 +28,14 @@ export type McpRouteDispatch = (route: string, init: RequestInit) => Promise<Res
 // Writes whose effect leaves the user's Lifty workspace and private accounts.
 const openWorld = new Set(["sample-review.post", "research-schedule.activate", "campaigns.activate", "journeys.activate",
   "campaigns.review_settings_patch", "campaigns.message_review_post", "campaigns.reply_review_post", "campaigns.lead_stop_post",
-  "sending-accounts.resume", "sending-accounts.warmup_start", "sending-accounts.warmup_resume", "sending-accounts.placement_start", "notifications.test",
+  "sending-accounts.resume", "sending-accounts.resume_campaigns", "sending-accounts.warmup_start", "sending-accounts.warmup_resume", "sending-accounts.placement_start", "notifications.test",
   // Removing Lifty's access at the account provider.
   "sending-accounts.disconnect", "senders.delete"]);
 // Creating a resource changes nothing that exists.
 const nonDestructive = new Set(["business.post", "senders.post", "journeys.post", "campaigns.post"]);
 // Writes that commit synchronously, with no authorization link or receipt.
 const synchronousStages = new Set(["business", "targeting", "research-criteria", "commercial-voice", "setup", "research-schedule", "journeys", "campaigns"]);
-const synchronousOperations = new Set(["crm.preferences_patch", "crm.rules_patch", "customer-exclusions.import", "notifications.patch"]);
+const synchronousOperations = new Set(["sending-accounts.resume_campaigns", "crm.preferences_patch", "crm.rules_patch", "customer-exclusions.import", "notifications.patch"]);
 const pendingOperations = new Set(["campaigns.reply_review_post", "campaigns.message_rewrite_post", "campaigns.lead_stop_post"]);
 // Live CRM reads can replace credentials or connection health synchronously
 // under the existing authorization; they do not start a new business write.
