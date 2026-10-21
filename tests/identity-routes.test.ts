@@ -23,7 +23,7 @@ const attempt = (state: string, extra: Record<string, unknown> = {}) => ({ works
   progress: {stage: state === "pending" ? "verifying" : "complete"}, ...extra });
 
 type Rpc = (name: string, args: Record<string, unknown>) => unknown;
-function harness(rpc: Rpc, connector: Partial<AccountConnector> = {}) {
+function harness(rpc: Rpc, connector: Partial<AccountConnector> = {}, profile: "full" | "connections" = "full") {
   const calls: { name: string; args: Record<string, unknown> }[] = [];
   const client = { rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
     calls.push({ name, args });
@@ -35,8 +35,8 @@ function harness(rpc: Rpc, connector: Partial<AccountConnector> = {}) {
     revoke: vi.fn(async () => {}),
     ...connector,
   };
-  const app = createApp({ authenticate: async () => ({ ok: true, session: { userId: "founder", client } }),
-    identityOperation: (session, key, input, signal) => executeIdentityOperation(session, key, input, effects, signal), log: () => {} });
+  const app = createApp({ runtimeProfile: profile, authenticate: async () => ({ ok: true, session: { userId: "founder", client } }),
+    identityOperation: (session, key, input, signal) => executeIdentityOperation(session, key, input, effects, signal, profile), log: () => {} });
   const request = (method: string, path: string, body?: unknown) => app.request(path, { method,
     headers: { authorization: "Bearer session", "x-lifty-client-contract": STAGE_CLIENT_CONTRACT, "x-lifty-workspace": "example", "content-type": "application/json" },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
@@ -45,6 +45,17 @@ function harness(rpc: Rpc, connector: Partial<AccountConnector> = {}) {
 const dbError = (code: string, message: string, details?: unknown) => Object.assign(new Error(message), { code, message, details: details === undefined ? null : JSON.stringify(details) });
 
 describe("Identity member routes", () => {
+  it("uses the portable identity contract and preserves unavailable metrics in the connection profile", async () => {
+    const connected = account(accountId, { sends: null, sending: { allowed: false, reason: "blocked", scope: null }, limits: null });
+    const h = harness(name => {
+      expect(name).toBe("get_lifty_connection_senders");
+      return { workspace, senders: [{ ...sender, accounts: [connected] }] };
+    }, {}, "connections");
+    const response = await h.request("GET", "/v1/workspace/senders");
+    expect(response.status).toBe(200);
+    expect((await response.json()).senders[0].accounts[0]).toMatchObject({ sends: null, sending: { allowed: false } });
+  });
+
   it("requires confirmation and preserves per-campaign resume outcomes without provider work", async () => {
     const result = { workspace, account: account(accountId, { channel: "linkedin",
       disconnect_pause: { count: 1, can_resume: true } }), resumed: 1,

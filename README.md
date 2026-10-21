@@ -569,3 +569,23 @@ readers reject the new `disconnect_pause` field. This revision accepts both
 shapes. Recovery becomes usable when that migration is active; deploy the
 compatible dashboard after both. Reconnecting and account Resume remain
 separate from explicit campaign recovery.
+
+## Isolated connection profile
+
+`LIFTY_RUNTIME_PROFILE=connections` composes the same Auth, sender and email
+connection handlers and shared confirmation controller. It accepts no CRM,
+LinkedIn, Mailivery or Trigger credentials. Its route boundary closes campaigns,
+research, warmup, placement and notification sends before any handler can queue
+work. Its OpenAPI response lists only enabled operations. The default `full`
+profile retains all existing required settings and behavior.
+
+The profile is one prerequisite for LIF-1594, not evidence that a staging database
+implements its contracts. `/readyz` proves Auth reachability only. A real session,
+workspace, sender, signed authorization and verified durable attempt must pass
+before the pilot can be accepted.
+
+`.do/pilot-app.json` describes the separate `lifty-api-pilot` App Platform app at
+`api.pilot.liftygtm.com`, using one 0.5 GB instance. `scripts/prepare-pilot.mjs`
+pins it to the approved staging Supabase project and pilot Unipile application,
+checks runtime configuration and writes a private spec outside the checkout. It
+never creates or updates resources. See the runbook before provisioning.

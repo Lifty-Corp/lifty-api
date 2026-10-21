@@ -29,6 +29,7 @@ import { DEFAULT_DASHBOARD_ORIGIN, loadConfig, type ServiceConfig } from "./conf
 import { executeResearchOperation } from "./research-operations.js";
 import { connectorUnavailable, executeIdentityOperation } from "./identity-operations.js";
 import { createAccountConnection } from "./account-connection.js";
+import { createConnectionReadinessCheck } from "./connection-readiness.js";
 import { createWarmupMailboxIdentifier } from "./warmup-mailbox-provider.js";
 import { PublicError } from "./errors.js";
 import { createHubspotConnectOperations } from "./hubspot-connect.js";
@@ -60,7 +61,8 @@ export function createProductionApp(config: ServiceConfig) {
   // Reads use the caller's session; only report reads for authorized tests use the server-side key.
   const deliverability = createEmailDeliverabilityOperations({
     readPlacementDetails: createPlacementReportReader() });
-  const hubspot = createHubspotConnectOperations(config.hubspot);
+  const hubspotSettings = config.hubspot;
+  const hubspot = hubspotSettings ? createHubspotConnectOperations(hubspotSettings) : null;
   const attioSettings = config.attio ?? null;
   const attio = attioSettings ? createAttioConnectOperations(attioSettings) : null;
   const slackSettings = config.slack;
@@ -75,9 +77,10 @@ export function createProductionApp(config: ServiceConfig) {
     });
   };
   return createApp({
+    runtimeProfile: config.runtimeProfile ?? "full",
     connectionCallbacks:{
-      hubspot:createOAuthConfirmation({provider:"hubspot",origin:new URL(config.hubspot.publicBaseUrl).origin,...config.supabase,
-        open:state=>openHubspotConnectIntent(state,config.hubspot.clientSecret),complete:hubspot.completeCallback}),
+      ...(hubspot && hubspotSettings ? {hubspot:createOAuthConfirmation({provider:"hubspot",origin:new URL(hubspotSettings.publicBaseUrl).origin,...config.supabase,
+        open:state=>openHubspotConnectIntent(state,hubspotSettings.clientSecret),complete:hubspot.completeCallback})} : {}),
       ...(attio && attioSettings ? {attio:createOAuthConfirmation({provider:"attio",origin:new URL(attioSettings.publicBaseUrl).origin,...config.supabase,
         open:state=>openAttioConnectIntent(state,attioSettings.clientSecret),complete:attio.completeCallback})} : {}),
       ...(slack && slackSettings ? {slack:createOAuthConfirmation({provider:"slack",origin:new URL(slackSettings.publicBaseUrl).origin,...config.supabase,
@@ -85,7 +88,13 @@ export function createProductionApp(config: ServiceConfig) {
     },
     ...(accounts && config.accounts ? { accounts: { connection: accounts, origin: new URL(config.accounts.publicBaseUrl).origin,
       hostedOrigins: config.accounts.provider.v2.hostedAuthOrigins } } : {}),
-    identityOperation: (session, key, input, signal) => executeIdentityOperation(session, key, input, accounts ?? connectorUnavailable, signal),
+    identityOperation: (session, key, input, signal) => {
+      if (config.runtimeProfile === "connections" && key === "sending-accounts.connect"
+        && (typeof input.body !== "object" || input.body === null || !("channel" in input.body) || input.body.channel !== "email")) {
+        throw new PublicError({ status: 503, code: "CONNECT_UNAVAILABLE", message: "This environment supports email connection only." });
+      }
+      return executeIdentityOperation(session, key, input, accounts ?? connectorUnavailable, signal, config.runtimeProfile ?? "full");
+    },
     ...(config.openAiAppsChallenge === undefined ? {} : { openAiAppsChallenge: config.openAiAppsChallenge }),
     ...(config.mcp ? {
       mcp: { ...config.mcp, authenticate: createSupabaseAuthenticator(config.supabase, { oauthResource: config.mcp.resourceUrl }) },
@@ -132,15 +141,16 @@ export function createProductionApp(config: ServiceConfig) {
     // Test sends reach the notifications service's own Trigger project only.
     sendNotificationTest: (session, destinationRef) =>
       sendNotificationTest(session, destinationRef, notificationTest),
-    startHubspotConnect: hubspot.startConnect,
-    getHubspotConnection: hubspot.getConnection,
-    completeHubspotCallback: hubspot.completeCallback,
-    denyHubspotCallback: hubspot.denyCallback,
-    buildHubspotAuthorizeUrl: (state) => buildAuthorizationUrl({
-      clientId: config.hubspot.clientId,
-      redirectUri: `${config.hubspot.publicBaseUrl}/hubspot/callback`,
-      state,
-    }),
+    ...(hubspot && hubspotSettings ? {
+      startHubspotConnect: hubspot.startConnect,
+      getHubspotConnection: hubspot.getConnection,
+      completeHubspotCallback: hubspot.completeCallback,
+      denyHubspotCallback: hubspot.denyCallback,
+      buildHubspotAuthorizeUrl: (state: string) => buildAuthorizationUrl({
+        clientId: hubspotSettings.clientId,
+        redirectUri: `${hubspotSettings.publicBaseUrl}/hubspot/callback`, state,
+      }),
+    } : {}),
     getAttioConnection,
     ...(attio && attioSettings ? {
       startAttioConnect: attio.startConnect,
@@ -185,13 +195,15 @@ export function createProductionApp(config: ServiceConfig) {
         html: renderPasswordRecoveryPage({
           supabaseUrl: config.supabase.supabaseUrl,
           publishableKey: config.supabase.publishableKey,
-          publicBaseUrl: config.hubspot.publicBaseUrl,
+          publicBaseUrl: config.publicBaseUrl,
           scriptNonce, page,
         }),
         scriptNonce, connectOrigin: new URL(config.supabase.supabaseUrl).origin,
       };
     },
-    checkReadiness: createSupabaseReadinessCheck(config.supabase),
+    checkReadiness: config.runtimeProfile === "connections"
+      ? createConnectionReadinessCheck(config.supabase, emailKey)
+      : createSupabaseReadinessCheck(config.supabase),
     checkCompanyReadiness: createCompanyReadinessCheck(config.supabase, config.crm ?? null),
     checkCrmMappingReadiness: createCrmMappingReadinessCheck(config.supabase, config.crm ?? null),
   });
