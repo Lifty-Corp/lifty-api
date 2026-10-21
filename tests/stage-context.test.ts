@@ -27,6 +27,7 @@ describe("runtime context discovery and connection handoff", () => {
       reconnect: "POST /v1/workspace/sending-accounts/{id}/reconnect",
       pause: "POST /v1/workspace/sending-accounts/{id}/pause",
       resume: "POST /v1/workspace/sending-accounts/{id}/resume",
+      resume_campaigns: "POST /v1/workspace/sending-accounts/{id}/resume-campaigns",
       disconnect: "POST /v1/workspace/sending-accounts/{id}/disconnect",
     });
     expect(operations.connect!.request.body).toMatchObject({ required: ["sender_id", "channel"], additionalProperties: false });

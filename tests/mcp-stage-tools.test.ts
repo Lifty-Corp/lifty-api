@@ -52,6 +52,10 @@ describe("generated MCP stage operations", () => {
     expect(tools.find(tool => tool.name === "crm_mapping_sources")!.annotations.readOnlyHint).toBe(true);
     expect(tools.find(tool => tool.name === "sending_accounts_deliverability")!.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
     expect(tools.find(tool => tool.name === "sending_accounts_disconnect")!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: true });
+    const resumeCampaigns = tools.find(tool => tool.name === "sending_accounts_resume_campaigns")!;
+    expect(resumeCampaigns.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: true });
+    expect(resumeCampaigns.description).toContain("Writes commit synchronously");
+    expect(resumeCampaigns.inputSchema.required).toContain("body");
     const resume = tools.find(tool => tool.name === "sending_accounts_resume")!;
     expect(resume.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: true });
     expect(resume.description).toContain("automatically send to external recipients");

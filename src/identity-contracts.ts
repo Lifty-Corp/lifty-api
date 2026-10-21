@@ -51,6 +51,7 @@ export const AccountSchema = z.object({
   // Optional until the Functions migration 20261013160000 is live everywhere.
   sending: Sending.optional(),
   limits: Limits.nullable().optional(),
+  disconnect_pause: z.object({ count: Count, can_resume: z.boolean() }).strict().optional(),
   checked_at: Timestamp.nullable(),
   observation: z.object({ state: z.enum(["verified", "unverified"]) }).strict(),
   connected_at: Timestamp.nullable(),
@@ -85,6 +86,12 @@ export const SenderDeleteResultSchema = z.object({ ...Workspace,
 }).strict();
 export const AccountsGetSchema = z.object({ ...Workspace, accounts: z.array(AccountSchema).max(5000) }).strict();
 export const AccountResultSchema = z.object({ ...Workspace, account: AccountSchema }).strict();
+export const CampaignResumeResultSchema = AccountResultSchema.extend({
+  resumed: Count,
+  results: z.array(z.object({
+    campaign_ref: Id, outcome: z.enum(["resumed", "blocked"]), reason: z.string().nullable(),
+  }).strict()),
+}).strict();
 /** Durable stage shared by the browser and member/agent reads. A timeout is not a failed connection. */
 export const AccountConnectionProgress = z.object({
   stage: z.enum(["declaration_required", "preparing", "sign_in_required", "verifying", "complete"]),
