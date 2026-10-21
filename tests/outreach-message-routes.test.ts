@@ -142,6 +142,25 @@ describe("actual unapproved campaign message corrections", () => {
       expect((await harness(receipt).request("GET")).status).toBe(502);
     }
   });
+  it("reads conversations before and after the database adds copy_source and relays a hand-typed LinkedIn message", async () => {
+    const approved = reviewFixtures.approve;
+    const typed = { ...approved.message, message_ref: "6f1c2a8e-3b4d-4c5e-9f60-718293a4b5c6", status: "sent", review_status: null,
+      is_draft: false, content: "Typed directly in LinkedIn", source_message_ref: null, sender_version: null, review_reason: null,
+      action_ref: null, run_ref: null, campaign_ref: null, delivery_state: "confirmed", sent_at: "2026-10-20T10:00:00+00:00",
+      copy_source: "manual" };
+    const { copy_source: _absent, ...legacy } = typed;
+    for (const [item, expected] of [[legacy, undefined], [{ ...typed, copy_source: null }, null], [typed, "manual"]] as const) {
+      const response = await harness({ ...approved, history: [item] }, approved.message.message_ref).request("GET");
+      expect(response.status).toBe(200);
+      const [read] = (await response.json()).history;
+      if (expected === undefined) expect(read).not.toHaveProperty("copy_source");
+      else expect(read.copy_source).toBe(expected);
+    }
+    for (const value of ["", 42, {}]) {
+      const response = await harness({ ...approved, history: [{ ...typed, copy_source: value }] }, approved.message.message_ref).request("GET");
+      expect(response.status).toBe(502);
+    }
+  });
   it("forwards explicit approval feedback unchanged, including a down rating for edited copy", async () => {
     for (const action of ["approve", "retry"] as const) {
       const receipt = reviewFixtures[action];
