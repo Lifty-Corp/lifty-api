@@ -229,3 +229,27 @@ after its database dependencies; do not deploy local uncommitted source.
 Staging Google administrator Trusted approval and Google brand verification are
 separate acceptance checks. External/Testing and invited test users establish
 only testing behavior. Keep campaigns and warmup disabled in this profile.
+
+### Develop delivery and readiness
+
+The Verify workflow deploys `develop` only when repository variable
+`CONNECTION_PROFILE_ENABLED=true`. It verifies the source first, then
+`scripts/deploy-pilot.py` requires the Functions-owned staging contract and a
+replay heartbeat newer than two minutes before creating/updating the separate
+pilot app. The first create is the deployment; later pushes create one
+provider deployment and verify its active SHA. `main` retains its existing
+production workflow and app. Set `LIFTY_PILOT_APP_ID` to the created ID for an
+additional target assertion.
+
+The API repository's staging secrets are `STAGING_PUBLISHABLE_KEY`,
+`STAGING_EMAIL_SERVER_KEY` and `STAGING_UNIPILE_ACCESS_TOKEN`. The existing
+DigitalOcean deployment credential is reused. No administrative database key
+enters the API. The connection profile routes use shared workspace/sender/
+attempt contracts, expose unavailable metrics as null, and keep unsupported
+operations closed. `/readyz` requires both Auth health and the exact installed
+connection catalog, including its permissions and the replay heartbeat.
+
+The custom domain must resolve to the created app before testing browser
+callbacks. A healthy default ingress proves the deployment; it does not prove
+custom-domain DNS or a real mailbox consent. Record those live checks in
+LIF-1594 before enabling the dashboard's develop deployment.

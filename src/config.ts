@@ -243,6 +243,7 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
     } : null,
     serverKeys: { email: emailKey || null },
     accounts: v2 && (emailKey || linkedinKey) ? {
+      connectionOnly: runtimeProfile === "connections",
       publicBaseUrl: publicBaseUrl.toString().replace(/\/$/, ""),
       supabaseUrl: supabaseUrl.toString().replace(/\/$/, ""), publishableKey,
       serverKeys: { ...(emailKey ? { email: emailKey } : {}), ...(linkedinKey ? { linkedin: linkedinKey } : {}) },

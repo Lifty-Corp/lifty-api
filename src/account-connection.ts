@@ -14,6 +14,7 @@ import { AccountConnectionProgress, type Account } from "./identity-contracts.js
 // the trusted provider RPC. Member authorization happens before any call here.
 export interface AccountConnectionSettings {
   publicBaseUrl: string;
+  connectionOnly?: boolean;
   supabaseUrl: string;
   publishableKey: string;
   /** Existing per-channel server keys; the database checks them per attempt/account channel. */
@@ -196,7 +197,7 @@ export function createAccountConnection(settings: AccountConnectionSettings) {
     if (!accountRef) return "exists";
     let conflict: z.infer<typeof Conflict>;
     try {
-      conflict = Conflict.parse(await call("lifty_sending_account_conflict",
+      conflict = Conflict.parse(await call(settings.connectionOnly ? "lifty_connection_account_conflict" : "lifty_sending_account_conflict",
         { p_server_key: key(channel), p_attempt_id: attemptId, p_account_id: accountRef }));
     } catch { return "exists"; }
     switch (conflict.conflict) {

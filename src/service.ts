@@ -29,6 +29,7 @@ import { DEFAULT_DASHBOARD_ORIGIN, loadConfig, type ServiceConfig } from "./conf
 import { executeResearchOperation } from "./research-operations.js";
 import { connectorUnavailable, executeIdentityOperation } from "./identity-operations.js";
 import { createAccountConnection } from "./account-connection.js";
+import { createConnectionReadinessCheck } from "./connection-readiness.js";
 import { createWarmupMailboxIdentifier } from "./warmup-mailbox-provider.js";
 import { PublicError } from "./errors.js";
 import { createHubspotConnectOperations } from "./hubspot-connect.js";
@@ -92,7 +93,7 @@ export function createProductionApp(config: ServiceConfig) {
         && (typeof input.body !== "object" || input.body === null || !("channel" in input.body) || input.body.channel !== "email")) {
         throw new PublicError({ status: 503, code: "CONNECT_UNAVAILABLE", message: "This environment supports email connection only." });
       }
-      return executeIdentityOperation(session, key, input, accounts ?? connectorUnavailable, signal);
+      return executeIdentityOperation(session, key, input, accounts ?? connectorUnavailable, signal, config.runtimeProfile ?? "full");
     },
     ...(config.openAiAppsChallenge === undefined ? {} : { openAiAppsChallenge: config.openAiAppsChallenge }),
     ...(config.mcp ? {
@@ -200,7 +201,9 @@ export function createProductionApp(config: ServiceConfig) {
         scriptNonce, connectOrigin: new URL(config.supabase.supabaseUrl).origin,
       };
     },
-    checkReadiness: createSupabaseReadinessCheck(config.supabase),
+    checkReadiness: config.runtimeProfile === "connections"
+      ? createConnectionReadinessCheck(config.supabase, emailKey)
+      : createSupabaseReadinessCheck(config.supabase),
     checkCompanyReadiness: createCompanyReadinessCheck(config.supabase, config.crm ?? null),
     checkCrmMappingReadiness: createCrmMappingReadinessCheck(config.supabase, config.crm ?? null),
   });
