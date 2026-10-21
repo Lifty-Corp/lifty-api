@@ -1,3 +1,4 @@
+import { connectionProfileAllows } from "./runtime-profile.js";
 import { historicalEmailResult, historicalOperation, HistoricalEmailResultSchema } from "./historical-outreach.js";
 import { executeOutreachOperation, type OutreachInput } from "./outreach-operations.js";
 import { executeLinkedinOperation, type LinkedinInput } from "./linkedin-operations.js";
@@ -93,6 +94,7 @@ export type AuthenticationResult =
 export type { WorkspaceStatus } from "./contracts.js";
 
 export interface AppDependencies {
+  runtimeProfile?: "full" | "connections";
   openAiAppsChallenge?: string;
   mcp?: McpDependencies;
   renderOAuthConsentPage?(authorizationId: string): { html: string; scriptNonce: string; connectOrigin: string };
@@ -847,6 +849,9 @@ export function createApp(
     context.set("requestId", requestId);
     context.set("requestStartedAt", Date.now());
     context.header("x-request-id", requestId);
+    if (dependencies.runtimeProfile === "connections" && !connectionProfileAllows(context.req.method, context.req.path)) {
+      return context.json({ error: { code: "OPERATION_UNAVAILABLE", message: "This environment supports workspace setup and email connection only.", request_id: requestId } }, 503);
+    }
     await next();
   });
 
@@ -1090,6 +1095,14 @@ export function createApp(
           schema: { type: "string", enum: [...SUPPORTED_CLIENT_CONTRACTS] } });
         operation.responses ??= {};
         operation.responses["409"] ??= { description: "Unsupported client contract; update the installed CLI and skill." };
+      }
+    }
+    if (dependencies.runtimeProfile === "connections") {
+      for (const [path, methods] of Object.entries(document.paths ?? {})) {
+        for (const method of ["get", "post", "patch", "put", "delete"] as const) {
+          if (methods && !connectionProfileAllows(method.toUpperCase(), path)) delete methods[method];
+        }
+        if (methods && !["get", "post", "patch", "put", "delete"].some(method => method in methods)) delete document.paths![path];
       }
     }
     return context.json(document);

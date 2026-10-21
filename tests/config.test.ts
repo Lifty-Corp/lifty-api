@@ -48,7 +48,7 @@ describe("service configuration", () => {
     expect(loadConfig(ready).warmupSetup).not.toHaveProperty("appPasswordEnabled");
     const branded = loadConfig({...ready, LIFTY_WARMUP_PUBLIC_BASE_URL:"https://warmup.liftygtm.com"});
     expect(branded.warmupSetup?.publicBaseUrl).toBe("https://warmup.liftygtm.com");
-    expect(branded.hubspot.publicBaseUrl).toBe(validEnvironment.PUBLIC_BASE_URL);
+    expect(branded.hubspot?.publicBaseUrl).toBe(validEnvironment.PUBLIC_BASE_URL);
     expect(branded.slack?.publicBaseUrl).toBe(validEnvironment.PUBLIC_BASE_URL);
     for (const origin of ["http://warmup.example.com", "https://warmup.example.com/path", "https://warmup.example.com:444", "https://user:pass@warmup.example.com", "https://warmup.example.com?q=x", "https://warmup.example.com#x"]) {
       expect(() => loadConfig({...ready, LIFTY_WARMUP_PUBLIC_BASE_URL:origin})).toThrow();
@@ -168,7 +168,7 @@ describe("service configuration", () => {
 
 it("reaches the notifications Trigger project only with its own distinct key", () => {
   expect(loadConfig(validEnvironment).notificationsTrigger).toEqual({ apiUrl: "https://api.trigger.dev", secretKey: "tr_prod_notifications_test_key" });
-  expect(loadConfig({ ...validEnvironment, NOTIFICATIONS_TRIGGER_API_URL: "https://notifications.trigger.test/" }).notificationsTrigger.apiUrl)
+  expect(loadConfig({ ...validEnvironment, NOTIFICATIONS_TRIGGER_API_URL: "https://notifications.trigger.test/" }).notificationsTrigger?.apiUrl)
     .toBe("https://notifications.trigger.test");
   expect(() => loadConfig({ ...validEnvironment, NOTIFICATIONS_TRIGGER_SECRET_KEY: validEnvironment.TRIGGER_SECRET_KEY })).toThrow(/distinct from TRIGGER_SECRET_KEY/);
 });

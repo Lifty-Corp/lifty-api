@@ -8,6 +8,7 @@ describe("production service composition", () => {
     const app = createProductionApp({
       host: "0.0.0.0",
       port: 3000,
+      publicBaseUrl: "https://api.lifty.test",
       supabase: {
         supabaseUrl: "https://project.supabase.test",
         publishableKey: "sb_publishable_test_abcdefghijklmnopqrstuvwxyz",

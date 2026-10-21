@@ -191,3 +191,41 @@ restore a v5-only API against new resource writes without an explicit plan.
 ## Request limits
 
 `POST /v1/workspace/business`, `POST /v1/workspace/setup`, and `POST /v1/workspace/sample-review` share a budget of ten requests per authenticated user per minute per API process. Exhaustion returns 429 `RATE_LIMITED` with `Retry-After`. The in-memory budget resets on restart and is not shared across replicas. Per-IP and fleet-wide limiting belong at ingress. Reads and OAuth callbacks do not consume this budget.
+
+## Connection pilot preparation
+
+The existing app named `lifty-api-staging` serves production Auth/data. Its
+`do:*` commands must never be used to provision or deploy LIF-1594's pilot.
+
+The pilot target is `lifty-api-pilot`, API `https://api.pilot.liftygtm.com`,
+dashboard `https://pilot.liftygtm.com`, staging Supabase
+`csyhcwpcojbjlwwxdmhc`, and Unipile application
+`app_01m5fr5mgdfzx8ftceq7y7z0h4` on `https://auth.pilot.liftygtm.com`.
+
+Build the API, then prepare a private spec with staging's publishable key in
+`SUPABASE_PUBLISHABLE_KEY` and private credential files:
+
+```sh
+npm run build
+node scripts/prepare-pilot.mjs --output /private/tmp/lifty-pilot-app.json \
+  --unipile-key-file /private/path/to/pilot-account-key \
+  --email-key-file /private/path/to/pilot-email-capability
+```
+
+The files must be readable only by their owner. Use a distinct random email
+capability of at least 32 characters and provision only its SHA-256 digest in
+the staging database. The Unipile Account key belongs exclusively to the pilot
+application. Do not copy the production app spec, credentials or encrypted
+values. Never print the generated spec: it contains secrets even though App
+Platform encrypts SECRET entries after accepting them.
+
+Before creating this separately authorized USD5/month resource, verify the
+Functions-owned staging contract receipt and its real Auth/workspace/sender/
+connection checks, plus a deployed signed durable intake and replay path. Auth
+health alone is insufficient. Hold deployment when a contract is missing.
+Ordinary push, PR and merge gates still apply. Deploy the reviewed source only
+after its database dependencies; do not deploy local uncommitted source.
+
+Staging Google administrator Trusted approval and Google brand verification are
+separate acceptance checks. External/Testing and invited test users establish
+only testing behavior. Keep campaigns and warmup disabled in this profile.
