@@ -10,7 +10,12 @@ import {
 // fixture, captured at this instant (see tests/fixtures/email-deliverability).
 const now = new Date("2026-09-29T19:52:59Z");
 const fixture = (name: string): unknown => JSON.parse(readFileSync(new URL(`./fixtures/email-deliverability/${name}`, import.meta.url), "utf8"));
-const source = (name = "source-member-a.json"): Source => DeliverabilitySource.parse(fixture(name));
+const source = (name = "source-member-a.json"): Source => {
+  const parsed = DeliverabilitySource.parse(fixture(name));
+  // Captured inbox evidence with the new common-gate projection attached.
+  for (const mailbox of parsed.mailboxes) for (const connection of mailbox.connections) connection.send_gate_known = true;
+  return parsed;
+};
 const inbox = (response: { mailboxes: DeliverabilityMailbox[] }, email: string, slug = "fixture-a") => {
   const found = response.mailboxes.find(item => item.email === email && item.workspace.slug === slug);
   if (!found) throw new Error(`missing ${slug}/${email}`);
@@ -91,7 +96,7 @@ describe("Unipile and Mailivery inbox", () => {
 
   it("explains a blocked campaign with the effective control", () => {
     expect(mailbox.campaigns.status.code).toBe("in_campaign_blocked");
-    expect(mailbox.campaigns.status.reasons).toEqual([{ code: "send_paused", message: "Sending is paused for all LIFT email." }]);
+    expect(mailbox.campaigns.status.reasons).toEqual([{ code: "hold", message: "A safety hold is active (operator_hold)." }, { code: "send_paused", message: "Sending is paused for all LIFT email." }]);
     expect(mailbox.connections[0]!.holds).toEqual([{ reason: "operator_hold", updated_at: expect.any(String) }]);
     expect(mailbox.status.code).toBe("blocked_in_campaign");
   });
@@ -154,41 +159,46 @@ describe("mixed providers, identity and missing evidence", () => {
 
 });
 
-describe("send gates by workspace owner", () => {
-  const managed = (by: "lift" | "lifty", edit: (mailbox: Source["mailboxes"][number]) => void = () => {}) =>
-    inbox(present(withInbox("uni-only@a.test", item => { item.workspace_managed_by = by; edit(item); })), "uni-only@a.test");
-
-  it("treats LIFT send controls as the canonical Unipile gate", () => {
-    expect(inbox(present(), "uni-only@a.test").readiness.paths).toEqual([expect.objectContaining({ gate: "lift_send_controls", state: expect.objectContaining({ code: "blocked" }) })]);
-    const allowed = managed("lift", item => { item.connections[0]!.send_block_reason = null; });
-    expect(allowed.readiness).toMatchObject({ code: "ready", paths: [{ gate: "lift_send_controls", state: { code: "allowed" } }] });
-    expect(allowed.campaigns.status.code).toBe("in_campaign_enabled");
-    const blocked = managed("lift", item => { item.connections[0]!.send_block_reason = "sender_mailbox_ineligible"; });
-    expect(blocked.readiness.reasons[0]!.message).toMatch(/warmup and placement checks/);
+describe("common strict sender gates", () => {
+  it.each(["lift", "lifty", undefined])("uses the same strict placement rule regardless of old classifier %s", by => {
+    const value = withInbox("uni-only@a.test", item => Object.assign(item, { workspace_managed_by: by }));
+    const mailbox = inbox(present(value), "uni-only@a.test");
+    expect(mailbox.placement.evidence).toMatchObject({ max_age_days: 10, freshness: "stale" });
+    expect(mailbox.readiness.paths[0]!.gate).toBe("strict_sender_checks");
   });
 
-  it("does not claim readiness when the governing gate is unknown", () => {
-    // The first deliverability-source.v1 release had no workspace_managed_by.
-    const unknown = inbox(present(withInbox("uni-only@a.test", item => { delete item.workspace_managed_by; item.connections[0]!.send_block_reason = null; })), "uni-only@a.test");
-    expect(unknown.readiness.code).toBe("unknown");
-    expect(unknown.campaigns.status.code).toBe("unverified");
+  it("uses the evaluated database gate without guessing from plan or warmup", () => {
+    const allowed = inbox(present(withInbox("uni-only@a.test", item => {
+      item.connections[0]!.send_block_reason = null;
+      item.connections[0]!.holds = [];
+    })), "uni-only@a.test");
+    expect(allowed.readiness).toMatchObject({ code: "ready", paths: [{ gate: "strict_sender_checks", state: { code: "allowed" } }] });
+    const blocked = inbox(present(withInbox("uni-only@a.test", item => {
+      item.connections[0]!.send_block_reason = "email_placement_required";
+      item.connections[0]!.holds = [];
+    })), "uni-only@a.test");
+    expect(blocked.readiness.code).toBe("blocked");
+    expect(blocked.readiness.reasons[0]).toMatchObject({ code: "email_placement_required", message: expect.stringContaining("last ten days") });
   });
 
-  it("does not apply LIFT's placement freshness rule to Lifty inboxes", () => {
-    const lifty = managed("lifty");
-    expect(lifty.placement.evidence).toMatchObject({ max_age_days: null, freshness: "unknown" });
-    expect(lifty.placement.evidence.rule).toMatch(/No placement freshness rule is known/);
-    expect(managed("lift").placement.evidence).toMatchObject({ max_age_days: 10, freshness: "stale" });
+  it("never treats a missing common-gate projection as all-clear", () => {
+    const mailbox = inbox(present(withInbox("uni-only@a.test", item => {
+      delete item.connections[0]!.send_gate_known;
+      item.connections[0]!.send_block_reason = null;
+      item.connections[0]!.holds = [];
+    })), "uni-only@a.test");
+    expect(mailbox.readiness.code).toBe("unknown");
+    expect(mailbox.campaigns.status.code).toBe("unverified");
   });
 
-  it("keeps optional personal warmup from blocking Lifty inboxes", () => {
-    const personal = managed("lifty", item => { item.connections[0]!.mailbox_use = "personal"; item.connections[0]!.holds = []; item.connections[0]!.send_block_reason = null; });
-    expect(personal.warmup.sources[0]).toMatchObject({ required_days: null, period_complete: null, outreach_unlocked: null, estimated_completion: null });
-    expect(personal.readiness).toMatchObject({ code: "no_known_blocker", paths: [{ gate: "lifty_campaign_checks" }] });
-    const outreach = managed("lifty", item => { item.connections[0]!.mailbox_use = "outreach"; item.connections[0]!.holds = []; });
-    expect(outreach.readiness.reasons.map(item => item.code)).toEqual(["warmup_required"]);
-    const undeclared = managed("lifty", item => { item.connections[0]!.holds = []; });
-    expect(undeclared.readiness.reasons.map(item => item.code)).toEqual(["mailbox_use_required"]);
+  it("preserves explicit holds and optional personal warmup independently", () => {
+    const mailbox = inbox(present(withInbox("uni-only@a.test", item => {
+      item.connections[0]!.mailbox_use = "personal";
+      item.connections[0]!.send_block_reason = null;
+    })), "uni-only@a.test");
+    expect(mailbox.warmup.sources[0]).toMatchObject({ required_days: null, period_complete: null, outreach_unlocked: null, estimated_completion: null });
+    expect(mailbox.readiness.code).toBe("blocked");
+    expect(mailbox.readiness.reasons.map(item => item.code)).toContain("hold");
   });
 });
 

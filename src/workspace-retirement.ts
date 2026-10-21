@@ -22,13 +22,11 @@ export const RetireWorkspaceResult = z.object({
 export type RetireWorkspaceInput = z.infer<typeof RetireWorkspaceRequest>;
 export type RetireWorkspaceOutput = z.infer<typeof RetireWorkspaceResult>;
 const messages: Record<string, string> = {
-  workspace_forbidden: "Only a LIFT admin can delete a workspace. Contact LIFT support.",
+  workspace_forbidden: "Only a workspace member or LIFT admin can retire this workspace. Sign in with an authorized account.",
   workspace_history_retained:
-    "This workspace has history and cannot be deleted.",
+    "This workspace has business history and cannot be retired. Preserve its records and disconnect integrations to stop provider access.",
   workspace_identity_mismatch:
     "The workspace ID, slug and name do not match. Read its current identity before retiring it.",
-  workspace_not_lifty:
-    "LIFT manages this workspace, so it cannot be retired here. Ask the LIFT team to retire it.",
   workspace_cross_tenant_reference:
     "This workspace has shared references that prevent safe retirement. Contact LIFT support.",
   workspace_retirement_blocked:
@@ -39,9 +37,9 @@ const messages: Record<string, string> = {
   workspace_email_disconnect_required:
     "Disconnect email through LIFTY before retiring this workspace.",
   workspace_integration_disconnect_required:
-    "Disconnect HubSpot through LIFTY before retiring this workspace.",
+    "Disconnect every integration through Lifty before retiring this workspace.",
   workspace_integration_revocation_pending:
-    "HubSpot authorization revocation is still pending. Wait for it to finish before retrying retirement.",
+    "Integration authorization revocation is still pending. Wait for it to finish before retrying retirement.",
   email_service_forbidden:
     "The workspace retirement service is unavailable. Contact LIFT support.",
   unauthenticated: "Sign in to LIFTY before retiring a workspace.",

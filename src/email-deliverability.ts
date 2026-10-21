@@ -20,7 +20,6 @@ const MAILIVERY_EVIDENCE_FRESH_HOURS = 24;
  * lifty_email_sender_gate for Unipile connections under the strict policy.
  */
 const PLACEMENT_FRESH_DAYS = 10;
-const LIFTY_BETA_POLICY = /^lifty\.personal-beta\./;
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -53,20 +52,18 @@ function freshness(observedAt: string | null | undefined, maxAgeMs: number | nul
 
 function executionOf(test: SourceTest): Pick<PlacementTest, "execution_status" | "execution_reason"> {
   const failure = test.failure_code ?? null;
-  const policy = failure && LIFTY_BETA_POLICY.test(failure)
-    ? reason("disabled_by_policy", "Placement tests are disabled by this workspace's beta policy. This request will not run.") : null;
   switch (test.execution_status) {
     case "completed": return { execution_status: "completed", execution_reason: null };
-    case "running": return { execution_status: "running", execution_reason: policy };
+    case "running": return { execution_status: "running", execution_reason: null };
     case "queued": case "ready":
-      return { execution_status: "pending", execution_reason: policy };
+      return { execution_status: "pending", execution_reason: null };
     case "awaiting_confirmation":
-      return { execution_status: "pending", execution_reason: policy ?? reason("awaiting_confirmation", "Waiting for someone to review the seed recipients and authorize the test. No seed email is sent before that.") };
+      return { execution_status: "pending", execution_reason: reason("awaiting_confirmation", "Waiting for someone to review the seed recipients and authorize the test. No seed email is sent before that.") };
     case "failed":
-      return { execution_status: "error", execution_reason: policy ?? reason(failure && /^[a-z][a-z0-9_]{0,63}$/.test(failure) ? failure : "execution_failed",
+      return { execution_status: "error", execution_reason: reason(failure && /^[a-z][a-z0-9_]{0,63}$/.test(failure) ? failure : "execution_failed",
         failure ? `The test did not complete (${failure}). This is not a placement result.` : "The test did not complete. This is not a placement result.") };
     case "blocked":
-      return { execution_status: "error", execution_reason: policy ?? reason("blocked", "Safety checks stopped this test before it sent. This is not a placement result.") };
+      return { execution_status: "error", execution_reason: reason("blocked", "Safety checks stopped this test before it sent. This is not a placement result.") };
     case "ambiguous":
       return { execution_status: "unknown", execution_reason: reason("ambiguous", "The provider's result is uncertain. Check the existing test before creating another.") };
     default:
@@ -85,8 +82,7 @@ function presentTest(test: SourceTest, now: Date): PlacementTest {
   const tally = test.counts?.inbox != null && test.counts?.total != null ? ` · ${test.counts.inbox}/${test.counts.total} inbox` : "";
   const label = execution.execution_status === "completed"
     ? verdict === "pass" ? `Passed${tally}` : verdict === "fail" ? `Failed${tally}` : "Completed · no verdict"
-    : execution.execution_status === "pending" ? (execution.execution_reason?.code === "awaiting_confirmation" ? "Waiting for authorization"
-      : execution.execution_reason?.code === "disabled_by_policy" ? "Not run · disabled by policy" : "Pending")
+    : execution.execution_status === "pending" ? (execution.execution_reason?.code === "awaiting_confirmation" ? "Waiting for authorization" : "Pending")
     : execution.execution_status === "running" ? "Running" : execution.execution_status === "error" ? "Did not run" : "Uncertain";
   const families = test.families ? {
     gmail: test.families.gmail ? counts(test.families.gmail) : null,
@@ -104,14 +100,11 @@ function presentTest(test: SourceTest, now: Date): PlacementTest {
 }
 
 function placementRule(mailbox: SourceMailbox): { maxAgeDays: number | null; rule: string; applies: boolean; disabled: boolean } {
-  // outreach_email_mailbox_ready governs LIFT-managed Unipile inboxes only;
-  // Lifty workspaces follow their own email policy, which the source doesn't carry.
-  if (mailbox.workspace_managed_by !== "lifty" && mailbox.warmup.mailivery.some(item => item.binding)) return { maxAgeDays: PLACEMENT_FRESH_DAYS, applies: true, disabled: false,
-    rule: `This inbox's send check needs a passing placement test from the last ${PLACEMENT_FRESH_DAYS} days.` };
-  const beta = [...mailbox.placement.recent_tests, mailbox.placement.latest_completed_test]
-    .some(test => test?.failure_code && LIFTY_BETA_POLICY.test(test.failure_code));
-  if (beta) return { maxAgeDays: null, applies: false, disabled: true, rule: "Placement tests are disabled by this workspace's beta policy." };
-  return { maxAgeDays: null, applies: false, disabled: false, rule: "No placement freshness rule is known for this inbox, so its age is shown without a verdict on currency." };
+  if (mailbox.connections.some(connection => connection.provider === "unipile")) return {
+    maxAgeDays: PLACEMENT_FRESH_DAYS, applies: true, disabled: false,
+    rule: `This inbox's send check needs a passing placement test from the last ${PLACEMENT_FRESH_DAYS} days.`,
+  };
+  return { maxAgeDays: null, applies: false, disabled: false, rule: "No current sending account is connected to this inbox. Historical placement age does not establish sending eligibility." };
 }
 
 function initialWarmupPending(warmup: DeliverabilityMailbox["warmup"]): boolean {
@@ -139,7 +132,6 @@ function presentPlacement(mailbox: SourceMailbox, warmup: DeliverabilityMailbox[
     else if (attempt.execution_status === "unknown") reasons.push(reason("newer_test_uncertain", `The newest test from ${day(attempt.tested_at)} has an uncertain result.`));
     else if (attempt.verdict === "unknown") reasons.push(reason("newer_test_no_verdict", `The newest test from ${day(attempt.tested_at)} completed without a verdict.`));
   }
-  if (latestAttempt?.execution_reason?.code === "disabled_by_policy") reasons.push(latestAttempt.execution_reason);
   let status: DeliverabilityMailbox["placement"]["status"];
   if (source.test_count === 0) {
     const afterWarmup = rule.applies && initialWarmupPending(warmup);
@@ -248,6 +240,14 @@ const controlReasons: Record<string, string> = {
   channel_paused: "Email is paused for this workspace.",
   sender_mailbox_ineligible: "This inbox hasn't passed its warmup and placement checks for sending.",
   owner_mismatch: "The lead belongs to a different sender.",
+  email_declaration_required: "A current workspace member must declare this mailbox's use before sending.",
+  email_sender_unhealthy: "The connected account needs a current successful health check before sending.",
+  email_sender_identity_mismatch: "The connected account no longer matches the approved sender.",
+  email_warmup_required: "This dedicated mailbox needs a healthy check after 21 active warmup days before sending.",
+  email_warmup_spam: "Warmup emails are landing in spam. Sending remains held until a later sufficient clean measurement.",
+  email_placement_required: "This mailbox needs a passing placement test from the last ten days before sending.",
+  email_safety_check_required: "This mailbox needs a recent successful safety check before sending.",
+  email_critical_hold: "An explicit safety hold blocks this mailbox.",
 };
 
 function controlScope(scopeKey: string): Connection["controls"][number]["scope"] {
@@ -270,32 +270,20 @@ function controlReason(value: string): Reason {
   return reason(code, controlReasons[value] ?? "A send control blocks this connection.");
 }
 
-function connectionGate(mailbox: SourceMailbox, connection: SourceConnection): Connection["send_gate"] & { gate: DeliverabilityMailbox["readiness"]["paths"][number]["gate"] } {
-  const managedBy = mailbox.workspace_managed_by ?? null;
-  if (managedBy === "lift") {
-    return connection.send_block_reason
-      ? { gate: "lift_send_controls", ...make("blocked", "Blocked", "bad", "LIFT's send controls block this connection.", [controlReason(connection.send_block_reason)]) }
-      : { gate: "lift_send_controls", ...make("allowed", "Allowed to send", "ok", "Passes LIFT's send controls, including this inbox's warmup and placement checks.") };
-  }
-  if (managedBy === "lifty") {
-    const reasons: Reason[] = [];
-    if (connection.status !== "connected") reasons.push(reason("connection_unavailable", `The connection is ${connection.status}.`));
-    for (const hold of connection.holds) reasons.push(reason("hold", `A safety hold is active (${hold.reason}).`));
-    if (!connection.mailbox_use) reasons.push(reason("mailbox_use_required", "Say whether this is a mailbox you already use or a new outreach account before sending. Reconnect the email account to answer."));
-    const unlocked = mailbox.warmup.mailivery.find(item => item.connection_ref === connection.connection_ref)?.outreach_unlocked === true;
-    if (connection.mailbox_use === "outreach" && !unlocked) reasons.push(reason("warmup_required", `Warmup holds this dedicated account: it needs a healthy check after ${REQUIRED_WARMUP_ACTIVE_DAYS} active warmup days, or its warmup emails are landing in spam. Check warmup status for which.`));
-    return reasons.length > 0
-      ? { gate: "lifty_campaign_checks", ...make("blocked", "Blocked", "bad", "Lifty's send checks block this connection.", reasons) }
-      : { gate: "lifty_campaign_checks", ...make("no_known_blocker", "No known blocker", "watch",
-        "Nothing recorded blocks this connection. Lifty runs the remaining checks, such as a fresh connection check, when a campaign sends.") };
-  }
-  return connection.send_block_reason
-    ? { gate: "unknown", ...make("blocked", "Blocked", "bad", "A send control blocks this connection.", [controlReason(connection.send_block_reason)]) }
-    : { gate: "unknown", ...make("unknown", "Send checks unknown", "warn", "This server's data doesn't say which send checks govern this connection.") };
+function connectionGate(connection: SourceConnection): Connection["send_gate"] & { gate: DeliverabilityMailbox["readiness"]["paths"][number]["gate"] } {
+  const reasons: Reason[] = [];
+  if (connection.status !== "connected") reasons.push(reason("connection_unavailable", `The connection is ${connection.status}.`));
+  for (const hold of connection.holds) reasons.push(reason("hold", `A safety hold is active (${hold.reason}).`));
+  if (connection.send_block_reason) reasons.push(controlReason(connection.send_block_reason));
+  if (reasons.length) return { gate: "strict_sender_checks", ...make("blocked", "Blocked", "bad", "The shared sender checks block this connection.", reasons) };
+  // A null reason is an all-clear only when the database confirms that the
+  // common sender gate was evaluated. Older projections stay unknown.
+  if (connection.send_gate_known === true) return { gate: "strict_sender_checks", ...make("allowed", "Allowed to send", "ok", "Passes the shared sender checks, including warmup, placement, account health and holds. Campaign authorization is checked at sending.") };
+  return { gate: "unknown", ...make("unknown", "Send checks unknown", "warn", "Current sender-gate evidence is unavailable. Refresh after the shared gate projection is available.") };
 }
 
 function presentConnection(mailbox: SourceMailbox, connection: SourceConnection): Connection & { gate: DeliverabilityMailbox["readiness"]["paths"][number]["gate"] } {
-  const { gate, ...sendGate } = connectionGate(mailbox, connection);
+  const { gate, ...sendGate } = connectionGate(connection);
   return {
     gate,
     connection_ref: connection.connection_ref,

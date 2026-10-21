@@ -235,14 +235,14 @@ describe("member-only exact placement seed preview",()=>{
   });
 });
 
-describe("beta campaign contracts",()=>{
+describe("historical campaign policy snapshots",()=>{
   const email_policy={version:"lifty.personal-beta.v1",revision:reference,placement_required:false,habitual_only:true};
   it("preserves exact policy digest content and never reports invented placement",async()=>{
     const h=harness({data:{...preview,email_policy,content:{...preview.content,email_policy},placement_required:false,placement_performed:false,blockers:[]},error:null});
     const res=await h.app.request("/v1/email/campaign",post(request()));
     expect(res.status).toBe(200);expect(await res.json()).toMatchObject({email_policy,content:{email_policy},placement_required:false,placement_performed:false});
   });
-  it.each(["email_policy_changed","email_beta_mailbox_use_required","email_placement_disabled_by_policy"])("exposes actionable blocker %s",async message=>{
+  it.each(["email_policy_changed"])("exposes actionable blocker %s",async message=>{
     const h=harness({data:null,error:{code:"PT409",message}});const res=await h.app.request("/v1/email/campaign",post(request()));
     expect(res.status).toBe(409);expect((await res.json()).error.code).toBe(message.toUpperCase());
   });

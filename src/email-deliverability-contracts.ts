@@ -99,6 +99,8 @@ const SourceConnection = z.object({
   created_at: Timestamp,
   updated_at: Timestamp.nullish(),
   send_block_reason: z.string().max(300).nullish(),
+  // Only the common strict database gate can establish an all-clear.
+  send_gate_known: z.boolean().optional(),
   mailbox_ready: z.boolean().nullish(),
   controls: z.array(SourceControl).max(50).default([]),
   holds: z.array(z.object({ reason: z.string().max(200), updated_at: Timestamp.nullish() })).max(50).default([]),
@@ -148,8 +150,6 @@ export type SourceCampaign = z.infer<typeof SourceCampaign>;
 const SourceMailbox = z.object({
   mailbox_ref: Ref,
   workspace_ref: Uuid,
-  // Added by the managed-by follow-up; absent from the first release.
-  workspace_managed_by: z.enum(["lift", "lifty"]).nullish(),
   email: Email,
   domain: z.string().max(253),
   senders: z.array(z.object({ sender_ref: Uuid, name: z.string().max(200) })).max(50),
@@ -176,7 +176,6 @@ export type SourceMailbox = z.infer<typeof SourceMailbox>;
 
 const SourceWorkspace = z.object({
   workspace_ref: Uuid, slug: z.string().max(100), name: z.string().max(200), is_active: z.boolean(),
-  managed_by: z.enum(["lift", "lifty"]).nullish(),
 });
 export const DeliverabilitySource = z.object({
   contract: z.literal(DELIVERABILITY_SOURCE_CONTRACT),
@@ -284,7 +283,7 @@ export type WarmupSource = z.infer<typeof WarmupSource>;
 
 const Path = z.object({
   provider: Provider, connection_ref: Uuid.nullable(),
-  gate: z.enum(["lift_send_controls", "lifty_campaign_checks", "unknown"]),
+  gate: z.enum(["strict_sender_checks", "unknown"]),
   state: state(PathCode),
 }).strict();
 
