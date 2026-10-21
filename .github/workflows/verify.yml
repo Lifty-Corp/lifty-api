@@ -10,6 +10,12 @@ on:
     branches: [main, develop]
   push:
     branches: [develop]
+  workflow_dispatch:
+    inputs:
+      self_hosted_staging:
+        description: Verify and deploy staging on the one-use repository runner
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -20,6 +26,7 @@ concurrency:
 
 jobs:
   verify:
+    if: "!(github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/develop' && inputs.self_hosted_staging)"
     name: Verify (typecheck + tests + build)
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -84,3 +91,33 @@ jobs:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
       - name: Deploy isolated develop API after database/replay readiness
         run: python3 scripts/deploy-pilot.py
+
+  deploy-pilot-local:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/develop' && inputs.self_hosted_staging && vars.CONNECTION_PROFILE_ENABLED == 'true'
+    runs-on: ${{ vars.STAGING_RUNNER_LABEL || 'lifty-staging-unconfigured' }}
+    timeout-minutes: 30
+    concurrency:
+      group: deploy-pilot
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Verify the exact staging source
+        run: |
+          npm run verify
+          python3 -m unittest discover -s scripts -p test_deploy_pilot.py
+      - name: Deploy isolated develop API after database/replay readiness
+        env:
+          DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_PUBLISHABLE_KEY }}
+          LIFTY_EMAIL_SERVER_KEY: ${{ secrets.STAGING_EMAIL_SERVER_KEY }}
+          UNIPILE_V2_ACCESS_TOKEN: ${{ secrets.STAGING_UNIPILE_ACCESS_TOKEN }}
+          LIFTY_PILOT_APP_ID: ${{ vars.LIFTY_PILOT_APP_ID }}
+        run: |
+          doctl version
+          python3 scripts/deploy-pilot.py
