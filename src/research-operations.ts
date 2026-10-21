@@ -21,7 +21,7 @@ const Grade = z.enum(["A", "B", "C"]);
 export const ResearchLimitSchema = z
   .object({
     weekly_research_limit: z.number().int().positive(),
-    source: z.enum(["free", "paid", "managed"]),
+    source: z.enum(["free", "paid"]),
     effective_from: Timestamp,
   })
   .strict();

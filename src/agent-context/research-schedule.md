@@ -5,8 +5,7 @@ each week, and turn weekly research on or off. Read `references.common` first.
 
 ## How weekly volume works
 
-- Every workspace has a weekly research limit set by its plan: 25 people on
-  the free plan, 100 on a paid plan and 150 for workspaces managed by LIFT.
+- Every workspace has a weekly research limit set by its explicit plan.
   `get` returns it as `limit` with its `source` and `effective_from`; it is
   read-only.
 - The week runs from Monday 00:00 UTC to the next Monday 00:00 UTC for every

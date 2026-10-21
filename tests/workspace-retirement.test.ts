@@ -24,8 +24,14 @@ describe("workspace retirement API boundary",()=>{
   const h=harness();for(const value of [{},{confirm_slug:"senja"},{...body,workspace_ref:user},{...body,p_server_key:key},{...body,reset_budget:true}])expect((await h.app.request(path,post(value))).status).toBe(400);
   expect((await h.app.request("/v1/workspaces/not-a-uuid/retire",post())).status).toBe(400);expect(h.rpc).not.toHaveBeenCalled();
  });
- it.each(["workspace_forbidden","workspace_history_retained","workspace_identity_mismatch","workspace_not_lifty","workspace_cross_tenant_reference","workspace_retirement_blocked","workspace_linkedin_retention_required","workspace_email_disconnect_required","workspace_integration_disconnect_required","workspace_integration_revocation_pending"])("preserves SQL guard %s without exposing details",async message=>{
+ it.each(["workspace_forbidden","workspace_history_retained","workspace_identity_mismatch","workspace_cross_tenant_reference","workspace_retirement_blocked","workspace_linkedin_retention_required","workspace_email_disconnect_required","workspace_integration_disconnect_required","workspace_integration_revocation_pending"])("preserves SQL guard %s without exposing details",async message=>{
   const h=harness(null,{code:"PT409",message,details:"private-db-context"});const response=await h.app.request(path,post());expect(response.status).toBe(409);const text=await response.text();expect(text).toContain(message.toUpperCase());expect(text).not.toContain("private-db-context");expect(h.rpc).toHaveBeenCalledTimes(1);
+ });
+ it("explains common history and integration guards without a workspace category",async()=>{
+  for(const [message,expected] of [["workspace_forbidden","workspace member or LIFT admin"],["workspace_history_retained","business history"],["workspace_integration_disconnect_required","every integration"]]){
+   const response=await harness(null,{code:message==="workspace_forbidden"?"PT403":"PT409",message}).app.request(path,post());
+   expect((await response.json()).error.message).toContain(expected);
+  }
  });
  it("supports exact request replay without broadening the identity",async()=>{
   const h=harness();await h.app.request(path,post());await h.app.request(path,post());expect(h.rpc.mock.calls[0]).toEqual(h.rpc.mock.calls[1]);

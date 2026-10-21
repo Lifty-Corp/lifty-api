@@ -9,7 +9,6 @@ import { BASE_CONTEXTS, NEXT_STEP_CATALOG, ON_REQUEST_CONTEXTS, getNextStep, nex
 export const AdminWorkspace = z.object({
   workspace_ref: z.uuid(), name: z.string().min(1), slug: z.string().min(1), active: z.boolean(),
   created_at: z.string(),
-  // Only the plan kind (free, paid, managed) tells Lifty and managed workspaces apart.
   plan: z.object({ kind: z.string().nullable() }),
 });
 export type AdminWorkspace = z.infer<typeof AdminWorkspace>;

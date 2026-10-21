@@ -5,7 +5,7 @@ team. Every LinkedIn account and mailbox belongs to exactly one sender. A sender
 has at most one LinkedIn account and any number of mailboxes. The sender exists
 before any account is connected; connecting never creates a person.
 
-Every workspace (Lifty or LIFT-managed) uses the same senders and operations.
+Every workspace uses the same senders and operations.
 Send the chosen workspace as `references.common` describes.
 
 ## Find the person first, then use their id

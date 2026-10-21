@@ -56,8 +56,8 @@ CLI and dashboard alongside this API cutover; v7 is deliberately retired.
 
 Weekly research (LIF-1174) is one schedule per workspace: `weekly_target` plus
 active or paused, with CAS `expected_version`. A `null` target follows the
-plan's full limit (LIF-1247). The plan's weekly research limit (25 free, 100
-paid, 150 managed; plans are set by LIFT admins, LIF-1233) is read-only; a Monday 00:00 UTC week counts
+plan's full limit (LIF-1247). The plan's explicit weekly research allowance is read-only;
+LIFT admins assign entitlements independently of payment arrangements. a Monday 00:00 UTC week counts
 each person once, when their first research completes, and includes the
 five-person sample. Weekly status, the calibration sample and the lead list
 read the same ledger. Like every stage, these RPCs select the workspace in the
@@ -422,17 +422,18 @@ Primary contracts: [password recovery guide](https://supabase.com/docs/guides/au
 
 ## Workspace retirement
 
-Customers cannot delete a workspace, and the customer catalog has no delete
-operation. Only a LIFT admin (`profiles.is_admin`) calls
-`POST /v1/workspaces/{workspace_ref}/retire`; other callers receive 403
-`WORKSPACE_FORBIDDEN`. A workspace with history (leads, campaigns, research runs
-or Business changes) is rejected with 409 `WORKSPACE_HISTORY_RETAINED`, even for
-an admin. There is no archive, restore or purge. A successful delete returns
-`state:"deleted"`.
-It requires exact workspace identity, disconnection and resolution of pending
-revocations; retained LinkedIn account/history guards still apply. Consumed
-sending budgets are preserved. Retirement is separate from Business and does
-not depend on the email service key. Account deletion remains a separate action.
+Workspace members and LIFT admins use the same retirement endpoint,
+`POST /v1/workspaces/{workspace_ref}/retire`, with the exact current name and
+slug as confirmation. The caller's JWT is forwarded to `retire_lifty_workspace`;
+there is no privileged API credential or role bypass. SQL permits retirement
+only without business history and after all required integration disconnections
+and revocations finish. Shared references and historical sender/reply evidence
+remain protected. Retirement preserves the login and acquisition budget; it
+never deletes business history to make a workspace eligible.
+
+Requires the LIF-1590 Functions migration before member retirement is enabled.
+Provider disconnects remain explicit operations and are never performed by this
+endpoint. Unknown errors and mismatched identity receipts fail closed.
 
 ## Company mapping for the local agent
 

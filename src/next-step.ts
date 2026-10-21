@@ -116,7 +116,7 @@ export const NEXT_STEP_CATALOG: Record<string, NextStepEntry> = {
     guide: { task: "campaigns", references: ["common", "writing", "anti_slop"] }, context: "campaigns",
     related: ["research-schedule", "sending-accounts", "journeys"] },
   email_ready: { step: "email", state: "action_required", section: "kickoff",
-    when: ["The founder confirmed the first sample", "A mailbox's warmup is ready and its placement test passed", "The workspace is on a paid or managed plan"],
+    when: ["The founder confirmed the first sample", "A mailbox's warmup is ready and its placement test passed", "The workspace plan allows outreach"],
     guide: { task: "campaigns", references: ["common", "writing", "anti_slop"] }, context: "campaigns",
     related: ["journeys", "commercial-voice", "senders", "sending-accounts", "research-schedule"] },
 };
