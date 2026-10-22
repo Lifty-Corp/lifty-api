@@ -1,3 +1,4 @@
+import { SetNotificationControlsRequestSchema, SetNotificationPreferencesRequestSchema } from "./contracts.js";
 import { outreachOperationDefinitions } from "./outreach-operations.js";
 import { businessOperationDefinitions } from "./business-operations.js";
 import { researchOperationDefinitions } from "./research-operations.js";
@@ -65,6 +66,8 @@ export const ConnectionAttemptQuerySchema = z.object({ attempt_ref: AttemptRef.o
 export const NotificationStagePatchSchema = z.discriminatedUnion("operation", [
   z.object({ operation: z.literal("destination"), values: UpsertNotificationDestinationRequestSchema }).strict(),
   z.object({ operation: z.literal("route"), values: SetNotificationRouteRequestSchema }).strict(),
+  z.object({ operation: z.literal("controls"), values: SetNotificationControlsRequestSchema }).strict(),
+  z.object({ operation: z.literal("preferences"), values: SetNotificationPreferencesRequestSchema }).strict(),
 ]);
 
 function json(schema: z.ZodType, io: "input" | "output" = "output") {
@@ -198,7 +201,7 @@ export const stageOperations: Record<string, Record<string, StageOperation>> = {
   notifications: {
     get: operation("GET", stageRoute("notifications"), "Without attempt_ref read the notification types with the channels each can use, the destinations (each saved Slack channel and the workspace owner's email) with the types each receives, and Slack state. With it verify only that exact Slack authorization attempt.", z.union([NotificationConfigSchema, ConnectionAttemptStatusSchema]), null, ConnectionAttemptQuerySchema),
     post: operation("POST", stageRoute("notifications"), "Start Slack connection/reconnection and immediately return the workspace consent link and exact attempt reference. Supersedes earlier unused pending Slack consent links for this workspace. Does not replace the existing Slack grant, change notification destinations or post a message. Show the returned link; connection requires user consent and verification of that exact attempt.", AuthorizationRequiredSchema, Empty),
-    patch: operation("PATCH", stageRoute("notifications"), "Save a Slack channel as a destination (operation destination; needs connected Slack; a new destination receives every default-on type Slack can show), or subscribe or unsubscribe one destination, a Slack channel or the owner email, to one notification type (operation route). Returns the saved destination. This cannot authorize Slack or send a test.", NotificationDestinationSchema, NotificationStagePatchSchema),
+    patch: operation("PATCH", stageRoute("notifications"), "Save a Slack channel as a destination (operation destination; needs connected Slack; a new destination receives every default-on type Slack can show), or subscribe or unsubscribe one destination, a Slack channel or the owner email, to one notification type (operation route). Returns the saved destination. Use operation controls for workspace enablement and independent source/destination restrictions, or preferences for a type’s complete Slack/email/both/Off choice. Global restrictions always apply. This cannot authorize Slack, send a test or change outreach.", z.union([NotificationDestinationSchema, NotificationConfigSchema]), NotificationStagePatchSchema),
     channels: operation("GET", "/v1/notifications/slack/channels", "Read Slack channels currently available to Lifty before choosing a destination.", SlackNotificationChannelsSchema),
     test: operation("POST", "/v1/notifications/destinations/{destination_ref}/test", "Send one test message to a saved Slack destination, active or not; needs connected Slack. Posts a visible message in that channel and returns the accepted request_ref, not proof of delivery. The owner email destination cannot be tested. Does not change subscriptions or authorize outreach.", NotificationTestResultSchema, Empty, Empty, z.object({ destination_ref: z.uuid() }).strict()),
     disconnect: operation("POST", "/v1/workspace/notifications/disconnect", "Disconnect Slack from the current workspace. Slack notifications stop until Slack is reconnected; saved destinations and their subscriptions are not deleted.", DisconnectResponseSchema, Empty),

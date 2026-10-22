@@ -475,7 +475,9 @@ export function registerStageRoutes(app: OpenAPIHono<AppEnvironment>, dependenci
 
       if (stage === "notifications") {
         const input = parse(NotificationStagePatchSchema, body);
-        return forward(context, "PUT", input.operation === "destination" ? "/v1/notifications/destinations/slack" : "/v1/notifications/routes", input.values);
+        const paths = { destination: "/v1/notifications/destinations/slack", route: "/v1/notifications/routes",
+          controls: "/v1/notifications/controls", preferences: "/v1/notifications/preferences" };
+        return forward(context, "PUT", paths[input.operation], input.values);
       }
       throw new PublicError({ status: 405, code: "STAGE_OPERATION_UNSUPPORTED", message: "This operation is not available." });
     });

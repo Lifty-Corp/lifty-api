@@ -44,7 +44,7 @@ import {
   createSupabaseReadinessCheck,
 } from "./supabase-auth.js";
 import { createAcquisitionVerificationTrigger, createCrmSyncTrigger, createCrmMappingTrigger, createFirstRunTrigger, createIntegrationRevocationTrigger, createNotificationTestTrigger, createWarmupVerifyTrigger } from "./trigger-client.js";
-import { confirmRunReview, disconnectIntegration, getCrmSyncStatus, getRunStatus, getWorkspaceStatus, getNotificationConfig, listSlackNotificationChannels, upsertNotificationDestination, setNotificationRoute, sendNotificationTest, startCrmSyncRun, startRun } from "./workspace-operations.js";
+import { confirmRunReview, disconnectIntegration, getCrmSyncStatus, getRunStatus, getWorkspaceStatus, getNotificationConfig, setNotificationControls, setNotificationPreferences, listSlackNotificationChannels, upsertNotificationDestination, setNotificationRoute, sendNotificationTest, startCrmSyncRun, startRun } from "./workspace-operations.js";
 
 export function createProductionApp(config: ServiceConfig) {
   const emailKey = config.serverKeys?.email ?? null;
@@ -134,6 +134,8 @@ export function createProductionApp(config: ServiceConfig) {
     runCrmMapping: createCrmMapping(config.crm ? { ...config.crm, enqueue: createCrmMappingTrigger(config.trigger) } : null),
     upsertNotificationDestination,
     setNotificationRoute,
+    setNotificationControls,
+    setNotificationPreferences,
     // Test sends reach the notifications service's own Trigger project only.
     sendNotificationTest: (session, destinationRef) =>
       sendNotificationTest(session, destinationRef, notificationTest),
