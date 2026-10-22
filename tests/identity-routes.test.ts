@@ -74,6 +74,23 @@ describe("Identity member routes", () => {
     expect(h.effects.revoke).not.toHaveBeenCalled();
   });
 
+  it("changes a mailbox's use only with an explicit use and confirmation", async () => {
+    const result = { workspace, account: account(accountId, { declaration: { mailbox_use: "dedicated", declared_by: senderId, declared_at: now } }) };
+    const h = harness(() => result);
+    const path = `/v1/workspace/sending-accounts/${accountId}/declare`;
+    for (const body of [{ mailbox_use: "dedicated" }, { confirm: true }, { mailbox_use: "outreach", confirm: true }]) {
+      expect((await h.request("POST", path, body)).status).toBe(400);
+    }
+    expect(h.calls).toEqual([]);
+    const response = await h.request("POST", path, { mailbox_use: "dedicated", confirm: true });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(result);
+    expect(h.calls).toEqual([{ name: "declare_lifty_sending_account_use",
+      args: { p_workspace_id: null, p_account_id: accountId, p_payload: { mailbox_use: "dedicated", confirm: true } } }]);
+    expect(h.effects.reconcileAttempt).not.toHaveBeenCalled();
+    expect(h.effects.revoke).not.toHaveBeenCalled();
+  });
+
   it("call the documented RPCs with named arguments and the database-resolved workspace", async () => {
     const h = harness(name => ({
       get_lifty_senders: { workspace, senders: [sender] },

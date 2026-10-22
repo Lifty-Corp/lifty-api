@@ -10,8 +10,7 @@ behind Lifty’s connection pages.
 `sender_id`, `channel`) lists accounts including disconnected history. Each has:
 
 - `status`: `connected`, `needs_reconnect` (Lifty lost access; the person must
-  sign in again) or `disconnected` (explicitly removed by the customer or an
-  operator).
+  sign in again) or `disconnected` (explicitly removed).
 - `state`: `active` or `paused`, the account's own usage switch, independent of
   `status`.
 - `sending`: whether the account may send now (`allowed`) and, if not, the
@@ -20,9 +19,9 @@ behind Lifty’s connection pages.
   and daily budget still apply.
 - `limits`: daily limits Lifty enforces (null when none). Only LIFT changes them.
 - `checked_at` and `observation.state`: the last verified provider check and
-  whether it is recent enough. `unverified` means the last known facts are
-  older than the freshness window; it is not a disconnection and not a reason
-  to reconnect by itself. Sending waits until a fresh check.
+  whether it is recent enough. `unverified` means the facts are older than the
+  freshness window; it is not a disconnection or a reason to reconnect. Sending
+  waits for a fresh check.
 - `declaration`: what the person confirmed on Lifty's connect page.
 - `sends`: sends today and over the last seven days.
 
@@ -39,7 +38,7 @@ never report an account as disconnected or missing from a failed read.
    automation tool; for email, a mailbox they already use or a dedicated
    sending mailbox), then opens the sign-in. Google and Microsoft 365/Outlook
    are offered for new mailboxes. Use the owner’s primary mailbox; aliases and shared/delegated
-   mailboxes are not supported. Connecting never resumes outreach. A sender has at most one LinkedIn account
+   mailboxes are not supported. A sender has at most one LinkedIn account
    (`LINKEDIN_ALREADY_CONNECTED`: reconnect that one instead).
 3. For `declaration_required`, `preparing` or `sign_in_required`, show
    `connection_url` as a clickable link naming the account owner. Do not open
@@ -107,8 +106,7 @@ omitted; with several it is required and the operation returns
 POST inputs belong in body. Every workspace uses the same operations, and each
 mailbox has its own warmup: starting one never stops another.
 
-Google and Microsoft mailbox connections use the same warmup and placement
-operations. Warmup authorization is a separate step from the outreach account
+Warmup authorization is a separate step from the outreach account
 connection. Show the returned Lifty setup link for that exact mailbox; Lifty
 verifies its provider and selects Google or Microsoft automatically. The owner
 must authorize the same mailbox. Microsoft consent opens in another tab;
@@ -116,15 +114,16 @@ keep the Lifty confirmation page open until it verifies warmup is running.
 An organization may require Microsoft administrator approval. A canceled or
 blocked consent does not mean warmup is running; read the same attempt's status.
 Preserve existing warmup evidence during a migration until the replacement is
-verified; connecting does not transfer warmup age or resume outreach.
+verified; connecting does not transfer warmup age.
 Never request an App Password or route the founder to a password form.
 
 After the email account is connected, call `warmup_status` and use its
 `mailbox_use` and `recommended_go_live` to explain what happens next. Do not
 compute dates yourself.
 
-- `personal` (a mailbox the person already uses, declared habitual): no
-  initial warmup period is required. Recommend warmup anyway: it runs
+- `personal` (a mailbox the person already uses, declared habitual): a
+  lookalike-domain or outreach-only address is really dedicated, so offer
+  `sending_accounts_declare`. Otherwise no initial warmup period is required. Recommend warmup anyway: it runs
   alongside outreach and protects inbox placement and reply rates. The
   placement test needs the warmup setup; Lifty runs it once setup is done.
   Tradeoff: a warmup service gets access to the mailbox, and warmup emails and

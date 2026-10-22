@@ -589,3 +589,13 @@ before the pilot can be accepted.
 pins it to the approved staging Supabase project and pilot Unipile application,
 checks runtime configuration and writes a private spec outside the checkout. It
 never creates or updates resources. See the runbook before provisioning.
+
+### Mailbox use changes (LIF-1603)
+
+`sending-accounts.declare` exposes
+`POST /v1/workspace/sending-accounts/{id}/declare` and
+`lifty post sending-accounts declare` with
+`{"mailbox_use":"habitual"|"dedicated","confirm":true}`. It calls Functions'
+`declare_lifty_sending_account_use`, so deploy this API after migration
+`20261022160000_lif1603_declare_mailbox_use.sql` is live; account reads are
+unchanged. The email connect page no longer preselects a mailbox use.
