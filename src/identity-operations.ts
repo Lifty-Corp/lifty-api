@@ -106,6 +106,13 @@ export const identityOperationDefinitions = {
       args: input => ({ p_account_id: path(input), p_payload: input.body }),
       description: "Explicitly resume LinkedIn campaigns recorded as paused by disconnect, with confirm:true. Requires the same verified identity, active account and no hold. Rechecks approval and safety per campaign; returns resumed/blocked results. Other pauses stay. Retries reuse actions. First pending steps become due now; follow-ups keep receipt-relative timing. Read disconnect_pause first. This permits sends.",
     },
+    declare: {
+      method: "POST", route: `${accountsRoute}/{id}/declare`, cli: { operation: "declare" }, rpc: "declare_lifty_sending_account_use",
+      path: contracts.IdPath, query: Empty, request: contracts.DeclareUseSchema, invalid: invalidRequest,
+      response: contracts.AccountResultSchema, success: 200,
+      args: input => ({ p_account_id: path(input), p_payload: input.body }),
+      description: "With the user's yes, switch a mailbox between habitual and dedicated. Dedicated waits for 21 active warmup days.",
+    },
     disconnect: {
       method: "POST", route: `${accountsRoute}/{id}/disconnect`, cli: { operation: "disconnect" }, rpc: "disconnect_lifty_sending_account",
       path: contracts.IdPath, query: Empty, request: contracts.DisconnectSchema, invalid: invalidRequest,

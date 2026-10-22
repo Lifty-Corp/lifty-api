@@ -50,7 +50,7 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   SENDER_NOT_FOUND: "This sender is not available in the selected workspace. Read senders for current ids.",
   CAMPAIGN_RESUME_ACCOUNT_BLOCKED: "Reconnect the same LinkedIn account and resume its usage first. Sending holds and unverified health must be resolved before resuming campaigns.",
   ACCOUNT_NOT_FOUND: "This sending account is not available in the selected workspace. Read sending-accounts for current ids.",
-  ACCOUNT_DISCONNECTED: "This account is disconnected. Reconnect it before resuming.",
+  ACCOUNT_DISCONNECTED: "This account is disconnected. Reconnect it before resuming or changing it.",
   LINKEDIN_ALREADY_CONNECTED: "This sender already has a LinkedIn account. Reconnect that account instead of connecting another.",
   CONNECTION_ATTEMPT_NOT_FOUND: "This connection attempt is not available in the selected workspace.",
   CONNECT_UNAVAILABLE: "Lifty cannot open a sign-in for this account right now. Try again later or contact LIFT support.",
