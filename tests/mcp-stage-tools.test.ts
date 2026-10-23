@@ -56,6 +56,8 @@ describe("generated MCP stage operations", () => {
     expect(resumeCampaigns.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: true });
     expect(resumeCampaigns.description).toContain("Writes commit synchronously");
     expect(resumeCampaigns.inputSchema.required).toContain("body");
+    // LIF-1603: switching a mailbox to habitual can let campaigns send through it.
+    expect(tools.find(tool => tool.name === "sending_accounts_declare")!.annotations).toMatchObject({ readOnlyHint: false, openWorldHint: true });
     const resume = tools.find(tool => tool.name === "sending_accounts_resume")!;
     expect(resume.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: true });
     expect(resume.description).toContain("automatically send to external recipients");

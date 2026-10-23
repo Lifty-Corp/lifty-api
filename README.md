@@ -569,3 +569,26 @@ readers reject the new `disconnect_pause` field. This revision accepts both
 shapes. Recovery becomes usable when that migration is active; deploy the
 compatible dashboard after both. Reconnecting and account Resume remain
 separate from explicit campaign recovery.
+
+## Mailbox use changes (LIF-1603)
+
+`sending-accounts.declare` exposes
+`POST /v1/workspace/sending-accounts/{id}/declare` and
+`lifty post sending-accounts declare` with
+`{"mailbox_use":"habitual"|"dedicated","confirm":true}`. It calls Functions'
+`declare_lifty_sending_account_use`, so deploy this API after migration
+`20261023213000_lif1603_declare_mailbox_use.sql` is live; account reads are
+unchanged. The email connect page no longer preselects a mailbox use.
+
+## Inbox verdict (LIF-1603)
+
+Every `email-deliverability.v1` inbox carries one member-facing `status` and a
+`next_step` (`code`, `owner`, `label`, `description`) built from the current
+account first, then the shared sender gate's reason, then campaigns. A missing
+send-time safety check (`email_safety_check_required`, the gate's last check)
+is not a blocker: such an inbox is `ready_idle` without an active campaign. New
+status codes are `disconnected`, `needs_reconnect`, `on_hold` and
+`setup_needed`. A LIFT pause never changes the verdict; `account.outreach` and
+`connections[].controls` still report it. The dashboard reads status codes as
+strings, so either deploy order is safe; deploy the dashboard that renders
+`next_step` after this revision.

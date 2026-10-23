@@ -5,6 +5,7 @@ import {
   DeliverabilityQuery, DeliverabilityResponse, DeliverabilitySource,
   type DeliverabilityMailbox, type DeliverabilitySource as Source,
 } from "../src/email-deliverability-contracts.js";
+import type { Account } from "../src/identity-contracts.js";
 
 // Sources are real deliverability_read output for the LIF-1041 two-tenant
 // fixture, captured at this instant (see tests/fixtures/email-deliverability).
@@ -244,4 +245,58 @@ describe("warmup states", () => {
 
 
 
+});
+
+describe("member verdict and next step (LIF-1603)", () => {
+  type Edit = (mailbox: Source["mailboxes"][number]) => void;
+  /** uni-only@a.test as its current account sees it: connected, no holds, the given gate reason. */
+  function verdict(reason: string | null, edit: Edit = () => {}, account: Partial<Account> = {}) {
+    const value = withInbox("uni-only@a.test", item => {
+      item.connections[0]!.holds = [];
+      item.connections[0]!.controls = [];
+      item.connections[0]!.send_block_reason = reason;
+      edit(item);
+    });
+    const mailbox = value.mailboxes.find(item => item.email === "uni-only@a.test")!;
+    const current: Account = { id: mailbox.connections[0]!.connection_ref, sender_id: mailbox.connections[0]!.sender_ref!, channel: "email",
+      identity: mailbox.email, status: "connected", state: "active", checked_at: now.toISOString(), observation: { state: "verified" },
+      connected_at: now.toISOString(), disconnected_at: null, access_revoked_at: null, declaration: null, sends: { today: 0, last_7_days: 0 }, ...account };
+    return inbox(presentDeliverability(value, now, { accounts: new Map([[mailbox.workspace_ref, [current]]]) }), "uni-only@a.test");
+  }
+  const noCampaigns: Edit = item => { item.campaigns = []; };
+
+  it("treats a missing send-time safety check as ready, not blocked", () => {
+    const idle = verdict("email_safety_check_required", noCampaigns);
+    expect(idle.readiness.code).toBe("ready");
+    expect(idle.account?.outreach.code).toBe("idle");
+    expect(idle.status).toMatchObject({ code: "ready_idle", label: "Ready · not in a campaign" });
+    expect(idle.next_step).toMatchObject({ code: "add_to_campaign", owner: "member" });
+    const sending = verdict("email_safety_check_required", item => { item.campaigns[0]!.states = { active: 1 }; });
+    expect(sending.status).toMatchObject({ code: "in_campaign", label: "In campaign" });
+    expect(sending.next_step.code).toBe("none");
+  });
+
+  it("names the action for each sender-gate reason", () => {
+    expect(verdict("email_declaration_required")).toMatchObject({ status: { code: "setup_needed" }, next_step: { code: "declare_use", owner: "member" } });
+    expect(verdict("email_sender_identity_mismatch")).toMatchObject({ status: { code: "needs_reconnect" }, next_step: { code: "reconnect" } });
+    expect(verdict(null, noCampaigns, { status: "needs_reconnect" })).toMatchObject({ status: { code: "needs_reconnect" }, next_step: { code: "reconnect" } });
+    expect(verdict(null, noCampaigns, { status: "disconnected" })).toMatchObject({ status: { code: "disconnected" }, next_step: { code: "none" } });
+    // An active campaign waiting on a blocked inbox is named in the explanation.
+    expect(verdict("email_declaration_required").status.description).toMatch(/active campaign is waiting/);
+  });
+
+  it("waits for a running dedicated warmup and asks to connect a missing one", () => {
+    const warming = verdict("email_warmup_required", item => { item.connections[0]!.mailbox_use = "outreach"; });
+    expect(warming).toMatchObject({ status: { code: "warming", label: "Warming · day 10 of 21" }, next_step: { code: "wait", owner: "lifty" } });
+    expect(warming.next_step.description).toMatch(/2026-10-10/);
+    const missing = verdict("email_warmup_required", item => { item.connections[0]!.mailbox_use = "outreach"; item.warmup.mailivery = []; });
+    expect(missing).toMatchObject({ status: { code: "setup_needed" }, next_step: { code: "connect_warmup", owner: "member" } });
+  });
+
+  it("sends a missing placement test to the domain records when they fail", () => {
+    const dns = verdict("email_placement_required", item => {
+      item.warmup.mailivery[0]!.binding!.snapshot = { spf: "valid", dmarc: "not_valid", mx: "valid" };
+    });
+    expect(dns).toMatchObject({ status: { code: "placement_due" }, next_step: { code: "fix_dns", owner: "member" } });
+  });
 });

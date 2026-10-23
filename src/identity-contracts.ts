@@ -129,3 +129,5 @@ export const SenderDeleteSchema = z.object({ expected_version: Version, confirm:
 export const AccountsQuerySchema = z.object({ sender_id: Id.optional(), channel: Channel.optional() }).strict();
 export const ConnectSchema = z.object({ sender_id: Id, channel: Channel }).strict();
 export const DisconnectSchema = z.object({ confirm: z.literal(true) }).strict();
+/** LIF-1603: a member changes how a connected mailbox is used. */
+export const DeclareUseSchema = z.object({ mailbox_use: z.enum(["habitual", "dedicated"]), confirm: z.literal(true) }).strict();
