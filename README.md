@@ -597,7 +597,7 @@ never creates or updates resources. See the runbook before provisioning.
 `lifty post sending-accounts declare` with
 `{"mailbox_use":"habitual"|"dedicated","confirm":true}`. It calls Functions'
 `declare_lifty_sending_account_use`, so deploy this API after migration
-`20261022160000_lif1603_declare_mailbox_use.sql` is live; account reads are
+`20261023213000_lif1603_declare_mailbox_use.sql` is live; account reads are
 unchanged. The email connect page no longer preselects a mailbox use.
 
 ## Inbox verdict (LIF-1603)
