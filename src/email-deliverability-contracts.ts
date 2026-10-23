@@ -216,7 +216,11 @@ const Counts = z.object({ inbox: Count.nullable(), spam: Count.nullable(), other
 const Provider = z.string().regex(/^[a-z][a-z0-9_-]{0,39}$/);
 
 export const MailboxStatusCode = ["retired", "paused", "placement_failed", "blocked_in_campaign", "warmup_problem", "needs_approval",
-  "placement_due", "in_campaign", "ready_idle", "warming", "no_known_blocker", "not_ready", "no_evidence"] as const;
+  "placement_due", "in_campaign", "ready_idle", "warming", "no_known_blocker", "not_ready", "no_evidence",
+  "disconnected", "needs_reconnect", "on_hold", "setup_needed"] as const;
+/** What resolves an inbox's status, and who acts (LIF-1603). Clients choose where each code leads. */
+export const NextStepCode = ["none", "add_to_campaign", "resume_campaign", "turn_on", "reconnect", "declare_use", "connect_warmup",
+  "finish_warmup_setup", "fix_dns", "wait", "lifty_review"] as const;
 export const ReadinessCode = ["ready", "partially_ready", "blocked", "no_known_blocker", "unknown"] as const;
 export const PathCode = ["allowed", "blocked", "no_known_blocker", "unknown"] as const;
 export const WarmupCode = ["active", "paused", "pending", "problem", "not_running", "unknown", "none"] as const;
@@ -362,6 +366,9 @@ export const DeliverabilityMailbox = z.object({
   connections: z.array(Connection).max(50),
   sending: Sending,
   availability: z.object({ mailivery_warmup: z.boolean(), placement_tests: z.boolean() }).strict(),
+  next_step: z.object({
+    code: z.enum(NextStepCode), owner: z.enum(["member", "lifty", "none"]), label: Text(120), description: Text(400),
+  }).strict(),
 }).strict();
 export type DeliverabilityMailbox = z.infer<typeof DeliverabilityMailbox>;
 
