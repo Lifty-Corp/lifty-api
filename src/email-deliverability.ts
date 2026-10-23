@@ -270,15 +270,27 @@ function controlReason(value: string): Reason {
   return reason(code, controlReasons[value] ?? "A send control blocks this connection.");
 }
 
+/**
+ * The last check of private.lifty_email_sender_gate: a passing safety row from the
+ * last 15 minutes, written only while a send path evaluates the inbox. Every
+ * earlier check (policy, account, holds, declaration, warmup, placement) has
+ * passed when it is the reason, so on its own it means "checked at send time",
+ * never blocked (LIF-1603).
+ */
+const SEND_TIME_CHECK = "email_safety_check_required";
+
 function connectionGate(connection: SourceConnection): Connection["send_gate"] & { gate: DeliverabilityMailbox["readiness"]["paths"][number]["gate"] } {
   const reasons: Reason[] = [];
+  const sendTime = connection.send_block_reason === SEND_TIME_CHECK;
   if (connection.status !== "connected") reasons.push(reason("connection_unavailable", `The connection is ${connection.status}.`));
   for (const hold of connection.holds) reasons.push(reason("hold", `A safety hold is active (${hold.reason}).`));
-  if (connection.send_block_reason) reasons.push(controlReason(connection.send_block_reason));
+  if (connection.send_block_reason && !sendTime) reasons.push(controlReason(connection.send_block_reason));
   if (reasons.length) return { gate: "strict_sender_checks", ...make("blocked", "Blocked", "bad", "The shared sender checks block this connection.", reasons) };
   // A null reason is an all-clear only when the database confirms that the
   // common sender gate was evaluated. Older projections stay unknown.
-  if (connection.send_gate_known === true) return { gate: "strict_sender_checks", ...make("allowed", "Allowed to send", "ok", "Passes the shared sender checks, including warmup, placement, account health and holds. Campaign authorization is checked at sending.") };
+  if (connection.send_gate_known === true) return { gate: "strict_sender_checks", ...make("allowed", "Allowed to send", "ok", sendTime
+    ? "Passes the shared sender checks, including warmup, placement, account health and holds. A final safety check runs right before each send."
+    : "Passes the shared sender checks, including warmup, placement, account health and holds. Campaign authorization is checked at sending.") };
   return { gate: "unknown", ...make("unknown", "Send checks unknown", "warn", "Current sender-gate evidence is unavailable. Refresh after the shared gate projection is available.") };
 }
 
@@ -411,6 +423,159 @@ function presentStatus(parts: {
   return make("not_ready", "Not ready yet", "muted", readiness.description, readiness.reasons);
 }
 
+// ---------------------------------------------------------------- verdict
+
+type NextStep = DeliverabilityMailbox["next_step"];
+type Verdict = { status: DeliverabilityMailbox["status"]; next_step: NextStep };
+const step = (code: NextStep["code"], owner: NextStep["owner"], label: string, description: string): NextStep =>
+  ({ code, owner, label: label.slice(0, 120), description: description.slice(0, 400) });
+const NOTHING = step("none", "none", "Nothing to do", "No action is needed.");
+const LIFTY_REVIEW = step("lifty_review", "lifty", "Lifty is reviewing it", "Nothing to do on your side. Lifty reviews this inbox and lets you know if it needs you.");
+const verdict = (code: DeliverabilityMailbox["status"]["code"], label: string, tone: Tone, description: string, next: NextStep, reasons: Reason[] = []): Verdict =>
+  ({ status: make(code, label, tone, description, reasons), next_step: next });
+
+function currentWarmupSource(warmup: DeliverabilityMailbox["warmup"]): WarmupSource | null {
+  return warmup.current ?? (warmup.sources.length === 1 ? warmup.sources[0]! : null);
+}
+
+function dnsStep(warmup: DeliverabilityMailbox["warmup"]): NextStep | null {
+  const source = currentWarmupSource(warmup);
+  const hold = source?.state.reasons.find(item => dnsHoldRecords(item.code));
+  if (hold) return step("fix_dns", "member", "Fix domain records", hold.message);
+  const checks = source?.checks;
+  if (checks && Object.values(checks).includes("not_valid")) return step("fix_dns", "member", "Fix domain records",
+    "At least one of SPF, DMARC or MX isn't valid for this domain. Fix it with your DNS provider; Lifty checks again automatically.");
+  return null;
+}
+
+/** What gets warmup running again when it isn't. */
+function warmupStep(warmup: DeliverabilityMailbox["warmup"]): NextStep {
+  const dns = dnsStep(warmup);
+  if (dns) return dns;
+  const source = currentWarmupSource(warmup);
+  switch (source?.state.code) {
+    case "active": return step("wait", "lifty", "Wait for warmup", "Lifty keeps warming this inbox up. Nothing to do on your side.");
+    case "pending": return step("finish_warmup_setup", "member", "Finish warmup setup", source.state.description);
+    case "paused": case "problem": return LIFTY_REVIEW;
+    default: return step("connect_warmup", "member", "Connect warmup", "Warmup isn't running for this inbox. Connect it in Senders; it runs alongside sending.");
+  }
+}
+
+/** A missing or failed placement test: domain records first, otherwise Lifty retests while warmup runs. */
+function placementStep(warmup: DeliverabilityMailbox["warmup"], failed: boolean): NextStep {
+  const dns = dnsStep(warmup);
+  if (dns) return dns;
+  if (currentWarmupSource(warmup)?.state.code !== "active") return warmupStep(warmup);
+  return step("wait", "lifty", failed ? "Lifty tests it again" : "Wait for the placement test", failed
+    ? "Lifty runs a new placement test automatically while warmup runs. If it keeps failing, Lifty reviews the inbox with you."
+    : "Lifty runs a placement test automatically while warmup runs. Nothing to do on your side.");
+}
+
+/** The pre-LIF-1603 status when the inbox's current account isn't known; its step follows the status. */
+function fallbackStep(status: DeliverabilityMailbox["status"]): NextStep {
+  switch (status.code) {
+    case "in_campaign": return NOTHING;
+    case "ready_idle": return step("add_to_campaign", "member", "Add to a campaign", "This inbox can send. Activate a campaign that uses it when you're ready.");
+    case "warming": return step("wait", "lifty", "Wait for warmup", "Lifty keeps warming this inbox up. Nothing to do on your side.");
+    default: return step("wait", "lifty", "Wait for the next check", "Lifty can't confirm this inbox's state from the stored data yet. Refresh later.");
+  }
+}
+
+/**
+ * LIF-1603: the one member-facing verdict for an inbox, with what resolves it.
+ * Ordered by what the member sees first: the account (Senders), then the shared
+ * send gate's reason, then campaigns. A LIFT pause is operator-side and never
+ * changes this verdict; `account.outreach` and `connections[].controls` report it.
+ */
+function presentVerdict(parts: {
+  account: Account | undefined; source: SourceConnection | undefined; connection: Connection | undefined;
+  presented: DeliverabilityMailbox["account"]; placement: DeliverabilityMailbox["placement"]; campaigns: DeliverabilityMailbox["campaigns"];
+  warmup: DeliverabilityMailbox["warmup"]; readiness: DeliverabilityMailbox["readiness"]; hasEvidence: boolean;
+}): Verdict {
+  const { account, source, connection, placement, campaigns, warmup } = parts;
+  if (!account || !source || !connection) {
+    const status = presentStatus({ account: parts.presented, placement, campaigns, warmup, readiness: parts.readiness, hasEvidence: parts.hasEvidence });
+    return { status, next_step: fallbackStep(status) };
+  }
+  const mine = campaigns.items.filter(item => item.connection_ref === account.id);
+  const active = mine.reduce((sum, item) => sum + (item.states.active ?? 0), 0);
+  const waiting = active ? ` ${active === 1 ? "An active campaign is" : `${active} active campaigns are`} waiting to send from it.` : "";
+  const reconnect = step("reconnect", "member", "Reconnect", "Reconnect the mailbox in Senders with the same account.");
+
+  if (account.status === "disconnected") return verdict("disconnected", "Disconnected", "muted",
+    "This inbox was disconnected, so Lifty doesn't send from it. Its history stays.",
+    step("none", "none", "Nothing to do", "Reconnect it in Senders only if you want to send from it again."));
+  if (account.status === "needs_reconnect") return verdict("needs_reconnect", "Reconnect needed", "bad",
+    `Lifty lost access to this mailbox, so nothing sends from it.${waiting}`, reconnect);
+  if (account.state === "paused") return verdict("paused", "Sending off", "warn",
+    "Sending is switched off for this inbox, so campaigns don't send from it. Warmup keeps running.",
+    step("turn_on", "member", "Turn sending on", "Switch sending on in Senders when you want campaigns to use this inbox."));
+  if (account.observation.state === "unverified" || source.send_gate_known !== true) return verdict("not_ready", "Checking the connection", "warn",
+    "A current connection check isn't confirmed yet, so Lifty can't say whether this inbox can send.",
+    step("wait", "lifty", "Wait for the next check", "Lifty checks the connection again automatically."));
+  if (source.holds.length) return verdict("on_hold", "On hold", "bad",
+    `A safety hold stops sends from this inbox.${waiting}`, LIFTY_REVIEW, connection.send_gate.reasons);
+
+  const gate = source.send_block_reason ?? null;
+  const blocked = (code: DeliverabilityMailbox["status"]["code"], label: string, tone: Tone, description: string, next: NextStep) =>
+    verdict(code, label, tone, `${description}${waiting}`, next, connection.send_gate.reasons);
+  if (gate && gate !== SEND_TIME_CHECK && !gate.startsWith("send_paused:")) {
+    switch (gate) {
+      case "account_paused":
+        return blocked("paused", "Sending off", "warn", "Sending is switched off for this inbox. Warmup keeps running.",
+          step("turn_on", "member", "Turn sending on", "Switch sending on in Senders when you want campaigns to use this inbox."));
+      case "account_disconnected":
+        return blocked("disconnected", "Disconnected", "muted", "This inbox was disconnected, so Lifty doesn't send from it.", reconnect);
+      case "account_needs_reconnect": case "connection_unavailable":
+        return blocked("needs_reconnect", "Reconnect needed", "bad", "Lifty lost access to this mailbox, so nothing sends from it.", reconnect);
+      case "email_sender_identity_mismatch":
+        return blocked("needs_reconnect", "Reconnect needed", "bad", "The connected account no longer matches this inbox.", reconnect);
+      case "account_unverified": case "email_sender_unhealthy":
+        return blocked("not_ready", "Checking the connection", "warn", "Lifty needs a current successful connection check before sending.",
+          step("wait", "lifty", "Wait for the next check", "Lifty checks the connection again automatically. Reconnect in Senders if it stays like this."));
+      case "email_declaration_required":
+        return blocked("setup_needed", "Mailbox use not set", "warn", "Lifty needs to know how this mailbox is used before sending from it.",
+          step("declare_use", "member", "Set mailbox use", "In Senders, say whether this is a mailbox you already use or a new one dedicated to outreach."));
+      case "email_warmup_required": {
+        const running = currentWarmupSource(warmup)?.state.code === "active";
+        if (running) {
+          const estimate = currentWarmupSource(warmup)?.estimated_completion?.on;
+          return blocked("warming", warmup.status.label, "muted", "This dedicated inbox sends after 21 active warmup days and a passing placement test.",
+            step("wait", "lifty", "Wait for warmup", `Lifty keeps warming it up${estimate ? `; ready around ${estimate} if warmup runs every day` : ""}. Nothing to do on your side.`));
+        }
+        return blocked("setup_needed", "Warmup not running", "warn", "This dedicated inbox needs 21 active warmup days before sending, and warmup isn't running.", warmupStep(warmup));
+      }
+      case "email_warmup_spam":
+        return blocked("warmup_problem", "Warmup landing in spam", "bad", "Warmup emails are landing in spam, so sending stays held until a clean measurement.",
+          dnsStep(warmup) ?? LIFTY_REVIEW);
+      case "email_placement_required": {
+        const failed = placement.status.code === "failed";
+        return blocked(failed ? "placement_failed" : "placement_due", failed ? "Placement test failed" : "Placement test due", failed ? "bad" : "warn",
+          failed ? placement.status.description : "This inbox needs a passing placement test from the last 10 days before sending.", placementStep(warmup, failed));
+      }
+      case "email_critical_hold":
+        return blocked("on_hold", "On hold", "bad", "A safety hold stops sends from this inbox.", LIFTY_REVIEW);
+      default:
+        return blocked(active ? "blocked_in_campaign" : "not_ready", "Not ready to send", "warn",
+          connection.send_gate.reasons[0]?.message ?? "A send check stops this inbox from sending.", LIFTY_REVIEW);
+    }
+  }
+
+  if (placement.status.code === "failed") return verdict("placement_failed", "Placement test failed", "bad", placement.status.description,
+    placementStep(warmup, true), placement.status.reasons);
+  if (warmup.status.code === "problem") return verdict("warmup_problem", warmup.status.label, "warn", warmup.status.description,
+    dnsStep(warmup) ?? LIFTY_REVIEW, warmup.status.reasons);
+  if (active) return verdict("in_campaign", "In campaign", "ok",
+    `Ready and used by ${plural(active, "active campaign")}. It sends on the campaign's schedule, up to its daily limit.`, NOTHING);
+  if (mine.some(item => item.status.code === "paused")) return verdict("ready_idle", "Ready · campaign paused", "watch",
+    "This inbox passed its checks, but every campaign using it is paused.",
+    step("resume_campaign", "member", "Resume the campaign", "Resume it in Campaigns when you want this inbox to send."));
+  const drafts = mine.some(item => item.status.code === "draft");
+  return verdict("ready_idle", "Ready · not in a campaign", "watch", "This inbox passed its checks and can send. No active campaign uses it yet.",
+    step("add_to_campaign", "member", drafts ? "Activate the campaign" : "Add to a campaign",
+      `${drafts ? "Activate the campaign that uses this inbox" : "Start a campaign that sends from this inbox"} when you're ready. Warmup keeps running either way.`));
+}
+
 /**
  * LIF-1341: today's sends against the inbox's daily limit, as the send budget
  * counts them. Nothing here estimates a count or decides whether a send may go.
@@ -485,6 +650,10 @@ function presentMailbox(source: SourceMailbox, workspaces: Map<string, { slug: s
   const placement = presentPlacement(source, warmup, now, detail);
   const campaigns = presentCampaigns(source.campaigns.map(item => presentCampaign(item, paths)));
   const currentAccount = presentAccount(account, connections, campaigns);
+  const result = presentVerdict({ account, presented: currentAccount, placement, campaigns, warmup, readiness,
+    source: account ? source.connections.find(item => item.connection_ref === account.id) : undefined,
+    connection: account ? connections.find(item => item.connection_ref === account.id) : undefined,
+    hasEvidence: warmup.sources.length > 0 || source.placement.test_count > 0 });
   const workspace = workspaces.get(source.workspace_ref);
   const unique = (values: string[]) => [...new Set(values)].slice(0, 5);
   return {
@@ -499,12 +668,12 @@ function presentMailbox(source: SourceMailbox, workspaces: Map<string, { slug: s
       warmup: unique(warmup.sources.map(item => item.provider)),
       placement: unique([...placement.recent_tests, ...(placement.latest_completed_test ? [placement.latest_completed_test] : [])].map(test => test.provider)),
     },
-    status: presentStatus({ account: currentAccount, placement, campaigns, warmup, readiness,
-      hasEvidence: warmup.sources.length > 0 || source.placement.test_count > 0 }),
+    status: result.status,
     readiness, warmup, campaigns, placement,
     connections: connections.map(({ gate: _gate, ...connection }) => connection),
     sending: presentSending(source.sending),
     availability: source.availability,
+    next_step: result.next_step,
   };
 }
 
