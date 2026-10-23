@@ -238,18 +238,18 @@ mailbox or starts campaigns by itself. For founders it is advisory.
 
 ## Inbox health
 
-To answer how inboxes are doing, what a sender's last placement tests were,
-or when an inbox will be ready, use `deliverability` with the explicit
-`workspace` in query. Add `sender` (a sender `id` from `senders_get`, or
-`unassigned`) or `mailbox`; add `detail: placement` with one
+For inbox health, recent placement tests or readiness dates, use
+`deliverability` with the explicit `workspace` in query. Add `sender` (an `id`
+from `senders_get`, or `unassigned`) or `mailbox`; add `detail: placement` with one
 `mailbox_ref` only when the stored test reports are needed. Follow
 `next_cursor` until it is null before describing all inboxes.
 
 Report each inbox's `label`, `description` and `reasons` as returned; do not
-recalculate health, readiness or dates. A pending or failed test run is not a
+recalculate health, readiness or dates. Lead with `status` and `next_step`
+(`owner` says who acts). A pending or failed test run is not a
 placement result, a configured campaign is not evidence of sending, and
 missing or out-of-date evidence is not healthy. Workspace health covers the
-whole workspace, not one inbox. This read never starts a placement test or
+whole workspace, not one inbox. This read never starts a test or
 changes sending; propose those only as separate, explicitly requested actions.
 
 ## Campaigns and accounts

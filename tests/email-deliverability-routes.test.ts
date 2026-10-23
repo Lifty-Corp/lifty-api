@@ -58,6 +58,7 @@ describe("deliverability read operation", () => {
     const mailbox = data.mailboxes[0]!;
     const current = mailbox.connections[0]!;
     current.mailbox_use = "personal";
+    current.send_gate_known = true;
     current.controls = [{ scope_key: mailbox.workspace_ref, send_paused: true, capture_paused: false }];
     const warmup = structuredClone(DeliverabilitySource.parse(memberA).mailboxes.find(item => item.email === "uni-only@a.test")!.warmup.mailivery[0]!);
     warmup.connection_ref = current.connection_ref;
@@ -70,7 +71,14 @@ describe("deliverability read operation", () => {
     const h = harness({ data, accounts });
     const response = await h.ops.read(h.session, { workspace: "fixture-a" });
     expect(response.mailboxes[0]!.account).toMatchObject({ status: "connected", observation: "verified", outreach: { code: "paused" } });
-    expect(response.mailboxes[0]!.status).toMatchObject({ code: "paused", label: "Paused" });
+    // A LIFT pause is operator-side: the account reports it, the member verdict doesn't (LIF-1603).
+    expect(response.mailboxes[0]!.status.code).not.toBe("paused");
+    account.state = "paused";
+    const off = harness({ data, accounts });
+    expect((await off.ops.read(off.session, { workspace: "fixture-a" })).mailboxes[0]).toMatchObject({
+      status: { code: "paused", label: "Sending off" }, next_step: { code: "turn_on", owner: "member" },
+    });
+    account.state = "active";
     expect(response.mailboxes[0]!.warmup.current).toMatchObject({ provider: "mailivery", required_days: null, metrics: { ramp_target: 22 } });
     expect(response.mailboxes[0]!.warmup.status.label).toBe("Warming");
     // Loss of verification is distinct from an explicit provider disconnection.
@@ -83,13 +91,17 @@ describe("deliverability read operation", () => {
     account.observation.state = "verified";
     current.holds = [{ reason: "operator_hold" }];
     const held = harness({ data, accounts });
-    expect((await held.ops.read(held.session, { workspace: "fixture-a" })).mailboxes[0]!.status).toMatchObject({ code: "not_ready", label: "Blocked", reasons: [{ code: "hold" }] });
+    expect((await held.ops.read(held.session, { workspace: "fixture-a" })).mailboxes[0]).toMatchObject({
+      status: { code: "on_hold", label: "On hold", reasons: [{ code: "hold" }] }, next_step: { code: "lifty_review", owner: "lifty" },
+    });
     expect((await held.ops.read(held.session, { workspace: "fixture-a" })).mailboxes[0]!.account?.outreach).toMatchObject({
       code: "blocked", description: "An outreach safety hold is active.", reasons: [{ code: "hold" }],
     });
     account.status = "disconnected";
     const disconnected = harness({ data, accounts });
-    expect((await disconnected.ops.read(disconnected.session, { workspace: "fixture-a" })).mailboxes[0]!.status).toMatchObject({ code: "not_ready", label: "Blocked" });
+    expect((await disconnected.ops.read(disconnected.session, { workspace: "fixture-a" })).mailboxes[0]).toMatchObject({
+      status: { code: "disconnected", label: "Disconnected" }, next_step: { code: "none" },
+    });
     expect((await disconnected.ops.read(disconnected.session, { workspace: "fixture-a" })).mailboxes[0]!.account).toMatchObject({
       status: "disconnected", outreach: { code: "blocked" },
     });
