@@ -67,6 +67,8 @@ class PilotRelease(unittest.TestCase):
                     app={'id':'pilot-id','spec':live,'active_deployment':{'id':'deployment-id'},'default_ingress':'https://pilot.test'}
                     if args==('list',): return [app]
                     if args[0]=='update':
+                        # App spec updates otherwise reuse the previously deployed source.
+                        self.assertIn('--update-sources', args)
                         path=Path(args[args.index('--spec')+1])
                         self.assertEqual(path.stat().st_mode & 0o077, 0)
                         updated=json.loads(path.read_text())
