@@ -98,7 +98,7 @@ function browser(href:string,fetchImpl:typeof fetch){
   const warmup=href.includes('/warmup/');
   elements.confirmation!.dataset={prepare:String(new URL(href).searchParams.get('prepare')==='1'),label:warmup?'email warmup':'email',warmup:String(warmup),microsoft:String(href.includes('/warmup/microsoft/')),stateKey:href.includes('/connect/')?'intent':'state',
     ...(href.includes('/connect/email/')?{retry:'/connect/email'}:{})};
-  const location={href};
+  const location={href,replace:vi.fn((path:string)=>{location.href=new URL(path,location.href).href;})};
   const history={replaceState:vi.fn((_state:unknown,_title:string,path:string)=>{location.href=new URL(path,location.href).href;})};
   const context={URL,AbortController,JSON,Date,Promise,setTimeout,clearTimeout,location,history,fetch:fetchImpl,document:{getElementById:(id:string)=>elements[id]}};
   return {elements,location,history,run:()=>runInNewContext(CONFIRMATION_SCRIPT,context) as Promise<void>};
@@ -235,7 +235,7 @@ it.each(['hubspot','slack','attio'] as const)('%s never repeats an exchanged cod
   expect(complete).toHaveBeenCalledTimes(1);
 });
 
-it('prepares a sending-account link once after the shell, then offers a same-attempt sign-in action',async()=>{
+it('prepares a sending-account link once after the shell and automatically opens that same attempt',async()=>{
   vi.useFakeTimers();const requests:string[]=[];
   const fetchImpl=vi.fn(async(input:unknown)=>{
     requests.push(String(input));
@@ -244,12 +244,9 @@ it('prepares a sending-account link once after the shell, then offers a same-att
   const page=browser('https://api.lifty.test/connect/email/return?intent=capability&prepare=1',fetchImpl);
   const work=page.run();await vi.runAllTimersAsync();await work;
   expect(requests.filter(path=>path.endsWith('/process'))).toHaveLength(1);
-  expect(page.elements['confirmation-title']!.textContent).toBe('Ready to sign in');
-  expect(page.elements['confirmation-retry']!.textContent).toBe('Continue to sign in');
-  expect(page.elements['confirmation-retry']!.href).toBe('/connect/email?intent=capability');
-  expect(page.elements['confirmation-actions']!.hidden).toBe(false);
-  expect(page.elements['confirmation-reference']!.textContent).toContain('11111111-1111-4111-8111-111111111111');
-  expect(page.elements['confirmation-check']!.hidden).toBe(false);
+  expect(page.location.replace).toHaveBeenCalledExactlyOnceWith('/connect/email?intent=capability');
+  expect(page.location.href).toBe('https://api.lifty.test/connect/email?intent=capability');
+  expect(requests).toHaveLength(1);
 });
 it.each(['email','linkedin'])('waits for delayed %s authorization after return without reopening the used sign-in',async channel=>{
   vi.useFakeTimers();let connected=false;
@@ -300,8 +297,7 @@ it('waits for one preparation and keeps checking until a sign-in that could not 
   expect(page.elements['confirmation-title']!.textContent).toBe('Preparing sign-in');
   expect(page.elements['confirmation-reference']!.textContent).toContain('11111111-1111-4111-8111-111111111111');
   open=true;await vi.runAllTimersAsync();await work;
-  expect(page.elements['confirmation-title']!.textContent).toBe('Ready to sign in');
-  expect(page.elements['confirmation-retry']!.textContent).toBe('Continue to sign in');
+  expect(page.location.replace).toHaveBeenCalledExactlyOnceWith('/connect/email?intent=capability');
   expect(requests.filter(path=>path.endsWith('/process'))).toHaveLength(1);
   expect(statusDuringProcess).toBe(false);
 });
@@ -315,6 +311,7 @@ it('preserves a provider refusal instead of preparing again or redirecting into 
   expect(refused.elements['confirmation-title']!.textContent).toBe('This account is already linked');
   expect(requests.every(path=>path.endsWith('/status'))).toBe(true);
   expect(refused.location.href).toContain('/return?');
+  expect(refused.location.replace).not.toHaveBeenCalled();
 });
 it.each(['prepare=2','prepare=1&prepare=1'])('rejects invalid preparation markers before work: %s',async marker=>{
   const work=vi.fn(async()=>({status:'pending' as const}));

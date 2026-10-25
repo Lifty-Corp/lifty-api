@@ -32,6 +32,15 @@ describe("isolated connection deployment", () => {
     expect((await app.request("/v1/workspace/senders")).status).toBe(401);
   });
 
+  it("offers the exact pilot Google app only for its isolated application", () => {
+    const config = loadConfig({ ...environment, UNIPILE_V2_APPLICATION_ID: "app_01m5fr5mgdfzx8ftceq7y7z0h4" });
+    expect(config.accounts?.emailSetup?.google).toEqual({
+      url: "https://admin.google.com/ac/owl",
+      clientId: "755267746293-dtk3bl2tpfdcrtoc18t2j7mq6e5mvjir.apps.googleusercontent.com",
+    });
+    expect(loadConfig(environment).accounts?.emailSetup).toEqual({});
+  });
+
   it("closes every sending, warmup, job and integration entry before any external request", async () => {
     const external = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("unexpected external request"));
     try {

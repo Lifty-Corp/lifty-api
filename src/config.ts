@@ -1,3 +1,4 @@
+import { emailConnectSetup } from "./email-connect-setup.js";
 import type { SupabaseEnv } from "@supabase/server";
 import { parseHostedAuthOrigin } from "./hosted-auth-branding.js";
 
@@ -244,6 +245,8 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
     serverKeys: { email: emailKey || null },
     accounts: v2 && (emailKey || linkedinKey) ? {
       connectionOnly: runtimeProfile === "connections",
+      emailSetup: emailConnectSetup(runtimeProfile, v2.applicationId),
+      dashboardOrigin: dashboardUrl.origin,
       publicBaseUrl: publicBaseUrl.toString().replace(/\/$/, ""),
       supabaseUrl: supabaseUrl.toString().replace(/\/$/, ""), publishableKey,
       serverKeys: { ...(emailKey ? { email: emailKey } : {}), ...(linkedinKey ? { linkedin: linkedinKey } : {}) },
