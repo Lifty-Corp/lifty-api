@@ -98,7 +98,7 @@ afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.useRealTimers(
 
 describe("Lifty connect page", () => {
   it("asks the declaration before any sign-in link, then issues exactly one link for repeated visits", async () => {
-    const db = attemptDb(); const { provider } = stub(db); const server = app(); const state = intent();
+    const db = attemptDb(); const { provider } = stub(db); const server = app(); let state = intent();
     const page = await server.request(`/connect/email?intent=${encodeURIComponent(state)}`);
     expect(page.status).toBe(200);
     const html = await page.text();
@@ -111,16 +111,18 @@ describe("Lifty connect page", () => {
     expect(page.headers.get("content-security-policy")).toContain("form-action 'self' https://connect.lifty.test");
     expect(db.ops).toEqual(["context"]); expect(provider.calls).toEqual([]);
 
-    const declared = await server.request("/connect/email", form(`intent=${encodeURIComponent(state)}&mailbox_use=dedicated`));
+    const declared = await server.request("/connect/email", form(`intent=${encodeURIComponent(state)}&mailbox_use=dedicated&provider=google&admin_approval=google`));
     expect(declared.status).toBe(303);
-    expect(declared.headers.get("location")).toBe(`/connect/email/return?intent=${encodeURIComponent(state)}&prepare=1`);
+    const next = new URL(declared.headers.get("location")!, "https://api.lifty.test");
+    state = next.searchParams.get("intent")!;
+    expect(next.searchParams.get("prepare")).toBe("1");
     expect(provider.calls).toEqual([]);
     const prepared = await server.request("/connect/email/return/process", status("email", state));
     expect(await prepared.json()).toMatchObject({ status: "pending", progress: { stage: "sign_in_required" }, reference: attemptId });
     expect(db.declaration).toEqual({ mailbox_use: "dedicated" });
     // The link is stored with the attempt's deterministic auth state.
     expect(db.ops).toEqual(["context", "declare", "context", "link"]);
-    expect(provider.bodies).toEqual([expect.objectContaining({ providers: ["google", "outlook"], domain: "connect.lifty.test",
+    expect(provider.bodies).toEqual([expect.objectContaining({ providers: ["google"], domain: "connect.lifty.test",
       redirect_uri: `https://api.lifty.test/connect/email/return?intent=${encodeURIComponent(state)}`, state: db.payloads.link!.state })]);
     expect(db.payloads.link).toEqual({ attempt_id: attemptId, state: db.payloads.link!.state, url: hostedLink });
 
@@ -133,7 +135,7 @@ describe("Lifty connect page", () => {
 
   it.each(["google", "outlook"] as const)("keeps the chosen %s provider through refresh and reuses the first link", async selected => {
     const db = attemptDb(); const { provider } = stub(db); const server = app();
-    const response = await server.request("/connect/email", form(new URLSearchParams({ intent: intent(), mailbox_use: "habitual", provider: selected }).toString()));
+    const response = await server.request("/connect/email", form(new URLSearchParams({ intent: intent(), mailbox_use: "habitual", provider: selected, admin_approval: selected }).toString()));
     expect(response.status).toBe(303);
     const next = new URL(response.headers.get("location")!, "https://api.lifty.test");
     const state = next.searchParams.get("intent")!;
@@ -146,7 +148,7 @@ describe("Lifty connect page", () => {
     expect((await server.request(`/connect/email?intent=${encodeURIComponent(state)}`)).headers.get("location")).toBe(hostedLink);
     expect(provider.calls).toEqual(["POST /v2/auth/link"]);
     // Even another browser's selected provider cannot replace the stored link.
-    const second = await server.request("/connect/email", form(new URLSearchParams({ intent: intent(), mailbox_use: "habitual", provider: selected === "google" ? "outlook" : "google" }).toString()));
+    const second = await server.request("/connect/email", form(new URLSearchParams({ intent: intent(), mailbox_use: "habitual", provider: selected === "google" ? "outlook" : "google", admin_approval: selected === "google" ? "outlook" : "google" }).toString()));
     expect(second.headers.get("location")).toBe(hostedLink);
     expect(provider.calls).toHaveLength(1);
     // The new browser token is still channel/key bound and tamper evident.
@@ -159,7 +161,14 @@ describe("Lifty connect page", () => {
 
   it.each(["provider=imap", "provider=google&provider=outlook", "provider=google&mailbox_use=habitual"])("rejects invalid or ambiguous email choices before work: %s", async fields => {
     const db = attemptDb(); const { provider } = stub(db);
-    expect((await app().request("/connect/email", form(`intent=${encodeURIComponent(intent())}&mailbox_use=dedicated&${fields}`))).status).toBe(400);
+    expect((await app().request("/connect/email", form(`intent=${encodeURIComponent(intent())}&mailbox_use=dedicated&admin_approval=google&${fields}`))).status).toBe(400);
+    expect(db.ops).toEqual([]); expect(provider.calls).toEqual([]);
+  });
+
+  it.each(["", "&admin_approval=outlook", "&admin_approval=google&admin_approval=google"])("requires one acknowledgement for the selected provider before any work: %s", async acknowledgement => {
+    const db = attemptDb(); const { provider } = stub(db);
+    const response = await app().request("/connect/email", form(`intent=${encodeURIComponent(intent())}&mailbox_use=habitual&provider=google${acknowledgement}`));
+    expect(response.status).toBe(400);
     expect(db.ops).toEqual([]); expect(provider.calls).toEqual([]);
   });
 
@@ -184,8 +193,8 @@ describe("Lifty connect page", () => {
       expect((await server.request(path)).status, path).toBe(400);
     }
     expect((await server.request("/connect/email", form(`intent=${encodeURIComponent(email)}&mailbox_use=habitual`, "https://evil.test"))).status).toBe(403);
-    expect((await server.request("/connect/email", form(`intent=${encodeURIComponent(email)}&mailbox_use=personal`))).status).toBe(400);
-    expect((await server.request("/connect/email", form(`intent=${encodeURIComponent(email)}&mailbox_use=habitual&email=a@b.test`))).status).toBe(400);
+    expect((await server.request("/connect/email", form(`intent=${encodeURIComponent(email)}&mailbox_use=personal&provider=google&admin_approval=google`))).status).toBe(400);
+    expect((await server.request("/connect/email", form(`intent=${encodeURIComponent(email)}&mailbox_use=habitual&provider=google&admin_approval=google&email=a@b.test`))).status).toBe(400);
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
