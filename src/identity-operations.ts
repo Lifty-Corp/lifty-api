@@ -79,7 +79,7 @@ export const identityOperationDefinitions = {
       description: "Read sending accounts, optionally filtered by sender_id and channel, including disconnected history: connection status, usage state (active/paused), sending (allowed now, else reason), daily limits, last verified check, observation (verified/unverified), access removal, declaration and sends. Read-only; never checks or changes a provider. Unverified means the last known facts are older than the freshness window, not a disconnection.",
     },
     connect: {
-      method: "POST", route: `${accountsRoute}/connect`, cli: { operation: "connect" }, rpc: "connect_lifty_sending_account", connectionRpc: "connect_lifty_connection_email",
+      method: "POST", route: `${accountsRoute}/connect`, cli: { operation: "connect" }, rpc: "connect_lifty_sending_account", connectionRpc: "connect_lifty_connection_account",
       path: Empty, query: Empty, request: contracts.ConnectSchema, invalid: invalidRequest,
       response: contracts.ConnectResultSchema, success: 200, args: input => ({ p_payload: input.body }),
       description: "Start connecting a LinkedIn account or mailbox for an existing sender_id (from the senders roster). Returns connection_url and durable progress: declaration_required, preparing, sign_in_required, verifying or complete. Until verifying, show connection_url: the connect page asks the declaration and opens the sign-in. A live attempt for the same sender and channel is reused (created:false), even when its link text changes; an expired one never blocks a new connect. The account exists only after verified authorization. Connecting never activates a campaign or sends.",

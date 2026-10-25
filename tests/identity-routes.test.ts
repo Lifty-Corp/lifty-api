@@ -56,6 +56,19 @@ describe("Identity member routes", () => {
     expect((await response.json()).senders[0].accounts[0]).toMatchObject({ sends: null, sending: { allowed: false } });
   });
 
+  it.each(["email", "linkedin"] as const)("starts a %s pilot connection through the bounded member RPC", async (channel) => {
+    const h = harness(name => {
+      if (name === "connect_lifty_connection_account") return { workspace, id: attemptId, channel, expires_at: "2099-01-01T00:00:00Z", created: true };
+      if (name === "get_lifty_sending_account_attempt") return attempt("pending", { channel, progress: { stage: "declaration_required" } });
+      throw new Error("Unexpected RPC");
+    }, {}, "connections");
+    const response = await h.request("POST", "/v1/workspace/sending-accounts/connect", { sender_id: senderId, channel });
+    expect(response.status).toBe(200);
+    expect((await response.json()).connection_url).toBe(`https://api.lifty.test/connect/${channel}?intent=sealed-${attemptId}`);
+    expect(h.calls[0]).toEqual({ name: "connect_lifty_connection_account", args: { p_workspace_id: null, p_payload: { sender_id: senderId, channel } } });
+    expect(h.effects.revoke).not.toHaveBeenCalled();
+  });
+
   it("requires confirmation and preserves per-campaign resume outcomes without provider work", async () => {
     const result = { workspace, account: account(accountId, { channel: "linkedin",
       disconnect_pause: { count: 1, can_resume: true } }), resumed: 1,
