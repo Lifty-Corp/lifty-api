@@ -14,7 +14,7 @@ describe("pilot deployment artifact", () => {
       SUPABASE_URL: "https://csyhcwpcojbjlwwxdmhc.supabase.co",
       PUBLIC_BASE_URL: "https://api.pilot.liftygtm.com",
       UNIPILE_V2_APPLICATION_ID: "app_01m5fr5mgdfzx8ftceq7y7z0h4",
-      LIFTY_WARMUP_GOOGLE_CLIENT_ID: "755267746293-dtk3bl2tpfdcrtoc18t2j7mq6e5mvjir.apps.googleusercontent.com",
+      LIFTY_WARMUP_GOOGLE_CLIENT_ID: "137758851026-7ktkltco85ftr9p51ijjvbeviajcndgj.apps.googleusercontent.com",
       LIFTY_RUNTIME_PROFILE: "connections",
     });
   });

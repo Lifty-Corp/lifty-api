@@ -13,9 +13,10 @@ REPOSITORY = 'https://github.com/Lifty-Corp/lifty-api.git'
 NAME = 'lifty-api-pilot'
 BASE = 'https://api.pilot.liftygtm.com'
 DATABASE = 'https://csyhcwpcojbjlwwxdmhc.supabase.co'
-# The Google client configured in the pilot Unipile application; admins mark it
-# Trusted. Change both together. This deploy installs it in the live spec.
-GOOGLE_CLIENT_ID = '755267746293-dtk3bl2tpfdcrtoc18t2j7mq6e5mvjir.apps.googleusercontent.com'
+# Lifty's one Google client (project lifty-warmup), which admins mark Trusted.
+# The pilot Unipile application must use the same client; change both together.
+# This deploy installs it in the live spec.
+GOOGLE_CLIENT_ID = '137758851026-7ktkltco85ftr9p51ijjvbeviajcndgj.apps.googleusercontent.com'
 
 
 def doctl(*args):
