@@ -141,6 +141,8 @@ function linkedinDeclaration(): string {
 // Copying writes through a temporary selection first: it runs synchronously in
 // the click, so it still works when the same click opens the admin console in
 // a new tab and the page loses focus before an async clipboard write settles.
+// Company approval and mailbox use are always the person's own clicks: the
+// browser must not restore them on reload or when returning with Back.
 const helpScript = `
 function write(text){
  var active=document.activeElement,area=document.createElement('textarea'),copied=false;
@@ -176,6 +178,9 @@ var form=document.querySelector('form[data-email]');
 if(form){
  var submit=form.querySelector('button[type=submit]'),panels=Array.from(form.querySelectorAll('[data-provider-help]'));
  var placeholder=document.getElementById('approval-placeholder'),mailbox=document.getElementById('mailbox-step');
+ function clearAnswers(){
+  form.querySelectorAll('[name=admin_approval],[name=mailbox_use]').forEach(function(input){input.checked=false});
+ }
  function update(reset){
   var selected=form.querySelector('input[name=provider]:checked'),provider=selected&&selected.value;
   panels.forEach(function(panel){
@@ -189,13 +194,13 @@ if(form){
  }
  form.querySelectorAll('[name=provider]').forEach(function(input){input.addEventListener('change',function(){update(true)})});
  form.querySelectorAll('[name=admin_approval]').forEach(function(input){input.addEventListener('change',function(){update(false)})});
- addEventListener('pageshow',function(){form.removeAttribute('aria-busy');update(false)});
+ addEventListener('pageshow',function(event){form.removeAttribute('aria-busy');if(event.persisted)clearAnswers();update(false)});
  form.addEventListener('submit',function(event){
   if(form.hasAttribute('aria-busy')||submit.disabled){event.preventDefault();return}
   var spinner=document.createElement('span');spinner.className='spinner';spinner.setAttribute('aria-hidden','true');
   form.setAttribute('aria-busy','true');submit.disabled=true;submit.replaceChildren(spinner,'Opening sign-in…');
  });
- update(false);
+ clearAnswers();update(false);
 }`;
 export const CONNECT_HELP_SCRIPT_HASH = `sha256-${createHash("sha256").update(helpScript).digest("base64")}`;
 
@@ -264,7 +269,7 @@ export function renderConnectPage(channel: ConnectChannel, intent: string, sende
   const label = email ? "email account" : "LinkedIn account";
   return page(`Connect your ${label}`, `<h1>Connect ${escape(senderName)}'s ${email ? "email" : label}</h1>
 ${email ? "" : '<p class="intro">Connect the LinkedIn account Lifty should act from.</p>'}
-<form method="post" action="/connect/${channel}" data-pending="Opening sign-in…"${email ? ' data-email="true"' : ''}><input type="hidden" name="intent" value="${escape(intent)}">
+<form method="post" action="/connect/${channel}" data-pending="Opening sign-in…"${email ? ' data-email="true" autocomplete="off"' : ''}><input type="hidden" name="intent" value="${escape(intent)}">
 ${email ? `${providerChoice()}${setupHelp(setup)}<div id="mailbox-step" hidden>${emailDeclaration()}</div><button class="primary block connect-submit" type="submit" disabled>Choose your provider</button><noscript>Enable JavaScript to choose a provider, review company approval and connect.</noscript>` : `${linkedinDeclaration()}<button class="primary block" type="submit">Continue to sign-in</button>`}</form>
 <p class="reassurance">${email ? shieldIcon : ""}Connecting does not start campaigns.</p>`, email ? `<script>${helpScript}</script>` : pendingSubmitScript);
 }

@@ -107,6 +107,8 @@ describe("Lifty connect page", () => {
     // LIF-1603: the person chooses the mailbox use; neither is preselected.
     expect(html).toContain('value="habitual"'); expect(html).toContain('value="dedicated"');
     expect(html).not.toMatch(/name="mailbox_use"[^>]*checked/);
+    // Company approval is the person's own click, never a default.
+    expect(html).not.toMatch(/name="admin_approval"[^>]*checked/);
     expect(page.headers.get("content-security-policy")).toContain("form-action 'self' https://connect.lifty.test");
     expect(db.ops).toEqual(["context"]); expect(provider.calls).toEqual([]);
 
