@@ -379,6 +379,12 @@ Before setting `LIFTY_WARMUP_SETUP_ENABLED=true`:
 2. Save that same client ID and secret in Mailivery (Settings → Team Settings →
    API Access → Google OAuth Credentials) before creating a mailbox, and deploy
    `LIFTY_WARMUP_GOOGLE_CLIENT_ID` / `LIFTY_WARMUP_GOOGLE_CLIENT_SECRET`.
+   This is Lifty's one Google client: configure the same client in the
+   runtime's Unipile application. The email connect page shows the client ID
+   in the Workspace Trusted instructions whenever it is set, without the
+   secret and even while warmup setup is off; the connections profile accepts
+   the ID and refuses the secret. The pilot deploy pins the ID next to its
+   Unipile application.
    Mailivery's partner OAuth endpoint needs no separate enablement: a
    placeholder probe on 2026-09-23 passed its enablement gate (LIF-986).
 3. Keep proxy/APM body capture off for these routes and outbound OAuth calls;

@@ -3,14 +3,12 @@ export interface EmailSetup {
   outlook?: { url: string };
 }
 
-// Public app identity from the isolated LIF-1594 Trusted pilot. It must never
-// be offered for another Unipile app or the production runtime. The URL opens
-// Manage app access, where the admin chooses Configure new app.
-export function emailConnectSetup(profile: "full" | "connections", applicationId: string): EmailSetup {
-  if (profile !== "connections" || applicationId !== "app_01m5fr5mgdfzx8ftceq7y7z0h4") return {};
-  return { google: {
-    url: "https://admin.google.com/ac/owl/list?tab=configuredApps",
-    clientId: "755267746293-dtk3bl2tpfdcrtoc18t2j7mq6e5mvjir.apps.googleusercontent.com",
-  } };
+// Lifty has one Google OAuth client per runtime: Unipile's hosted Google
+// sign-in and warmup both use it, so admins mark that client Trusted once.
+// The ID comes from LIFTY_WARMUP_GOOGLE_CLIENT_ID and must be the Google client
+// configured in this runtime's Unipile application. The URL opens Manage app
+// access, where the admin chooses Configure new app.
+export function emailConnectSetup(googleClientId: string | undefined): EmailSetup {
+  if (!googleClientId) return {};
+  return { google: { url: "https://admin.google.com/ac/owl/list?tab=configuredApps", clientId: googleClientId } };
 }
-

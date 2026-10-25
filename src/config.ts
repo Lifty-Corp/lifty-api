@@ -122,10 +122,11 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
   if (runtimeProfile === "connections") {
     // An isolated connection rehearsal has no job, CRM or warmup credentials.
     // Refuse accidental production configuration rather than merely ignoring it.
+    // The public Google client ID stays allowed: the Trusted setup shows it.
     for (const name of ["TRIGGER_SECRET_KEY", "NOTIFICATIONS_TRIGGER_SECRET_KEY", "HUBSPOT_CLIENT_ID",
       "HUBSPOT_CLIENT_SECRET", "SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET", "ATTIO_CLIENT_ID", "ATTIO_CLIENT_SECRET",
       "MAILIVERY_API_KEY", "LIFTY_CRM_SERVER_KEY", "UNIPILE_DSN", "UNIPILE_ACCESS_TOKEN",
-      "LIFTY_WARMUP_GOOGLE_CLIENT_ID", "LIFTY_WARMUP_GOOGLE_CLIENT_SECRET"]) {
+      "LIFTY_WARMUP_GOOGLE_CLIENT_SECRET"]) {
       if (environment[name]?.trim()) throw new Error(`${name} is unavailable in the connections profile.`);
     }
     if (environment.LIFTY_WARMUP_SETUP_ENABLED === "true" || environment.LIFTY_MCP_ENABLED === "true") {
@@ -218,6 +219,9 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
   const setupEnabled = environment.LIFTY_WARMUP_SETUP_ENABLED === "true";
   const googleClientId = environment.LIFTY_WARMUP_GOOGLE_CLIENT_ID?.trim();
   const googleClientSecret = environment.LIFTY_WARMUP_GOOGLE_CLIENT_SECRET?.trim();
+  if (googleClientId && (!/^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$/.test(googleClientId) || googleClientId.length > 255)) {
+    throw new Error("LIFTY_WARMUP_GOOGLE_CLIENT_ID must be a Google OAuth client ID.");
+  }
   if (environment.LIFTY_WARMUP_SETUP_ENABLED && !["true", "false"].includes(environment.LIFTY_WARMUP_SETUP_ENABLED)) throw new Error("LIFTY_WARMUP_SETUP_ENABLED must be true or false.");
   if (setupEnabled && (!emailKey || !mailiveryKey || !googleClientId || !googleClientSecret)) {
     throw new Error("Google warmup setup requires email and Mailivery keys and both Google client credentials.");
@@ -245,7 +249,7 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
     serverKeys: { email: emailKey || null },
     accounts: v2 && (emailKey || linkedinKey) ? {
       connectionOnly: runtimeProfile === "connections",
-      emailSetup: emailConnectSetup(runtimeProfile, v2.applicationId),
+      emailSetup: emailConnectSetup(googleClientId),
       dashboardOrigin: dashboardUrl.origin,
       publicBaseUrl: publicBaseUrl.toString().replace(/\/$/, ""),
       supabaseUrl: supabaseUrl.toString().replace(/\/$/, ""), publishableKey,

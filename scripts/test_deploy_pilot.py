@@ -14,12 +14,13 @@ module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
 
-def pilot():
+def pilot(installed=True):
     spec = json.loads((HERE.parent/'.do/pilot-app.json').read_text())
     values = {'LIFTY_RUNTIME_PROFILE':'connections','SUPABASE_URL':module.DATABASE,
       'PUBLIC_BASE_URL':module.BASE,'LIFTY_DASHBOARD_ORIGIN':'https://pilot.liftygtm.com',
       'UNIPILE_V2_APPLICATION_ID':'app_01m5fr5mgdfzx8ftceq7y7z0h4',
       'UNIPILE_V2_HOSTED_AUTH_ORIGINS':'https://auth.pilot.liftygtm.com'}
+    if installed: values['LIFTY_WARMUP_GOOGLE_CLIENT_ID']=module.GOOGLE_CLIENT_ID
     spec['services'][0]['envs']=[{'key':key,'value':value} for key,value in values.items()]
     return spec
 
@@ -52,13 +53,22 @@ class PilotRelease(unittest.TestCase):
             self.assertEqual(probe.call_args.args[1], {'p_server_key':'e'*40,'p_linkedin_server_key':'l'*40})
             provider.assert_not_called()
 
-    def test_channel_capability_installs_in_one_deployment_preserving_existing_secrets(self):
-        for already_configured in [False, True]:
-            with self.subTest(already_configured=already_configured):
-                live=pilot()
+    def test_installed_settings_deploy_once_preserving_existing_secrets(self):
+        linkedin={'key':'LIFTY_LINKEDIN_SERVER_KEY','value':'EV[encrypted-linkedin]','type':'SECRET','scope':'RUN_TIME'}
+        installed_linkedin={'key':'LIFTY_LINKEDIN_SERVER_KEY','value':'l'*40,'type':'SECRET','scope':'RUN_TIME'}
+        google={'key':'LIFTY_WARMUP_GOOGLE_CLIENT_ID','value':module.GOOGLE_CLIENT_ID,'type':'GENERAL','scope':'RUN_TIME'}
+        stale={**google,'value':'123-previous.apps.googleusercontent.com'}
+        # (live installed settings, expected env changes; None means no spec update)
+        for case,existing,expected in [
+            ('missing',[],[installed_linkedin,google]),
+            ('current',[linkedin,google],None),
+            ('changed client',[linkedin,stale],[linkedin,google]),
+        ]:
+            with self.subTest(case=case):
+                live=pilot(installed=False)
                 live['services'][0]['envs'].append({'key':'UNIPILE_V2_ACCESS_TOKEN','value':'EV[encrypted-existing]','type':'SECRET','scope':'RUN_TIME'})
-                if already_configured:
-                    live['services'][0]['envs'].append({'key':'LIFTY_LINKEDIN_SERVER_KEY','value':'EV[encrypted-linkedin]','type':'SECRET','scope':'RUN_TIME'})
+                base=json.loads(json.dumps(live['services'][0]['envs']))
+                live['services'][0]['envs']+=json.loads(json.dumps(existing))
                 original=json.loads(json.dumps(live))
                 calls=[]
                 def doctl(*args):
@@ -72,8 +82,7 @@ class PilotRelease(unittest.TestCase):
                         path=Path(args[args.index('--spec')+1])
                         self.assertEqual(path.stat().st_mode & 0o077, 0)
                         updated=json.loads(path.read_text())
-                        self.assertEqual(updated, {**original,'services':[{**original['services'][0],'envs':original['services'][0]['envs']+[
-                            {'key':'LIFTY_LINKEDIN_SERVER_KEY','value':'l'*40,'type':'SECRET','scope':'RUN_TIME'}]}]})
+                        self.assertEqual(updated, {**original,'services':[{**original['services'][0],'envs':base+expected}]})
                         live=updated
                         return [app]
                     if args[0]=='create-deployment': return [{}]
@@ -94,11 +103,12 @@ class PilotRelease(unittest.TestCase):
                         patch('sys.stdout',new_callable=io.StringIO):
                     module.main()
                 self.assertEqual([call for call in calls if call in ('update','create-deployment')],
-                    ['create-deployment' if already_configured else 'update'])
+                    ['create-deployment' if expected is None else 'update'])
 
     def test_production_credentials_or_target_cannot_enter_pilot(self):
         module.check_spec(pilot())
-        for key,value in [('SUPABASE_URL','https://production.supabase.co'),('TRIGGER_SECRET_KEY','production-key')]:
+        for key,value in [('SUPABASE_URL','https://production.supabase.co'),('TRIGGER_SECRET_KEY','production-key'),
+                ('LIFTY_WARMUP_GOOGLE_CLIENT_ID','123-production.apps.googleusercontent.com')]:
             with self.subTest(key=key):
                 app=pilot()
                 app['services'][0]['envs']=[e for e in app['services'][0]['envs'] if e['key']!=key]+[{'key':key,'value':value}]

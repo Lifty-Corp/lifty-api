@@ -13,6 +13,10 @@ REPOSITORY = 'https://github.com/Lifty-Corp/lifty-api.git'
 NAME = 'lifty-api-pilot'
 BASE = 'https://api.pilot.liftygtm.com'
 DATABASE = 'https://csyhcwpcojbjlwwxdmhc.supabase.co'
+# Lifty's one Google client (project lifty-warmup), which admins mark Trusted.
+# The pilot Unipile application must use the same client; change both together.
+# This deploy installs it in the live spec.
+GOOGLE_CLIENT_ID = '137758851026-7ktkltco85ftr9p51ijjvbeviajcndgj.apps.googleusercontent.com'
 
 
 def doctl(*args):
@@ -21,7 +25,7 @@ def doctl(*args):
     return json.loads(result.stdout)
 
 
-def check_spec(spec):
+def check_spec(spec, installed=True):
     if spec.get('name') != NAME or len(spec.get('services',[])) != 1 or any(spec.get(x) for x in ['workers','jobs','static_sites','functions']):
         raise RuntimeError('Unexpected pilot app structure')
     service = spec['services'][0]
@@ -33,9 +37,11 @@ def check_spec(spec):
         'UNIPILE_V2_APPLICATION_ID':'app_01m5fr5mgdfzx8ftceq7y7z0h4',
         'UNIPILE_V2_HOSTED_AUTH_ORIGINS':'https://auth.pilot.liftygtm.com'}.items():
         if values.get(key) != value: raise RuntimeError('Pilot target mismatch: ' + key)
+    if installed and values.get('LIFTY_WARMUP_GOOGLE_CLIENT_ID') != GOOGLE_CLIENT_ID:
+        raise RuntimeError('Pilot target mismatch: LIFTY_WARMUP_GOOGLE_CLIENT_ID')
     allowed = {'LIFTY_RUNTIME_PROFILE','SUPABASE_URL','SUPABASE_JWKS_URL','SUPABASE_PUBLISHABLE_KEY',
         'PUBLIC_BASE_URL','LIFTY_DASHBOARD_ORIGIN','UNIPILE_V2_APPLICATION_ID','UNIPILE_V2_HOSTED_AUTH_ORIGINS',
-        'LIFTY_EMAIL_SERVER_KEY','LIFTY_LINKEDIN_SERVER_KEY','UNIPILE_V2_ACCESS_TOKEN'}
+        'LIFTY_EMAIL_SERVER_KEY','LIFTY_LINKEDIN_SERVER_KEY','UNIPILE_V2_ACCESS_TOKEN','LIFTY_WARMUP_GOOGLE_CLIENT_ID'}
     if set(values)-allowed: raise RuntimeError('Unexpected pilot environment setting')
     if service.get('instance_size_slug') != 'apps-s-1vcpu-0.5gb' or service.get('instance_count') != 1:
         raise RuntimeError('Unexpected pilot size')
@@ -72,18 +78,29 @@ def main():
             app = doctl('get',app['id'])[0]
     else:
         app = apps[0]
-        check_spec(app['spec'])
+        check_spec(app['spec'], installed=False)
         if os.environ.get('LIFTY_PILOT_APP_ID') and app['id'] != os.environ['LIFTY_PILOT_APP_ID']:
             raise RuntimeError('Unexpected pilot app ID')
-        # Install the newly scoped channel capability in the same owning deploy.
-        # Preserve encrypted credentials and every other setting from the live spec.
+        # Install the channel capability and the pinned Google client in the same
+        # owning deploy. Preserve encrypted credentials and every other setting.
         key = os.environ.get('LIFTY_LINKEDIN_SERVER_KEY', '')
         if len(key) < 32 or key == os.environ.get('LIFTY_EMAIL_SERVER_KEY'):
             raise RuntimeError('A distinct staging LinkedIn capability is required')
         spec = app['spec']
-        if not any(e['key'] == 'LIFTY_LINKEDIN_SERVER_KEY' for e in spec.get('envs', []) + spec['services'][0].get('envs', [])):
-            spec['services'][0].setdefault('envs', []).append({
-                'key': 'LIFTY_LINKEDIN_SERVER_KEY', 'value': key, 'type': 'SECRET', 'scope': 'RUN_TIME'})
+        envs = spec['services'][0].setdefault('envs', [])
+        current = {e['key']: e for e in spec.get('envs', []) + envs}
+        changed = False
+        if 'LIFTY_LINKEDIN_SERVER_KEY' not in current:
+            envs.append({'key': 'LIFTY_LINKEDIN_SERVER_KEY', 'value': key, 'type': 'SECRET', 'scope': 'RUN_TIME'})
+            changed = True
+        google = current.get('LIFTY_WARMUP_GOOGLE_CLIENT_ID')
+        if google is None:
+            envs.append({'key': 'LIFTY_WARMUP_GOOGLE_CLIENT_ID', 'value': GOOGLE_CLIENT_ID, 'type': 'GENERAL', 'scope': 'RUN_TIME'})
+            changed = True
+        elif google.get('value') != GOOGLE_CLIENT_ID:
+            google.update({'value': GOOGLE_CLIENT_ID, 'type': 'GENERAL'})
+            changed = True
+        if changed:
             check_spec(spec)
             with tempfile.TemporaryDirectory() as scratch:
                 path = Path(scratch) / 'pilot.json'

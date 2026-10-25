@@ -230,7 +230,7 @@ function setupHelp(setup: EmailSetup): string {
 
   const googleSteps: SetupStep[] = google ? [
     { title: "Open Google Admin", detail: "Opens app access settings and copies Lifty’s app ID.", action: adminLink(googleUrl, "google-client") },
-    { title: "Add Lifty Workspace Pilot", detail: "Choose Configure new app, paste the app ID, then select the app.",
+    { title: "Add Lifty", detail: "Choose Configure new app, paste the app ID, then select the app.",
       action: copyControl("google-client", "Copy app ID", google.clientId, "action-button", copyIcon) },
     { title: "Mark it Trusted", detail: "Choose who it applies to, select Trusted, then Finish. Google can take a few minutes to apply it." },
   ] : [
@@ -239,7 +239,7 @@ function setupHelp(setup: EmailSetup): string {
     { title: "Mark it Trusted", detail: "Choose who it applies to, select Trusted, then Finish. Google can take a few minutes to apply it." },
   ];
   const googleRequest = google
-    ? `Could you approve Lifty for my Google Workspace account?\n\n1. Open app access in Google Admin: ${googleUrl}\n2. Choose Configure new app, search for this app ID and select Lifty Workspace Pilot:\n${google.clientId}\n3. Choose who it applies to, select Trusted, then Finish.\n\nLet me know when it’s done so I can connect my mailbox in Lifty.`
+    ? `Could you approve Lifty for my Google Workspace account?\n\n1. Open app access in Google Admin: ${googleUrl}\n2. Choose Configure new app, search for this app ID and select the app it finds:\n${google.clientId}\n3. Choose who it applies to, select Trusted, then Finish.\n\nLet me know when it’s done so I can connect my mailbox in Lifty.`
     : `Could you approve Lifty for my Google Workspace account?\n\n1. Open app access in Google Admin: ${googleUrl}\n2. Choose Configure new app and select the app I see when I sign in to Lifty. I can send you its client ID.\n3. Choose who it applies to, select Trusted, then Finish.\n\nLet me know when it’s done so I can connect my mailbox in Lifty.`;
   const microsoftSteps: SetupStep[] = [
     { title: "Open Microsoft Entra", detail: "In Enterprise apps, open the app shown when you sign in.", action: adminLink(microsoftUrl) },
