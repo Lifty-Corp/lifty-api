@@ -228,3 +228,16 @@ refuses without it. The response shapes changed without a client-contract
 change; the CLI prints responses verbatim and agents read the schemas from
 `/v1/context/notifications`. Type codes are checked by shape, so a new catalog
 type needs no API release.
+
+## CRM automatic sync and test sync
+
+LIF-1622: `GET|PATCH /v1/workspace/crm/automatic-sync` reads and switches
+whether Lifty writes to the CRM on its own; `POST|GET
+/v1/workspace/crm/test-sync` starts and reads a test of up to five leads
+(`src/crm-sync-controls.ts`). The database owns both and creates the CRM runs;
+the route enqueues `lifty-crm-sync` for the run it returns (the turn-on
+catch-up or the test). The bulk `POST /v1/workspace/crm/sync` answers
+`CRM_AUTOMATIC_SYNC_PAUSED` while paused, and next_step offers the test sync
+instead. Release order: the Functions migration
+`20261026132000_lif1622_crm_automatic_sync.sql`, then the Jobs revision that
+gates its writers and runs test syncs, then this API revision.

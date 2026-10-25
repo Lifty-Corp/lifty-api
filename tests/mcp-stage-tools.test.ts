@@ -47,8 +47,9 @@ describe("generated MCP stage operations", () => {
     for (const alias of ["targeting_onboarding_save", "research_criteria_generation_context", "commercial_voice_onboarding_status"]) {
       expect(tools.some(tool => tool.name === alias), alias).toBe(false);
     }
-    // Every turn of a connector carries this list; keep it bounded.
-    expect(JSON.stringify(tools).length).toBeLessThan(190_000);
+    // Every turn of a connector carries this list; keep it bounded. LIF-1622
+    // added the CRM automatic sync and test sync tools (about 4,000 characters).
+    expect(JSON.stringify(tools).length).toBeLessThan(195_000);
     expect(tools.find(tool => tool.name === "crm_mapping_sources")!.annotations.readOnlyHint).toBe(true);
     expect(tools.find(tool => tool.name === "sending_accounts_deliverability")!.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
     expect(tools.find(tool => tool.name === "sending_accounts_disconnect")!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: true });

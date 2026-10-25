@@ -93,6 +93,24 @@ function mapRpcError(error: unknown): PublicError {
     });
   }
 
+  if (code === "PT409" && message.includes("lifty_sync_automatic_paused")) {
+    return new PublicError({
+      status: 409,
+      code: "CRM_AUTOMATIC_SYNC_PAUSED",
+      message: "Automatic sync is paused for this CRM, so Lifty writes nothing on its own. Run a test sync of a few leads, or turn automatic sync on to write the waiting leads.",
+      cause: error,
+    });
+  }
+
+  if (code === "PT409" && message.includes("lifty_sync_test_in_progress")) {
+    return new PublicError({
+      status: 409,
+      code: "RUN_IN_PROGRESS",
+      message: "A CRM test sync is still running. Wait for it to finish, then start the CRM sync again.",
+      cause: error,
+    });
+  }
+
   if (code === "PT409" && message.includes("lifty_sync_run_in_progress")) {
     return new PublicError({
       status: 409,

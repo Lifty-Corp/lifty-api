@@ -1,8 +1,6 @@
 import { z } from "zod";
-import type { AuthSession } from "./app.js";
-import { PublicError } from "./errors.js";
-import { rpcFailure } from "./rpc-errors.js";
-import type { IdentityDefinition, IdentityInput } from "./identity-operations.js";
+import { crmOperationEntries, crmOperationExecutor } from "./crm-operations.js";
+import type { IdentityDefinition } from "./identity-operations.js";
 
 // LIF-1239 CRM preferences: the three founder choices of the strict v1
 // artifact policy (research notes, conversations, conversation channels).
@@ -65,19 +63,5 @@ export const crmPreferencesOperationDefinitions = {
     },
   },
 } satisfies Record<string, Record<string, IdentityDefinition>>;
-export const crmPreferencesEntries = () => Object.entries(crmPreferencesOperationDefinitions).flatMap(([resource, operations]) =>
-  Object.entries(operations).map(([action, definition]) => ({ key: `${resource}.${action}`, definition: definition as IdentityDefinition })));
-
-export async function executeCrmPreferencesOperation(session: AuthSession, key: string, input: IdentityInput): Promise<unknown> {
-  const entry = crmPreferencesEntries().find(item => item.key === key);
-  if (!entry) throw new Error("Unknown CRM preferences operation");
-  const { definition } = entry;
-  let result: { data: unknown; error: unknown };
-  try { result = await (session.client as { rpc(name: string, args: Record<string, unknown>): Promise<{ data: unknown; error: unknown }> })
-    .rpc(definition.rpc, { p_workspace_id: null, ...definition.args(input) }); }
-  catch (cause) { throw rpcFailure(cause, { operation: definition.rpc, ...unavailable }); }
-  if (result.error) throw rpcFailure(result.error, { operation: definition.rpc, ...unavailable });
-  const parsed = definition.response.safeParse(result.data);
-  if (!parsed.success) throw new PublicError({ status: 502, ...unavailable });
-  return parsed.data;
-}
+export const crmPreferencesEntries = () => crmOperationEntries(crmPreferencesOperationDefinitions);
+export const executeCrmPreferencesOperation = crmOperationExecutor(crmPreferencesOperationDefinitions, unavailable);

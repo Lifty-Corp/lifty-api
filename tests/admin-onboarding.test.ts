@@ -6,6 +6,7 @@ import { getCrmSyncStatus, getRunStatus } from "../src/workspace-operations.js";
 import { getAttioConnection } from "../src/attio-connect.js";
 import { createHubspotConnectOperations } from "../src/hubspot-connect.js";
 import { criteriaFixture, draftGetFixture, laneFixture, profileFixture } from "./business-fixtures.js";
+import crmSyncControls from "./crm-sync-controls-sql-fixture.json" with { type: "json" };
 
 const confirming = "1297000a-0000-4000-a000-00000000000a";
 const sampling = "1297000b-0000-4000-a000-00000000000b";
@@ -33,7 +34,11 @@ function rpcFor(ref: string, name: string): unknown {
       leads_discovered: 5, leads_researched: 5, error_code: null, started_at: at, completed_at: at, reviewed_at: null,
       workspace: { workspace_ref: ref, name: "Workspace" }, leads: [] } : { state: "none" };
     case "get_lifty_campaigns": return { workspace: identity(ref), campaigns: [], next_cursor: null };
-    case "get_lifty_hubspot_connection": return { provider: "hubspot", status: "not_connected" };
+    // The sample under review has a connected CRM, so its automatic sync is read too.
+    case "get_lifty_hubspot_connection": return ref === reviewing ? { provider: "hubspot", status: "connected", portal_id: "1297001",
+      hub_domain: null, granted_scopes: [], connected_at: at, reconnect_required: false } : { provider: "hubspot", status: "not_connected" };
+    case "get_lifty_crm_sync_status": return { state: "none" };
+    case "get_lifty_crm_automatic_sync": return crmSyncControls.status_paused;
     case "get_lifty_attio_connection": return { provider: "attio", status: "not_connected" };
     case "get_lifty_senders": return { workspace: identity(ref), senders: [] };
     case "get_lifty_context_drafts": return { workspace_ref: ref, drafts: [] };
@@ -91,7 +96,8 @@ describe("admin onboarding read", () => {
     const reads = h.calls.filter(([name]) => name !== "admin_list_workspaces");
     expect(new Set(reads.map(([name]) => name))).toEqual(new Set(["get_lifty_business_profile", "get_lifty_targeting",
       "get_lifty_research_criteria", "get_lifty_setup_status", "get_lifty_run_status", "get_lifty_campaigns",
-      "get_lifty_hubspot_connection", "get_lifty_attio_connection", "get_lifty_senders", "get_lifty_context_drafts", "get_workspace_customer_source_choice"]));
+      "get_lifty_hubspot_connection", "get_lifty_attio_connection", "get_lifty_crm_sync_status", "get_lifty_crm_automatic_sync",
+      "get_lifty_senders", "get_lifty_context_drafts", "get_workspace_customer_source_choice"]));
     expect(reads.every(([name, args]) => typeof (args as Record<string, unknown>)?.[name === "get_workspace_customer_source_choice" ? "p_workspace" : "p_workspace_id"] === "string")).toBe(true);
     expect(body.steps.map((step: { reason: string }) => step.reason)).toEqual(Object.keys(NEXT_STEP_CATALOG));
     expect(body.base).toEqual(BASE_CONTEXTS);

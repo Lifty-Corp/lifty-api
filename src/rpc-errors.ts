@@ -81,6 +81,13 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   // CRM preferences (LIF-1239).
   CRM_NOT_SELECTED: "This workspace has no CRM connected. Connect one before choosing what Lifty writes to it.",
   CRM_PREFERENCES_INVALID: "Repair the CRM preferences using the current operation schema.",
+  // CRM automatic sync and test sync (LIF-1622).
+  CRM_AUTOMATIC_SYNC_INVALID: "Automatic sync is on or paused. Send automatic_sync with the current expected_version.",
+  CRM_NOT_CONNECTED: "The CRM needs to be connected again before Lifty can write to it. Reconnect it, then try again.",
+  CRM_SYNC_IN_PROGRESS: "A CRM sync or research run is still running. Wait for it to finish, then start the test again.",
+  CRM_TEST_SYNC_NO_LEADS: "There are no qualified leads to test yet. Run research first; a test needs at least one qualified lead.",
+  CRM_TEST_SYNC_LEADS_INVALID: "Choose one to five qualified leads of this workspace, each once, or omit lead_refs to let Lifty pick them.",
+  CRM_TEST_SYNC_NOT_FOUND: "This test sync is not available in the selected workspace. Read the latest test instead.",
   // CRM counting rules (LIF-1477).
   CRM_RULES_INVALID: "Repair the CRM counting rules using the current operation schema.",
   CUSTOMER_EXCLUSIONS_INVALID: "Repair the customer CSV using the current import schema.",
