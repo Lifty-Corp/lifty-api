@@ -1,6 +1,7 @@
+import type { EmailSetup } from "./email-connect-setup.js";
 import { z } from "zod";
 import { connectionFetch, type ConfirmationAttention, type ConfirmationResult } from "./connection-confirmation.js";
-import { openConnectAttempt, sealConnectAttempt, type ConnectChannel } from "./connect-state.js";
+import { openConnectAttempt, openConnectProvider, sealConnectAttempt, type EmailProvider, type ConnectChannel } from "./connect-state.js";
 import { createAccountProvider, IdentityMismatch, ProviderTransport, type AccountProviderSettings, type ExpectedIdentity } from "./account-provider.js";
 import { HostedReturnError } from "./hosted-return-error.js";
 import { parseHostedAuthOrigin } from "./hosted-auth-branding.js";
@@ -14,7 +15,9 @@ import { AccountConnectionProgress, type Account } from "./identity-contracts.js
 // the trusted provider RPC. Member authorization happens before any call here.
 export interface AccountConnectionSettings {
   publicBaseUrl: string;
+  dashboardOrigin?: string;
   connectionOnly?: boolean;
+  emailSetup?: EmailSetup;
   supabaseUrl: string;
   publishableKey: string;
   /** Existing per-channel server keys; the database checks them per attempt/account channel. */
@@ -143,6 +146,7 @@ export function createAccountConnection(settings: AccountConnectionSettings) {
     try {
       const state = unipileV2AuthState(channel, attempt.id, key(channel));
       const url = hosted(await provider.createLink({ channel, state, transport: current.transport, expiresAt: attempt.expires_at,
+        emailProvider: openConnectProvider(channel, intent, key(channel)),
         redirectUri: `${settings.publicBaseUrl}/connect/${channel}/return?intent=${encodeURIComponent(intent)}` }));
       return result(await snapshot(channel, "link", { attempt_id: attempt.id, state, url }));
     } catch (error) {
@@ -221,6 +225,9 @@ export function createAccountConnection(settings: AccountConnectionSettings) {
   }
 
   return {
+    emailSetup: settings.emailSetup ?? {},
+    dashboardOrigin: settings.dashboardOrigin,
+    selectEmailProvider: (intent: string, provider: EmailProvider) => sealConnectAttempt("email", open("email", intent), key("email"), provider),
     connectionUrl: (channel: ConnectChannel, attemptId: string) =>
       `${settings.publicBaseUrl}/connect/${channel}?intent=${encodeURIComponent(sealConnectAttempt(channel, attemptId, key(channel)))}`,
     validate: (channel: ConnectChannel, intent: string) => { open(channel, intent); },

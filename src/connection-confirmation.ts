@@ -139,7 +139,7 @@ function placement(p){
 }
 function show(result){
  if(finished||!result||!['pending','connected','failed'].includes(result.status))return;
- if(result.status==='pending'){if(result.progress)progress(result.progress,result.reference);if(result.attention)attend(result.attention);return;}
+ if(result.status==='pending'){if(prepare&&!denied&&!code&&!errorType&&!result.attention&&result.progress&&result.progress.stage==='sign_in_required'&&root.dataset.retry){finished=true;location.replace(root.dataset.retry+'?'+key+'='+encodeURIComponent(body.state));return;}if(result.progress)progress(result.progress,result.reference);if(result.attention)attend(result.attention);return;}
  finished=true;spinner.hidden=true;actions.hidden=true;check.hidden=true;
  if(result.status==='connected'){title.textContent=warmup?'Warmup is running':label+' is connected';detail.textContent='Lifty verified '+(result.account||'the connection')+'.'+(warmup?placement(result.placement):'')+' Return to Lifty to continue. Connecting does not start outreach.';if(label==='Slack')detail.textContent+=' Invite @Lifty to the channel where you want notifications, then tell Lifty which channel you chose.';}
  else{title.textContent='Connection needs attention';detail.textContent=result.reason==='mailbox_in_other_warmup'?'This mailbox is already registered with another warmup service. Remove it there, then start warmup again in Lifty.':result.reason==='provider_rejected'?'The warmup service refused this setup. Our team has been alerted. Once the issue is fixed, start warmup again in Lifty.':result.reason==='canceled'?'Authorization was not completed. Return to Lifty to check this attempt.':result.reason==='verification'?'The selected account could not be verified. Return to Lifty for help.':'Return to Lifty to check this attempt and the next step before requesting another link.';if(label==='HubSpot'&&result.reason==='canceled')detail.textContent+=' If permissions were blocked, ask a HubSpot super admin to approve Lifty in Settings > Integrations > Connected Apps > Approved apps.';}
@@ -171,14 +171,15 @@ await poll();
 })();`;
 const scriptHash = createHash('sha256').update(CONFIRMATION_SCRIPT).digest('base64');
 const actionStyles = '.actions{margin:24px 0 0}.actions a,.check-status{display:inline-flex;align-items:center;min-height:50px;padding:12px 26px;border:1px solid hsl(99 34% 65% / .75);border-radius:9px;background:var(--lime);color:var(--paper);font-weight:600;text-decoration:none}.actions a:hover,.check-status:hover{background:var(--lime-hover)}';
-export function renderConfirmationPage(flow:ConnectionFlow, valid=true, prepare=false) {
+export function renderConfirmationPage(flow:ConnectionFlow, valid=true, prepare=false, returnUrl?: string) {
   const definition:{label:string;retry?:string}=CONNECTION_FLOWS[flow], {label}=definition;
+  const back = returnUrl ? `<p class="reassurance"><a href="${new URL(returnUrl).origin.replaceAll('"', '&quot;')}">Return to Lifty</a></p>` : "";
   const title=valid?(prepare?'Preparing sign-in':'Checking your connection'):'Connection needs attention';
   return renderLiftyPage({title,styles:actionStyles,content:
-    `<section id="confirmation" data-label="${label}" data-prepare="${prepare}" data-warmup="${flow==='warmup'||flow==='warmup_microsoft'}" data-microsoft="${flow==='warmup_microsoft'}" data-state-key="${['email','linkedin'].includes(flow)?'intent':'state'}"${definition.retry?` data-retry="${definition.retry}"`:''} aria-live="polite"><div id="confirmation-spinner" class="symbol" aria-hidden="true"${valid?'':' hidden'}><span class="spinner"></span></div><h1 id="confirmation-title">${title}</h1><p id="confirmation-detail" class="intro">${valid?(prepare?'Lifty is preparing the secure sign-in page. Sign-in has not finished yet.':'Lifty is reading the status of this connection. This page will update automatically.'):'Return to Lifty to check this attempt and get the next step.'}</p><p id="confirmation-actions" class="actions" hidden><a id="confirmation-retry" href="">Try again</a></p><p><button id="confirmation-check" class="check-status" type="button" hidden>Check status</button></p><p id="confirmation-reference" class="reassurance" hidden></p><p class="reassurance">Connecting does not start outreach.</p></section><noscript>JavaScript is needed to finish this connection here. Return to Lifty to check the attempt before requesting another link.</noscript>${valid?`<script>${CONFIRMATION_SCRIPT}</script>`:''}`});
+    `<section id="confirmation" data-label="${label}" data-prepare="${prepare}" data-warmup="${flow==='warmup'||flow==='warmup_microsoft'}" data-microsoft="${flow==='warmup_microsoft'}" data-state-key="${['email','linkedin'].includes(flow)?'intent':'state'}"${definition.retry?` data-retry="${definition.retry}"`:''} aria-live="polite"><div id="confirmation-spinner" class="symbol" aria-hidden="true"${valid?'':' hidden'}><span class="spinner"></span></div><h1 id="confirmation-title">${title}</h1><p id="confirmation-detail" class="intro">${valid?(prepare?'Lifty is preparing the secure sign-in page. Sign-in has not finished yet.':'Lifty is reading the status of this connection. This page will update automatically.'):'Return to Lifty to check this attempt and get the next step.'}</p><p id="confirmation-actions" class="actions" hidden><a id="confirmation-retry" href="">Try again</a></p><p><button id="confirmation-check" class="check-status" type="button" hidden>Check status</button></p><p id="confirmation-reference" class="reassurance" hidden></p><p class="reassurance">Connecting does not start outreach.</p></section>${back}<noscript>JavaScript is needed to finish this connection here. Return to Lifty to check the attempt before requesting another link.</noscript>${valid?`<script>${CONFIRMATION_SCRIPT}</script>`:''}`});
 }
 export type ConfirmationLog = {flow:ConnectionFlow;stage:string;outcome:string;elapsed_ms:number;status:number;correlation:string;upstream_status?:number;upstream_outcome?:string;provider_error?:string;reference?:string;progress_stage?:string};
-export function createConfirmationRouter(flow:ConnectionFlow, adapter:ConfirmationAdapter, options:{prefix?:string;origin?:string;log?:(event:ConfirmationLog)=>void}={}) {
+export function createConfirmationRouter(flow:ConnectionFlow, adapter:ConfirmationAdapter, options:{prefix?:string;origin?:string;returnUrl?:string;log?:(event:ConfirmationLog)=>void}={}) {
   const app=new Hono();
   const path=CONNECTION_FLOWS[flow].path.slice((options.prefix??'').length);
   const headers=(c:Context)=>{
@@ -194,7 +195,7 @@ export function createConfirmationRouter(flow:ConnectionFlow, adapter:Confirmati
     let valid=parsed.success && [key,'code','error','prepare'].every(key=>q.getAll(key).length<=1)
       && (!q.has('prepare')||prepare);
     if(valid&&parsed.success){try{adapter.validate(parsed.data,c);}catch{valid=false;}}
-    return c.html(renderConfirmationPage(flow,valid,prepare),200);
+    return c.html(renderConfirmationPage(flow,valid,prepare,options.returnUrl),200);
   });
   for(const stage of ['process','status'] as const)app.post(path+'/'+stage,async c=>{
     headers(c);

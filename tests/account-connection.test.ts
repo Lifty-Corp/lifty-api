@@ -107,7 +107,7 @@ describe("Lifty connect page", () => {
     // LIF-1603: the person chooses the mailbox use; neither is preselected.
     expect(html).toContain('value="habitual"'); expect(html).toContain('value="dedicated"');
     expect(html).not.toMatch(/name="mailbox_use"[^>]*checked/);
-    expect(html).not.toMatch(/unipile/i);
+    expect(html).toContain("unipile.com during sign-in");
     expect(page.headers.get("content-security-policy")).toContain("form-action 'self' https://connect.lifty.test");
     expect(db.ops).toEqual(["context"]); expect(provider.calls).toEqual([]);
 
@@ -129,6 +129,38 @@ describe("Lifty connect page", () => {
       expect(again.headers.get("location")).toBe(hostedLink);
     }
     expect(provider.calls).toEqual(["POST /v2/auth/link"]);
+  });
+
+  it.each(["google", "outlook"] as const)("keeps the chosen %s provider through refresh and reuses the first link", async selected => {
+    const db = attemptDb(); const { provider } = stub(db); const server = app();
+    const response = await server.request("/connect/email", form(new URLSearchParams({ intent: intent(), mailbox_use: "habitual", provider: selected }).toString()));
+    expect(response.status).toBe(303);
+    const next = new URL(response.headers.get("location")!, "https://api.lifty.test");
+    const state = next.searchParams.get("intent")!;
+    expect((await server.request(next.pathname + next.search)).status).toBe(200);
+    expect(provider.calls).toEqual([]);
+    await server.request("/connect/email/return/process", status("email", state));
+    expect(provider.bodies).toEqual([expect.objectContaining({ providers: [selected], redirect_uri: `https://api.lifty.test/connect/email/return?intent=${encodeURIComponent(state)}` })]);
+    expect(db.declaration).toEqual({ mailbox_use: "habitual" });
+    await server.request("/connect/email/return/process", status("email", state));
+    expect((await server.request(`/connect/email?intent=${encodeURIComponent(state)}`)).headers.get("location")).toBe(hostedLink);
+    expect(provider.calls).toEqual(["POST /v2/auth/link"]);
+    // Even another browser's selected provider cannot replace the stored link.
+    const second = await server.request("/connect/email", form(new URLSearchParams({ intent: intent(), mailbox_use: "habitual", provider: selected === "google" ? "outlook" : "google" }).toString()));
+    expect(second.headers.get("location")).toBe(hostedLink);
+    expect(provider.calls).toHaveLength(1);
+    // The new browser token is still channel/key bound and tamper evident.
+    const tampered = state.replace(/^v2/, "v1");
+    const before = db.ops.length;
+    expect((await server.request(`/connect/email?intent=${encodeURIComponent(tampered)}`)).status).toBe(400);
+    expect((await server.request(`/connect/linkedin?intent=${encodeURIComponent(state)}`)).status).toBe(400);
+    expect(db.ops).toHaveLength(before);
+  });
+
+  it.each(["provider=imap", "provider=google&provider=outlook", "provider=google&mailbox_use=habitual"])("rejects invalid or ambiguous email choices before work: %s", async fields => {
+    const db = attemptDb(); const { provider } = stub(db);
+    expect((await app().request("/connect/email", form(`intent=${encodeURIComponent(intent())}&mailbox_use=dedicated&${fields}`))).status).toBe(400);
+    expect(db.ops).toEqual([]); expect(provider.calls).toEqual([]);
   });
 
   it("requires both LinkedIn confirmations and reconnects the pinned provider account", async () => {

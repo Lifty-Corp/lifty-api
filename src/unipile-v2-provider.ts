@@ -1,3 +1,4 @@
+import type { EmailProvider } from "./connect-state.js";
 import { connectionFetch, noteProviderError } from "./connection-confirmation.js";
 import { z } from "zod";
 import { PublicError } from "./errors.js";
@@ -123,11 +124,11 @@ export function createUnipileV2Provider(settings: UnipileV2Settings & {fetchImpl
       : account.status === "disconnected" ? "disconnected" : account.status === "errored" || account.status === "degraded" ? "errored" : "unknown";
     return {account, verifiedTransport, healthy, healthStatus};
   }
-  async function createLink(input: {channel: "email" | "linkedin"; state: string; redirectUri: string; expiresAt: string; transport: UnipileTransport}) {
+  async function createLink(input: {channel: "email" | "linkedin"; emailProvider?: EmailProvider | undefined; state: string; redirectUri: string; expiresAt: string; transport: UnipileTransport}) {
     validateTransport(input.transport);
     const origin = input.transport.hosted_auth_origin;
     const raw = await request("auth/link", {
-      ...(input.transport.account_id ? {account_id: input.transport.account_id} : {providers: input.channel === "linkedin" ? ["linkedin"] : ["google", "outlook"]}),
+      ...(input.transport.account_id ? {account_id: input.transport.account_id} : {providers: input.channel === "linkedin" ? ["linkedin"] : input.emailProvider ? [input.emailProvider] : ["google", "outlook"]}),
       ...(input.channel === "email" ? {config: {outlook: {oauth_scope: outlookRequestedScopes}}} : {}),
       ...(input.transport.account_scope_id ? {account_scope_id: input.transport.account_scope_id} : {}),
       domain: new URL(origin).hostname,
