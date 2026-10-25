@@ -572,23 +572,32 @@ separate from explicit campaign recovery.
 
 ## Isolated connection profile
 
-`LIFTY_RUNTIME_PROFILE=connections` composes the same Auth, sender and email
-connection handlers and shared confirmation controller. It accepts no CRM,
-LinkedIn, Mailivery or Trigger credentials. Its route boundary closes campaigns,
+**Verified:** LIF-1619 source and local contract checks, 2026-10-25.
+
+`LIFTY_RUNTIME_PROFILE=connections` composes the same Auth, sender, email and
+LinkedIn connection handlers and shared confirmation controller. Initial
+connections use the isolated Unipile V2 application and distinct email/LinkedIn
+capabilities. It accepts no CRM, Mailivery or Trigger credentials. Its route boundary closes campaigns,
 research, warmup, placement and notification sends before any handler can queue
 work. Its OpenAPI response lists only enabled operations. The default `full`
 profile retains all existing required settings and behavior.
 
-The profile is one prerequisite for LIF-1594, not evidence that a staging database
-implements its contracts. `/readyz` proves Auth reachability only. A real session,
-workspace, sender, signed authorization and verified durable attempt must pass
-before the pilot can be accepted.
+`/readyz` checks Auth, the installed database catalog, replay heartbeat and both
+channel capabilities. LIF-1619 requires Functions' guarded LinkedIn profile
+migration `20261025010000_pilot_linkedin_connections.sql` and its verified staging
+artifact before this API. The deployment preflight checks both capabilities;
+the previous email-only API remains compatible during database rollout. A real
+session, signed authorization and provider identity verification are still
+required to establish a connected account. Connecting never enables sending.
 
 `.do/pilot-app.json` describes the separate `lifty-api-pilot` App Platform app at
 `api.pilot.liftygtm.com`, using one 0.5 GB instance. `scripts/prepare-pilot.mjs`
 pins it to the approved staging Supabase project and pilot Unipile application,
 checks runtime configuration and writes a private spec outside the checkout. It
-never creates or updates resources. See the runbook before provisioning.
+never creates or updates resources. The API and Functions release workflows need
+the same dedicated `STAGING_LINKEDIN_SERVER_KEY`, distinct from the email key.
+Deploy the Functions profile, then API, then dashboard. See the runbook before
+provisioning.
 
 ### Mailbox use changes (LIF-1603)
 

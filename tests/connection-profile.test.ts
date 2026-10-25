@@ -10,6 +10,7 @@ const environment = {
   PUBLIC_BASE_URL: "https://api.pilot.liftygtm.com",
   LIFTY_DASHBOARD_ORIGIN: "https://pilot.liftygtm.com",
   LIFTY_EMAIL_SERVER_KEY: "e".repeat(40),
+  LIFTY_LINKEDIN_SERVER_KEY: "l".repeat(40),
   UNIPILE_V2_ACCESS_TOKEN: "isolated-application-key",
   UNIPILE_V2_APPLICATION_ID: "app_pilot",
   UNIPILE_V2_HOSTED_AUTH_ORIGINS: "https://auth.pilot.liftygtm.com",
@@ -28,6 +29,7 @@ describe("isolated connection deployment", () => {
     expect(await login.text()).toContain("https://staging.supabase.test");
     // A real connection handler rejects an invalid capability without provider I/O.
     expect((await app.request("/connect/email?intent=invalid")).status).toBe(400);
+    expect((await app.request("/connect/linkedin?intent=invalid")).status).toBe(400);
     // The same session fence protects the enabled workspace handlers.
     expect((await app.request("/v1/workspace/senders")).status).toBe(401);
   });
@@ -50,7 +52,7 @@ describe("isolated connection deployment", () => {
         ["POST", "/v1/workspace/campaigns"], ["POST", "/v1/email/campaign"],
         ["POST", "/v1/email/warmup/start"], ["POST", "/v1/email/placement/start"],
         ["POST", "/v1/integrations/hubspot/connect"], ["POST", "/v1/notifications/destinations/test/test"],
-        ["GET", "/connect/linkedin"], ["POST", "/v1/workspace/sending-accounts/id/resume"],
+        ["POST", "/v1/workspace/sending-accounts/id/resume"],
       ]) {
         const result = await app.request(path!, { method: method! });
         expect(result.status, `${method} ${path}`).toBe(503);
@@ -70,7 +72,7 @@ describe("isolated connection deployment", () => {
   });
 
   it.each(["TRIGGER_SECRET_KEY", "NOTIFICATIONS_TRIGGER_SECRET_KEY", "HUBSPOT_CLIENT_SECRET", "SLACK_CLIENT_SECRET",
-    "MAILIVERY_API_KEY", "LIFTY_LINKEDIN_SERVER_KEY", "UNIPILE_ACCESS_TOKEN"])("refuses copied %s credentials", name => {
+    "MAILIVERY_API_KEY", "UNIPILE_ACCESS_TOKEN"])("refuses copied %s credentials", name => {
     expect(() => loadConfig({ ...environment, [name]: "should-never-be-loaded" })).toThrow(/connections profile/);
   });
 });

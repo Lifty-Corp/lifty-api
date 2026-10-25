@@ -35,7 +35,7 @@ def check_spec(spec):
         if values.get(key) != value: raise RuntimeError('Pilot target mismatch: ' + key)
     allowed = {'LIFTY_RUNTIME_PROFILE','SUPABASE_URL','SUPABASE_JWKS_URL','SUPABASE_PUBLISHABLE_KEY',
         'PUBLIC_BASE_URL','LIFTY_DASHBOARD_ORIGIN','UNIPILE_V2_APPLICATION_ID','UNIPILE_V2_HOSTED_AUTH_ORIGINS',
-        'LIFTY_EMAIL_SERVER_KEY','UNIPILE_V2_ACCESS_TOKEN'}
+        'LIFTY_EMAIL_SERVER_KEY','LIFTY_LINKEDIN_SERVER_KEY','UNIPILE_V2_ACCESS_TOKEN'}
     if set(values)-allowed: raise RuntimeError('Unexpected pilot environment setting')
     if service.get('instance_size_slug') != 'apps-s-1vcpu-0.5gb' or service.get('instance_count') != 1:
         raise RuntimeError('Unexpected pilot size')
@@ -54,7 +54,8 @@ def main():
     remote = subprocess.check_output(['git','ls-remote',REPOSITORY,'refs/heads/develop'],text=True).split()[0]
     if remote != sha: raise RuntimeError('Superseded develop source')
     ready = probe(DATABASE+'/rest/v1/rpc/lifty_connection_profile_ready',
-        {'p_server_key':os.environ['LIFTY_EMAIL_SERVER_KEY']},
+        {'p_server_key':os.environ['LIFTY_EMAIL_SERVER_KEY'],
+         'p_linkedin_server_key':os.environ['LIFTY_LINKEDIN_SERVER_KEY']},
         {'apikey':os.environ['SUPABASE_PUBLISHABLE_KEY'],'Content-Type':'application/json'})
     if ready.get('version') != 'lifty.connection-profile.v1' or ready.get('sending_available') is not False:
         raise RuntimeError('Staging database and replay are not ready')
@@ -74,7 +75,23 @@ def main():
         check_spec(app['spec'])
         if os.environ.get('LIFTY_PILOT_APP_ID') and app['id'] != os.environ['LIFTY_PILOT_APP_ID']:
             raise RuntimeError('Unexpected pilot app ID')
-        doctl('create-deployment',app['id'],'--wait')
+        # Install the newly scoped channel capability in the same owning deploy.
+        # Preserve encrypted credentials and every other setting from the live spec.
+        key = os.environ.get('LIFTY_LINKEDIN_SERVER_KEY', '')
+        if len(key) < 32 or key == os.environ.get('LIFTY_EMAIL_SERVER_KEY'):
+            raise RuntimeError('A distinct staging LinkedIn capability is required')
+        spec = app['spec']
+        if not any(e['key'] == 'LIFTY_LINKEDIN_SERVER_KEY' for e in spec.get('envs', []) + spec['services'][0].get('envs', [])):
+            spec['services'][0].setdefault('envs', []).append({
+                'key': 'LIFTY_LINKEDIN_SERVER_KEY', 'value': key, 'type': 'SECRET', 'scope': 'RUN_TIME'})
+            check_spec(spec)
+            with tempfile.TemporaryDirectory() as scratch:
+                path = Path(scratch) / 'pilot.json'
+                path.write_text(json.dumps(spec))
+                path.chmod(0o600)
+                doctl('update', app['id'], '--spec', str(path), '--wait')
+        else:
+            doctl('create-deployment',app['id'],'--wait')
         app = doctl('get',app['id'])[0]
     deployment = doctl('get-deployment',app['id'],app['active_deployment']['id'])[0]
     check_spec(deployment['spec'])

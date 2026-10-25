@@ -124,7 +124,7 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
     // Refuse accidental production configuration rather than merely ignoring it.
     for (const name of ["TRIGGER_SECRET_KEY", "NOTIFICATIONS_TRIGGER_SECRET_KEY", "HUBSPOT_CLIENT_ID",
       "HUBSPOT_CLIENT_SECRET", "SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET", "ATTIO_CLIENT_ID", "ATTIO_CLIENT_SECRET",
-      "MAILIVERY_API_KEY", "LIFTY_CRM_SERVER_KEY", "LIFTY_LINKEDIN_SERVER_KEY", "UNIPILE_DSN", "UNIPILE_ACCESS_TOKEN",
+      "MAILIVERY_API_KEY", "LIFTY_CRM_SERVER_KEY", "UNIPILE_DSN", "UNIPILE_ACCESS_TOKEN",
       "LIFTY_WARMUP_GOOGLE_CLIENT_ID", "LIFTY_WARMUP_GOOGLE_CLIENT_SECRET"]) {
       if (environment[name]?.trim()) throw new Error(`${name} is unavailable in the connections profile.`);
     }

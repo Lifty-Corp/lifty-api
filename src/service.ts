@@ -89,10 +89,6 @@ export function createProductionApp(config: ServiceConfig) {
     ...(accounts && config.accounts ? { accounts: { connection: accounts, origin: new URL(config.accounts.publicBaseUrl).origin,
       hostedOrigins: config.accounts.provider.v2.hostedAuthOrigins } } : {}),
     identityOperation: (session, key, input, signal) => {
-      if (config.runtimeProfile === "connections" && key === "sending-accounts.connect"
-        && (typeof input.body !== "object" || input.body === null || !("channel" in input.body) || input.body.channel !== "email")) {
-        throw new PublicError({ status: 503, code: "CONNECT_UNAVAILABLE", message: "This environment supports email connection only." });
-      }
       return executeIdentityOperation(session, key, input, accounts ?? connectorUnavailable, signal, config.runtimeProfile ?? "full");
     },
     ...(config.openAiAppsChallenge === undefined ? {} : { openAiAppsChallenge: config.openAiAppsChallenge }),
@@ -202,7 +198,7 @@ export function createProductionApp(config: ServiceConfig) {
       };
     },
     checkReadiness: config.runtimeProfile === "connections"
-      ? createConnectionReadinessCheck(config.supabase, emailKey)
+      ? createConnectionReadinessCheck(config.supabase, config.accounts?.serverKeys ?? {})
       : createSupabaseReadinessCheck(config.supabase),
     checkCompanyReadiness: createCompanyReadinessCheck(config.supabase, config.crm ?? null),
     checkCrmMappingReadiness: createCrmMappingReadinessCheck(config.supabase, config.crm ?? null),

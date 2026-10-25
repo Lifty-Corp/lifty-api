@@ -13,7 +13,7 @@ const pins = {
   UNIPILE_V2_APPLICATION_ID: "app_01m5fr5mgdfzx8ftceq7y7z0h4",
   UNIPILE_V2_HOSTED_AUTH_ORIGINS: "https://auth.pilot.liftygtm.com",
 };
-const credentials = ["SUPABASE_PUBLISHABLE_KEY", "LIFTY_EMAIL_SERVER_KEY", "UNIPILE_V2_ACCESS_TOKEN"];
+const credentials = ["SUPABASE_PUBLISHABLE_KEY", "LIFTY_EMAIL_SERVER_KEY", "LIFTY_LINKEDIN_SERVER_KEY", "UNIPILE_V2_ACCESS_TOKEN"];
 
 export function pilotEnvironment(environment) {
   for (const [name, expected] of Object.entries(pins)) {
@@ -42,7 +42,7 @@ async function secretFile(path) {
 
 async function main() {
   const { values } = parseArgs({ options: {
-    output: { type: "string" }, "unipile-key-file": { type: "string" }, "email-key-file": { type: "string" },
+    output: { type: "string" }, "unipile-key-file": { type: "string" }, "email-key-file": { type: "string" }, "linkedin-key-file": { type: "string" },
   } });
   if (!values.output) throw new Error("--output is required; use a private path outside the checkout.");
   const root = fileURLToPath(new URL("../", import.meta.url));
@@ -51,12 +51,13 @@ async function main() {
   const environment = { ...process.env };
   if (values["unipile-key-file"]) environment.UNIPILE_V2_ACCESS_TOKEN = await secretFile(values["unipile-key-file"]);
   if (values["email-key-file"]) environment.LIFTY_EMAIL_SERVER_KEY = await secretFile(values["email-key-file"]);
+  if (values["linkedin-key-file"]) environment.LIFTY_LINKEDIN_SERVER_KEY = await secretFile(values["linkedin-key-file"]);
   const config = pilotEnvironment(environment);
   const { loadConfig } = await import("../dist/config.js");
   loadConfig(config);
   const spec = JSON.parse(await readFile(new URL("../.do/pilot-app.json", import.meta.url), "utf8"));
   spec.services[0].envs = Object.entries(config).map(([key, value]) => ({
-    key, value, scope: "RUN_TIME", type: key === "LIFTY_EMAIL_SERVER_KEY" || key === "UNIPILE_V2_ACCESS_TOKEN" ? "SECRET" : "GENERAL",
+    key, value, scope: "RUN_TIME", type: key === "LIFTY_EMAIL_SERVER_KEY" || key === "LIFTY_LINKEDIN_SERVER_KEY" || key === "UNIPILE_V2_ACCESS_TOKEN" ? "SECRET" : "GENERAL",
   }));
   await writeFile(output, JSON.stringify(spec, null, 2) + "\n", { mode: 0o600, flag: "wx" });
   process.stdout.write("Prepared lifty-api-pilot for the staging database and pilot Unipile application. No resource was created.\n");

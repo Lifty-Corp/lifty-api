@@ -4,6 +4,7 @@ import { pilotEnvironment } from "../scripts/prepare-pilot.mjs";
 const credentials = {
   SUPABASE_PUBLISHABLE_KEY: "sb_publishable_staging",
   LIFTY_EMAIL_SERVER_KEY: "e".repeat(40),
+  LIFTY_LINKEDIN_SERVER_KEY: "l".repeat(40),
   UNIPILE_V2_ACCESS_TOKEN: "isolated-app-key",
 };
 
