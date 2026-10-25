@@ -80,14 +80,40 @@ export const ScopeSchema = z.object({
   portal_id: CrmIdSchema,
   mapping_version: Digest,
 });
+// The database still sends allow_provisioning (workspaces.allow_hubspot_provisioning).
+// Nothing reads it since LIF-1584: field creation follows the connection's own
+// permission (capabilities), so the stripped value never reaches a response.
 export const StateSchema = ScopeSchema.extend({
   // Databases before LIF-1238 return HubSpot-only state without a provider.
   provider: CrmProviderSchema.default("hubspot"),
   workspace_name: z.string(),
-  allow_provisioning: z.boolean(),
   mappings: z.array(MappingSchema),
 });
 export type State = z.infer<typeof StateSchema>;
+/** LIF-1584: what the stored credential lets Lifty do, from the scopes the provider reports for it. */
+export const CrmCapabilityStateSchema = z.enum(["available", "missing_permission", "unknown"])
+  .describe("available: the provider reports every scope the action needs. missing_permission: it does not; reconnect and approve every requested permission. unknown: the scopes could not be read; the action may be tried and a provider refusal reports missing_permission.");
+export const CrmCapabilitySchema = z.object({
+  state: CrmCapabilityStateSchema,
+  missing_scopes: z.array(z.string()).describe("Provider scopes the credential lacks for this action; empty unless missing_permission."),
+}).strict();
+export const CrmCapabilitiesSchema = z.object({
+  credential: z.enum(["oauth", "private_app"])
+    .describe("oauth: Lifty's own HubSpot or Attio app. private_app: a HubSpot private-app token from an earlier setup; reconnecting replaces it with Lifty's app."),
+  scopes: z.array(z.string()).nullable().describe("Scopes the provider reports for the stored credential; null when they could not be read."),
+  map_fields: CrmCapabilitySchema.describe("Save mappings to existing CRM fields and write them on records."),
+  create_fields: z.object({ contact: CrmCapabilitySchema, company: CrmCapabilitySchema }).strict()
+    .describe("Create a HubSpot property or Attio attribute on contacts/people or companies (property_create)."),
+}).strict();
+export type CrmCapabilities = z.infer<typeof CrmCapabilitiesSchema>;
+/** GET /v1/workspace/crm/capabilities: the connection's state and, when connected, what it can do. */
+export const CrmCapabilitiesReadSchema = z.discriminatedUnion("connection", [
+  z.object({ workspace_ref: Ref, connection: z.literal("not_connected"), provider: z.null() }).strict(),
+  z.object({ workspace_ref: Ref, connection: z.literal("reconnect_required"), provider: CrmProviderSchema }).strict()
+    .describe("The stored credential is revoked, expired or an Attio API key from an earlier setup. Customers, notes and fields wait for a reconnect of this provider."),
+  z.object({ workspace_ref: Ref, connection: z.literal("connected"), provider: CrmProviderSchema,
+    integration_ref: Ref, portal_id: CrmIdSchema, capabilities: CrmCapabilitiesSchema }).strict(),
+]);
 export const PropertySchema = z.object({
   name: z.string(),
   label: z.string(),
@@ -145,6 +171,7 @@ export const CrmMappingSourcesSchema = z.object({
     .optional(),
 });
 export const CrmMappingCatalogSchema = StateSchema.extend({
+  capabilities: CrmCapabilitiesSchema,
   schema_version: Digest,
   properties: z.object({
     contact: z.array(PropertySchema),
@@ -268,6 +295,7 @@ export const CrmMappingStatusSchema = z
   .passthrough();
 export const CrmMappingSyncSchema = CrmMappingStatusSchema;
 export type CrmMappingAction =
+  | "capabilities"
   | "catalog"
   | "sources"
   | "preview"

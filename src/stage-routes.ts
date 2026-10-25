@@ -14,7 +14,7 @@ import { RunProgressQuerySchema, RunProgressSchema } from "./run-progress.js";
 import { NextStepSchema } from "./next-step-contracts.js";
 import { CrmRecordsQuerySchema, CrmRecordsSchema } from "./crm-records.js";
 import {
-  CrmMappingCatalogSchema, CrmMappingSourcesRequestSchema, CrmMappingSourcesSchema,
+  CrmCapabilitiesReadSchema, CrmMappingCatalogSchema, CrmMappingSourcesRequestSchema, CrmMappingSourcesSchema,
   CrmMappingPreviewRequestSchema, CrmMappingPreviewSchema, CrmMappingApplyRequestSchema,
   CrmMappingApplySchema, CrmMappingPropertyCreateRequestSchema, CrmMappingPropertyCreateSchema,
   CrmMappingSyncRequestSchema, CrmMappingSyncSchema, CrmMappingStatusQuerySchema, CrmMappingStatusSchema,
@@ -353,6 +353,9 @@ export function registerStageRoutes(app: OpenAPIHono<AppEnvironment>, dependenci
     if (!result || typeof result !== "object" || !("workspace_ref" in result) || result.workspace_ref !== current) throw forbidden();
     return context.json(result);
   }
+  // LIF-1584: the connection's state and what it can do, for the CRM page.
+  app.get("/v1/workspace/crm/capabilities", context =>
+    mapping(context, "capabilities", parse(Empty, context.req.query()), CrmCapabilitiesReadSchema));
   app.get("/v1/workspace/crm/mapping/catalog", context =>
     mapping(context, "catalog", parse(Empty, context.req.query()), CrmMappingCatalogSchema));
   app.get("/v1/workspace/crm/mapping/status", context =>

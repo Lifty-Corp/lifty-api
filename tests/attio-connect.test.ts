@@ -80,7 +80,20 @@ describe("Attio connection operations", () => {
       .rejects.toMatchObject({ reason });
     expect(calls.map(call => call.url).at(-1)).toBe("https://project.supabase.test/rest/v1/rpc/fail_lifty_connect_attempt");
     expect(calls.some(call => call.url.endsWith("complete_lifty_attio_connection"))).toBe(false);
-    expect(JSON.parse(calls.at(-1)!.body)).toMatchObject({ p_provider: "attio", p_intent_token: "c".repeat(64), p_status: "failed" });
+    expect(JSON.parse(calls.at(-1)!.body)).toMatchObject({ p_provider: "attio", p_intent_token: "c".repeat(64), p_status: "failed",
+      p_error_code: "permission_missing" });
+  });
+
+  // LIF-1282/LIF-1584: each known refusal records its own cause for the page and the agent.
+  it.each([
+    ["lifty_attio_workspace_already_connected", "workspace_taken", "account_in_use"],
+    ["lifty_crm_account_mismatch", "account_mismatch", "account_mismatch"],
+    ["lifty_crm_provider_conflict", "crm_provider_conflict", "crm_provider_conflict"],
+  ])("records the named cause when the store refuses with %s", async (marker, reason, code) => {
+    const { calls, operations } = provider({ store: json({ message: marker }, 409) });
+    await expect(operations.completeCallback({ code: "code", state: sealAttioConnectIntent("f".repeat(64), SETTINGS.clientSecret) }))
+      .rejects.toEqual(new AttioCallbackError(reason, 409));
+    expect(JSON.parse(calls.at(-1)!.body)).toEqual({ p_provider: "attio", p_intent_token: "f".repeat(64), p_status: "failed", p_error_code: code });
   });
 
   it("keeps an inactive token or an uncertain store pending instead of failed", async () => {

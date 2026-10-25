@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { AuthSession } from "../app.js";
-import { resolveHubSpotGrant } from "../generated/hubspot-grant-policy.js";
+import { parsePersistedGrant, resolveHubSpotGrant } from "../generated/hubspot-grant-policy.js";
 import {
   MappingError,
   type State,
@@ -9,6 +9,11 @@ import {
 } from "./contracts.js";
 const PROVIDER_REQUEST_TIMEOUT_MS = 15_000;
 const ATTIO_API = "https://api.attio.com/v2";
+// HubSpot reports a private-app token's current scopes here (the OAuth token
+// metadata endpoints refuse pat- tokens). Scopes change when the app is edited
+// while the token string stays the same, so a lookup is reused only briefly.
+const HUBSPOT_PRIVATE_APP_INFO = "https://api.hubapi.com/oauth/v2/private-apps/get/access-token-info";
+const PRIVATE_APP_SCOPES_TTL_MS = 5 * 60_000;
 export interface CrmMappingSettings {
   serverKey: string;
   readOnly?: boolean;
@@ -21,7 +26,16 @@ export const scoped = (state: State) => ({
   integration_ref: state.integration_ref,
   portal_id: state.portal_id,
 });
+/** How Lifty holds the account and the scopes the provider reports for it (null: unreadable). */
+export interface CrmAccess {
+  credential: "oauth" | "private_app";
+  scopes: string[] | null;
+}
+type ScopeCache = Map<string, { scopes: string[]; expiresAt: number }>;
+const privateAppScopes = new WeakMap<CrmMappingSettings, ScopeCache>();
 export interface MappingSession {
+  /** The credential kind and its provider-reported scopes, verified like every provider call. */
+  access: (state: State) => Promise<CrmAccess>;
   rpc: (
     operation: string,
     payload?: Record<string, unknown>,
@@ -154,6 +168,7 @@ export async function withMappingSession<T>(
     return result.data.data;
   }
   const tokens = new Map<string, string>();
+  const grants = new Map<string, { credential: CrmAccess["credential"]; scopes: string[] | null; version: string }>();
   const providerFetch: typeof fetch = async (url, init) => {
     checkActive();
     const result = await fetcher(url, {
@@ -186,7 +201,7 @@ export async function withMappingSession<T>(
         headers: { authorization: `Bearer ${credential.secret}` },
       });
       const self = z
-        .object({ active: z.boolean(), workspace_id: z.string().optional() })
+        .object({ active: z.boolean(), workspace_id: z.string().optional(), scope: z.string().optional() })
         .safeParse(await response.json().catch(() => null));
       if (response.status === 401 || (response.ok && self.success && !self.data.active)) {
         await rpc("reconnect", { ...scoped(state), credential_version: credential.credential_version });
@@ -194,6 +209,9 @@ export async function withMappingSession<T>(
       }
       if (!response.ok || !self.success || self.data.workspace_id !== state.portal_id)
         throw new MappingError("WORKSPACE_OR_PORTAL_CHANGED", 409);
+      // /v2/self reports the token's current scopes as one space-separated string.
+      grants.set(cacheKey, { credential: "oauth", version: credential.credential_version,
+        scopes: self.data.scope === undefined ? null : [...new Set(self.data.scope.split(/\s+/).filter(Boolean))].sort() });
       tokens.set(cacheKey, credential.secret);
       return credential.secret;
     }
@@ -240,8 +258,44 @@ export async function withMappingSession<T>(
       String(account.data.portalId) !== state.portal_id
     )
       throw new MappingError("WORKSPACE_OR_PORTAL_CHANGED", 409);
+    // An OAuth grant carries the scopes HubSpot returned with its latest token,
+    // checked again on every refresh; a bare token is a private app's.
+    const stored = parsePersistedGrant(credential.secret);
+    grants.set(cacheKey, stored.kind === "oauth"
+      ? { credential: "oauth", scopes: stored.grant.scopes, version: credential.credential_version }
+      : { credential: "private_app", scopes: null, version: credential.credential_version });
     tokens.set(cacheKey, resolved.token);
     return resolved.token;
+  }
+  async function access(state: State): Promise<CrmAccess> {
+    const token = await tokenFor(state);
+    const cacheKey = `${state.integration_ref}:${state.portal_id}`;
+    const grant = grants.get(cacheKey)!;
+    if (grant.credential === "oauth" || grant.scopes) return { credential: grant.credential, scopes: grant.scopes };
+    let cache = privateAppScopes.get(settings);
+    if (!cache) privateAppScopes.set(settings, cache = new Map());
+    const key = `${cacheKey}:${grant.version}`, now = Date.now();
+    for (const [entry, value] of cache) if (value.expiresAt <= now) cache.delete(entry);
+    const cached = cache.get(key);
+    if (cached) return { credential: "private_app", scopes: grant.scopes = cached.scopes };
+    try {
+      const response = await providerFetch(HUBSPOT_PRIVATE_APP_INFO, {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ tokenKey: token }),
+      });
+      const info = z.object({ hubId: z.union([z.string(), z.number()]).optional(), scopes: z.array(z.string()) })
+        .safeParse(response.ok ? await response.json().catch(() => null) : await response.text().then(() => null));
+      // An unreadable or foreign answer leaves the scopes unknown, never assumed.
+      if (!info.success || (info.data.hubId !== undefined && String(info.data.hubId) !== state.portal_id))
+        return { credential: "private_app", scopes: null };
+      grant.scopes = [...new Set(info.data.scopes)].sort();
+      cache.set(key, { scopes: grant.scopes, expiresAt: now + PRIVATE_APP_SCOPES_TTL_MS });
+      return { credential: "private_app", scopes: grant.scopes };
+    } catch (error) {
+      if (error instanceof MappingError) throw error;
+      return { credential: "private_app", scopes: null };
+    }
   }
   async function call(
     state: State,
@@ -282,7 +336,7 @@ export async function withMappingSession<T>(
       onAbort = () => reject(new MappingError("CRM_MAPPING_TIMEOUT", 504));
       signal.addEventListener("abort", onAbort, { once: true });
     });
-    return await Promise.race([work({ rpc, call }), aborted]);
+    return await Promise.race([work({ access, rpc, call }), aborted]);
   } catch (error) {
     if (signal.aborted) throw new MappingError("CRM_MAPPING_TIMEOUT", 504);
     if (error instanceof MappingError) throw error;

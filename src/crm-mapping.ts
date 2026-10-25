@@ -3,7 +3,7 @@ import { PublicError } from "./errors.js";
 import { CrmRecordsSchema } from "./crm-records.js";
 import { runCrmMapping, type CrmMappingSettings } from "./crm-mapping/runtime.js";
 import {
-  MappingError, CrmMappingCatalogSchema, CrmMappingSourcesSchema,
+  MappingError, CrmCapabilitiesReadSchema, CrmMappingCatalogSchema, CrmMappingSourcesSchema,
   CrmMappingPreviewSchema, CrmMappingApplySchema, CrmMappingPropertyCreateSchema,
   CrmMappingSyncSchema, CrmMappingStatusSchema, type CrmMappingAction, type CrmMappingOperation,
 } from "./crm-mapping/contracts.js";
@@ -15,7 +15,7 @@ const IssueSchema = z.object({
 const ErrorCodeSchema = z.string().regex(/^[A-Z][A-Z0-9_]{0,99}$/);
 const ERROR_STATUSES = new Set([400, 401, 403, 404, 409, 422, 429, 502, 503, 504]);
 const responses: Record<CrmMappingAction, z.ZodType> = {
-  catalog: CrmMappingCatalogSchema, sources: CrmMappingSourcesSchema, preview: CrmMappingPreviewSchema,
+  capabilities: CrmCapabilitiesReadSchema, catalog: CrmMappingCatalogSchema, sources: CrmMappingSourcesSchema, preview: CrmMappingPreviewSchema,
   apply: CrmMappingApplySchema, property_create: CrmMappingPropertyCreateSchema,
   sync: CrmMappingSyncSchema, status: CrmMappingStatusSchema, records: CrmRecordsSchema,
 };
@@ -26,7 +26,10 @@ export class CrmMappingError extends PublicError {
       ? "CRM mapping is available once HubSpot or Attio is connected as this workspace's CRM. Connect the founder's CRM first."
       : code === "HUBSPOT_NOT_CONNECTED" ? "HubSpot is not connected to this workspace. Connect HubSpot first."
       : code === "ATTIO_NOT_CONNECTED" ? "Attio is not connected to this workspace. Connect Attio first."
-      : code === "ATTIO_RECONNECT_REQUIRED" ? "The Attio connection was revoked or expired. Reconnect Attio to continue."
+      : code === "ATTIO_RECONNECT_REQUIRED" ? "The Attio connection was revoked, expired or made with an API key. Reconnect Attio to continue."
+      : code === "HUBSPOT_RECONNECT_REQUIRED" ? "The HubSpot connection was revoked or expired. Reconnect HubSpot to continue."
+      : code === "HUBSPOT_PERMISSION_REQUIRED" || code === "ATTIO_PERMISSION_REQUIRED"
+        ? `The ${code.startsWith("ATTIO") ? "Attio" : "HubSpot"} connection does not have the permission this needs. Reconnect ${code.startsWith("ATTIO") ? "Attio" : "HubSpot"} and approve every permission Lifty requests.`
       : "CRM mapping could not be verified. Read the current catalog or exact run status and follow the reported repair details." });
   }
 }

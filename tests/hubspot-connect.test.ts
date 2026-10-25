@@ -182,6 +182,31 @@ describe("hosted HubSpot connection operations", () => {
     });
     expect(fetchImpl).toHaveBeenCalledTimes(2);
     expect(String((fetchImpl as ReturnType<typeof vi.fn>).mock.calls[1]?.[0])).toContain("fail_lifty_connect_attempt");
+    expect(JSON.parse(String(((fetchImpl as ReturnType<typeof vi.fn>).mock.calls[1]?.[1] as RequestInit).body)))
+      .toMatchObject({ p_status: "failed", p_error_code: "permission_missing" });
+  });
+
+  // LIF-1282/LIF-1584: each known refusal records its own cause for the page and the agent.
+  it.each([
+    ["lifty_portal_already_connected", "portal_taken", "account_in_use"],
+    ["lifty_crm_account_mismatch", "account_mismatch", "account_mismatch"],
+    ["lifty_crm_provider_conflict", "crm_provider_conflict", "crm_provider_conflict"],
+  ])("records the named cause when the store refuses with %s", async (marker, reason, code) => {
+    const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/oauth/2026-03/token")) return json({ access_token: "access-value", refresh_token: "refresh-value",
+        expires_in: 1800, scopes: HUBSPOT_REQUIRED_SCOPES, hub_id: 49072478 });
+      if (url.includes("/account-info/")) return json({ portalId: 49072478 });
+      if (url.endsWith("/rpc/fail_lifty_connect_attempt")) return json({ status: "failed" });
+      return json({ message: marker }, 409);
+    }) as typeof fetch;
+    const operations = createHubspotConnectOperations({ ...SETTINGS, fetchImpl });
+    await expect(operations.completeCallback({ code: "authorization-code",
+      state: sealHubspotConnectIntent("e".repeat(64), SETTINGS.clientSecret) })).rejects.toMatchObject({ reason, status: 409 });
+    const calls = (fetchImpl as ReturnType<typeof vi.fn>).mock.calls;
+    expect(String(calls.at(-1)?.[0])).toContain("fail_lifty_connect_attempt");
+    expect(JSON.parse(String((calls.at(-1)?.[1] as RequestInit).body))).toEqual({ p_provider: "hubspot",
+      p_intent_token: "e".repeat(64), p_status: "failed", p_error_code: code });
   });
 
   it("maps replayed state to a safe callback error without copying provider tokens", async () => {

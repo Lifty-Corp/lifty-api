@@ -192,6 +192,23 @@ Legacy V1 warmup identity reads additionally require the stable credential
 scope `UNIPILE_PROVIDER_NAMESPACE`, matching the stored connection namespace;
 do not derive it from the DSN. V2 uses the existing application configuration.
 
+## CRM capabilities and reconnect
+
+LIF-1584: `GET /v1/workspace/crm/capabilities` and the mapping catalog's
+`capabilities` report what the stored CRM credential can do (map fields, create
+fields per object) from the scopes the provider reports: Attio `/v2/self`, a
+HubSpot OAuth grant's stored token scopes, or HubSpot's private-app token info
+endpoint (cached five minutes per credential version). `property_create` no
+longer reads `allow_provisioning`; a missing scope, or a provider 403, returns
+`HUBSPOT_PERMISSION_REQUIRED` / `ATTIO_PERMISSION_REQUIRED`. HubSpot and Attio
+callbacks record named refusal codes (`account_in_use`, `account_mismatch`,
+`permission_missing`, `crm_provider_conflict`); the attempt read and the browser
+page return the same codes. Ship this API revision before the
+Functions migration `20261026131000_lif1584_crm_reconnect_same_account.sql`:
+that migration refuses a reconnect to a different account
+(`lifty_crm_account_mismatch`), which an older API cannot name and leaves pending.
+An older database stores the new codes as `callback_failed`, so API-first is safe.
+
 ## Customer exclusion imports
 
 LIF-1082's authenticated customer-exclusions status/import stage requires the
