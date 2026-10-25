@@ -89,7 +89,7 @@ def main():
                 path = Path(scratch) / 'pilot.json'
                 path.write_text(json.dumps(spec))
                 path.chmod(0o600)
-                doctl('update', app['id'], '--spec', str(path), '--wait')
+                doctl('update', app['id'], '--spec', str(path), '--update-sources', '--wait')
         else:
             doctl('create-deployment',app['id'],'--wait')
         app = doctl('get',app['id'])[0]
