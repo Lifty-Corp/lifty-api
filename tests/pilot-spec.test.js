@@ -14,6 +14,7 @@ describe("pilot deployment artifact", () => {
       SUPABASE_URL: "https://csyhcwpcojbjlwwxdmhc.supabase.co",
       PUBLIC_BASE_URL: "https://api.pilot.liftygtm.com",
       UNIPILE_V2_APPLICATION_ID: "app_01m5fr5mgdfzx8ftceq7y7z0h4",
+      LIFTY_WARMUP_GOOGLE_CLIENT_ID: "755267746293-dtk3bl2tpfdcrtoc18t2j7mq6e5mvjir.apps.googleusercontent.com",
       LIFTY_RUNTIME_PROFILE: "connections",
     });
   });
@@ -21,6 +22,7 @@ describe("pilot deployment artifact", () => {
     { SUPABASE_URL: "https://ycwarkyijoeunmgjbikm.supabase.co" },
     { PUBLIC_BASE_URL: "https://api.liftygtm.com" },
     { UNIPILE_V2_APPLICATION_ID: "app_production" },
+    { LIFTY_WARMUP_GOOGLE_CLIENT_ID: "123-production.apps.googleusercontent.com" },
     { UNIPILE_V2_HOSTED_AUTH_ORIGINS: "https://auth.liftygtm.com" },
     { SUPABASE_SERVICE_ROLE_KEY: "private-admin-key" },
     { TRIGGER_SECRET_KEY: "tr_prod_key" },

@@ -34,11 +34,11 @@ describe("isolated connection deployment", () => {
     expect((await app.request("/v1/workspace/senders")).status).toBe(401);
   });
 
-  it("offers the exact pilot Google app only for its isolated application", () => {
-    const config = loadConfig({ ...environment, UNIPILE_V2_APPLICATION_ID: "app_01m5fr5mgdfzx8ftceq7y7z0h4" });
+  it("offers Trusted setup for the configured Google client only", () => {
+    const clientId = "123-pilot.apps.googleusercontent.com";
+    const config = loadConfig({ ...environment, LIFTY_WARMUP_GOOGLE_CLIENT_ID: clientId });
     expect(config.accounts?.emailSetup?.google).toEqual({
-      url: "https://admin.google.com/ac/owl/list?tab=configuredApps",
-      clientId: "755267746293-dtk3bl2tpfdcrtoc18t2j7mq6e5mvjir.apps.googleusercontent.com",
+      url: "https://admin.google.com/ac/owl/list?tab=configuredApps", clientId,
     });
     expect(loadConfig(environment).accounts?.emailSetup).toEqual({});
   });
@@ -72,7 +72,7 @@ describe("isolated connection deployment", () => {
   });
 
   it.each(["TRIGGER_SECRET_KEY", "NOTIFICATIONS_TRIGGER_SECRET_KEY", "HUBSPOT_CLIENT_SECRET", "SLACK_CLIENT_SECRET",
-    "MAILIVERY_API_KEY", "UNIPILE_ACCESS_TOKEN"])("refuses copied %s credentials", name => {
+    "MAILIVERY_API_KEY", "UNIPILE_ACCESS_TOKEN", "LIFTY_WARMUP_GOOGLE_CLIENT_SECRET"])("refuses copied %s credentials", name => {
     expect(() => loadConfig({ ...environment, [name]: "should-never-be-loaded" })).toThrow(/connections profile/);
   });
 });

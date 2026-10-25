@@ -12,6 +12,8 @@ const pins = {
   LIFTY_DASHBOARD_ORIGIN: "https://pilot.liftygtm.com",
   UNIPILE_V2_APPLICATION_ID: "app_01m5fr5mgdfzx8ftceq7y7z0h4",
   UNIPILE_V2_HOSTED_AUTH_ORIGINS: "https://auth.pilot.liftygtm.com",
+  // The Google client configured in the pilot Unipile application. Change both together.
+  LIFTY_WARMUP_GOOGLE_CLIENT_ID: "755267746293-dtk3bl2tpfdcrtoc18t2j7mq6e5mvjir.apps.googleusercontent.com",
 };
 const credentials = ["SUPABASE_PUBLISHABLE_KEY", "LIFTY_EMAIL_SERVER_KEY", "LIFTY_LINKEDIN_SERVER_KEY", "UNIPILE_V2_ACCESS_TOKEN"];
 
