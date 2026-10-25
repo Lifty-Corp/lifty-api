@@ -10,7 +10,7 @@ import type { ConnectChannel } from "./connect-state.js";
 
 const MAX_FORM_BYTES = 4096;
 const fields: Record<ConnectChannel, string[]> = {
-  email: ["intent", "mailbox_use"],
+  email: ["intent", "mailbox_use", "provider", "admin_approval"],
   linkedin: ["intent", "habitual_personal_account", "no_other_automation"],
 };
 
@@ -64,18 +64,19 @@ export function createAccountConnectRouter(connection: AccountConnection,
         }
       } finally { reader.releaseLock(); }
       const form = new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
-      // Old open forms remain valid; new forms include one allowlisted provider.
-      const keys = channel === "email" && form.has("provider") ? [...fields.email, "provider"] : fields[channel];
+      // Approval is a browser acknowledgement, never evidence of tenant trust.
+      const keys = fields[channel];
       if (keys.some(key => form.getAll(key).length !== 1) || [...form.keys()].some(key => !keys.includes(key))) {
         return message(c, 400, "Connection needs attention", channel === "email"
-          ? "Say how you use this mailbox before continuing." : "Confirm both statements before continuing.");
+          ? "Reopen your Lifty connection link, choose your provider and confirm company approval before continuing." : "Confirm both statements before continuing.");
       }
       let intent = form.get("intent")!;
       if (channel === "email") {
         const use = form.get("mailbox_use");
         const provider = form.get("provider");
-        if (provider !== null && provider !== "google" && provider !== "outlook") return message(c, 400, "Connection needs attention", "Choose Google or Microsoft.");
-        if (provider) intent = connection.selectEmailProvider(intent, provider);
+        if (provider !== "google" && provider !== "outlook") return message(c, 400, "Connection needs attention", "Choose Google or Microsoft.");
+        if (form.get("admin_approval") !== provider) return message(c, 400, "Company approval required", "Confirm that your organization allows Lifty for the selected provider before connecting.");
+        intent = connection.selectEmailProvider(intent, provider);
         if (use !== "habitual" && use !== "dedicated") return message(c, 400, "Connection needs attention", "Say how you use this mailbox before continuing.");
         return render(c, channel, intent, await connection.declare(channel, intent, { mailbox_use: use }));
       }
