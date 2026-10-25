@@ -354,6 +354,10 @@ export const CampaignMessageSchema = z.object({ message_ref: Ref, lead_ref: Ref,
   delivery_state: z.enum(["confirmed", "scheduled", "planned", "unknown"]), sent_at: Timestamp.nullable(),
   not_sent_cause: z.enum(["account_disconnected", "sender_unavailable", "provider_rejected", "unknown"]).nullable().optional(),
   action_blocked_reason: z.literal("historical_engine_retired").nullable().optional(),
+  // LIF-1582: optional so this API deploys before the database adds the key.
+  // Any saved value is relayed; the database owns the value set.
+  copy_source: z.string().min(1).max(100).nullable().optional()
+    .describe("Where the saved copy came from. `manual`: the person typed it directly in LinkedIn; Lifty recorded it but did not write or send it."),
 }).strict().refine(message => message.direction !== "outbound" || message.delivery_state !== "confirmed" || message.sent_at !== null,
   "Confirmed outbound delivery requires its saved receipt time.");
 type ConversationOwner = Pick<z.infer<typeof CampaignMessageSchema>, "lead_ref" | "channel" | "account_id" | "sender_id">;

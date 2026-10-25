@@ -602,7 +602,7 @@ together. A spec-only update reuses the previous source and can fail startup.
 Deploy the Functions profile, then API, then dashboard. See the runbook before
 provisioning.
 
-### Mailbox use changes (LIF-1603)
+## Mailbox use changes (LIF-1603)
 
 `sending-accounts.declare` exposes
 `POST /v1/workspace/sending-accounts/{id}/declare` and
