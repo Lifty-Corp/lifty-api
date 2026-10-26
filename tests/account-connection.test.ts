@@ -322,7 +322,7 @@ describe("shared confirmation for sending accounts", () => {
     // The signed authorization arrives later (another tab): it wins.
     db.authorization = { received: true, account_id: "acc_new", return_error: "authorization_cancelled" };
     const confirmed = await server.request("/connect/email/return/status", status("email", state, "canceled"));
-    expect(await confirmed.json()).toEqual({ status: "connected", account: null, reference: attemptId });
+    expect(await confirmed.json()).toEqual({ status: "connected", account: null, reference: attemptId, next: "warmup" });
     expect(db.payloads.complete).toEqual({ attempt_id: attemptId, verified: { api_version: "v2", application_id: "app_test",
       account_scope_id: null, account_id: "acc_new", user_id: "user-1", email: "ana@example.test" } });
     expect(provider.calls).toEqual(["GET /v2/accounts/acc_new", "GET /v2/acc_new/email-senders"]);
@@ -370,7 +370,7 @@ describe("shared confirmation for sending accounts", () => {
     // The retry returns through the same attempt; the signed authorization still wins.
     db.authorization = { received: true, account_id: "acc_new", return_error: "account_exists" }; db.ops = [];
     const confirmed = await server.request("/connect/email/return/status", status("email", state));
-    expect(await confirmed.json()).toEqual({ status: "connected", account: null, reference: attemptId });
+    expect(await confirmed.json()).toEqual({ status: "connected", account: null, reference: attemptId, next: "warmup" });
     expect(db.ops).toEqual(["context", "complete"]);
   });
 
@@ -394,7 +394,8 @@ describe("shared confirmation for sending accounts", () => {
     expect(db.ops).not.toContain("complete");
     provider.verificationStatus = "verified";
     const confirmed = await server.request("/connect/email/return/status", status("email", intent()));
-    expect(await confirmed.json()).toMatchObject({ status: "connected" });
+    // A reconnected mailbox keeps its warmup, so the page asks for no warmup sign-in.
+    expect(await confirmed.json()).toEqual({ status: "connected", account: null, reference: attemptId });
     expect(db.ops.filter(op => op === "complete")).toHaveLength(1);
   });
 

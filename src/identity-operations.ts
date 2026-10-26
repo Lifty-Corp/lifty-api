@@ -88,8 +88,8 @@ export const identityOperationDefinitions = {
       method: "GET", route: `${accountsRoute}/attempts/{id}`, cli: { operation: "attempt" }, rpc: "get_lifty_sending_account_attempt",
       readOnly: false,
       path: contracts.IdPath, query: Empty, request: null, invalid: invalidRequest,
-      response: contracts.AttemptSchema, success: 200, args: input => ({ p_attempt_id: path(input) }),
-      description: "Check and reconcile one connection attempt: pending, connected (account_id), failed (reason) or expired, plus declaration and durable progress. During verifying, this may persist the account connection/reconnection or a verified failure from authorization already received. declaration_required, preparing and sign_in_required mean the person must open the same connection link. A failed or timed-out check is unknown, not a failed connection: use bounded backoff. Continues only the connection/reconnection the user already requested; never creates a new authorization link or starts outreach.",
+      response: contracts.AttemptReadSchema, success: 200, args: input => ({ p_attempt_id: path(input) }),
+      description: "Check and reconcile one connection attempt: pending, connected (account_id), failed (reason) or expired, plus declaration and durable progress. During verifying, this may persist the account connection/reconnection or a verified failure from authorization already received. declaration_required, preparing and sign_in_required mean the person must open the same connection link. A failed or timed-out check is unknown, not a failed connection: use bounded backoff. Continues only the connection/reconnection the user already requested; never creates a new authorization link or starts outreach. A connected mailbox carries next_step: its warmup setup, a second sign-in by its owner, to start right away.",
     },
     reconnect: {
       method: "POST", route: `${accountsRoute}/{id}/reconnect`, cli: { operation: "reconnect" }, rpc: "reconnect_lifty_sending_account",
@@ -174,6 +174,19 @@ type RpcClient = { rpc(name: string, args: Record<string, unknown>): Promise<{ d
 // name its connect page; it is not part of the public response.
 const StartedAttempt = contracts.ConnectStartSchema.extend({ channel: contracts.Channel }).strip();
 
+// Connecting a mailbox is only half of its setup: warmup and the placement
+// test need the owner's second consent, which an agent would otherwise miss
+// right where it reports success. warmup_start issues no link for a mailbox
+// whose warmup is already set up. The connection profile has no warmup.
+function withWarmupStep(attempt: contracts.Attempt, profile: "full" | "connections") {
+  if (profile !== "full" || attempt.channel !== "email" || attempt.state !== "connected" || !attempt.account_id) return attempt;
+  return contracts.AttemptReadSchema.parse({ ...attempt, next_step: {
+    operation: "sending_accounts_warmup_start",
+    body: { workspace: attempt.workspace.workspace_ref, connection_ref: attempt.account_id },
+    message: "The mailbox is connected, but it cannot warm up or get its placement test until its owner signs in to it once more. Call sending_accounts_warmup_start once with this body now and, in the same reply, show its setup link as that second sign-in. Reuse the link while it is valid: another call replaces it. A null connect_url means this mailbox's warmup is already set up.",
+  } });
+}
+
 export async function executeIdentityOperation(session: AuthSession, key: string, input: IdentityInput,
   connector: AccountConnector, signal?: AbortSignal, profile: "full" | "connections" = "full"): Promise<IdentityResult> {
   const entry = identityEntries().find(item => item.key === key);
@@ -201,11 +214,11 @@ export async function executeIdentityOperation(session: AuthSession, key: string
   }
   if (key === "sending-accounts.attempt") {
     const attempt = verified(contracts.AttemptSchema, data);
-    if (attempt.state !== "pending" || attempt.progress.stage !== "verifying") return { status: 200, body: attempt };
+    if (attempt.state !== "pending" || attempt.progress.stage !== "verifying") return { status: 200, body: withWarmupStep(attempt, profile) };
     // A provider or verification failure leaves the attempt pending; only the
     // durable attempt decides the outcome.
     try { await connector.reconcileAttempt(attempt.channel, attempt.id); } catch { return { status: 200, body: attempt }; }
-    return { status: 200, body: verified(contracts.AttemptSchema, await call(definition.rpc, definition.args(input))) };
+    return { status: 200, body: withWarmupStep(verified(contracts.AttemptSchema, await call(definition.rpc, definition.args(input))), profile) };
   }
   if (key === "sending-accounts.disconnect") {
     const receipt = verified(contracts.AccountResultSchema, data);

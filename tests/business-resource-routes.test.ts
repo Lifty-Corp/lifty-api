@@ -1128,7 +1128,9 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
       const actions = result.actions.join(" ");
       expect(actions).toContain("offer to connect it now so the test result reaches them there");
       expect(actions).toContain("Lifty will notify them with the placement test result");
-      expect(actions).toContain("Lifty tests where the mailbox's email lands as soon as its warmup setup is done");
+      expect(actions).toContain("Lifty tests where its email lands as soon as setup is done");
+      // Every mailbox gets its warmup link at once; connecting alone is not setup.
+      expect(actions).toContain("right away, whatever the mailbox's use, and show the returned setup link in the same reply");
       expect(result.recommended_tools).not.toContain("sending_accounts_placement_start");
     }
   });

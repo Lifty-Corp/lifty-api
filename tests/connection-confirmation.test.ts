@@ -142,7 +142,7 @@ it('submits a code once, survives a lost response, displays late success, and re
   expect(page.history.replaceState).toHaveBeenCalled();expect(page.location.href).not.toContain('PRIVATE_CODE');
   expect(requests.filter(r=>r.stage==='process')).toEqual([{stage:'process',body:{state:'capability',code:'PRIVATE_CODE'}}]);
   expect(requests.filter(r=>r.stage==='status').every(r=>!('code' in r.body))).toBe(true);
-  expect(page.elements['confirmation-title']!.textContent).toBe('email is connected');
+  expect(page.elements['confirmation-title']!.textContent).toBe('Email is connected');
   expect(page.elements['confirmation-detail']!.textContent).toContain('<img onerror=alert(1)>@example.test');
   const reload=browser(page.location.href,fetchImpl);const again=reload.run();await vi.runAllTimersAsync();await again;
   expect(requests.filter(r=>r.stage==='process')).toHaveLength(1);
@@ -164,6 +164,15 @@ it.each([
   expect(page.elements['confirmation-title']!.textContent).toBe('Warmup is running');
   expect(page.elements['confirmation-detail']!.textContent).toContain('Lifty verified founder@example.test.');
   expect(page.elements['confirmation-detail']!.textContent).toContain(promise);
+});
+// A connected mailbox is not set up yet: warmup and placement need the owner's second sign-in.
+it('sends a newly connected mailbox back for its warmup sign-in instead of calling setup done',async()=>{
+  vi.useFakeTimers();
+  const page=browser('https://api.lifty.test/connect/email/return?intent=capability',vi.fn(async()=>Response.json({status:'connected',account:null,next:'warmup'})) as typeof fetch);
+  const work=page.run();await vi.runAllTimersAsync();await work;
+  expect(page.elements['confirmation-title']!.textContent).toBe('One more step: set up warmup');
+  expect(page.elements['confirmation-detail']!.textContent).toContain('one more sign-in to this same mailbox. Go back to Lifty to get that link.');
+  expect(page.elements['confirmation-spinner']!.hidden).toBe(true);expect(page.elements['confirmation-actions']!.hidden).toBe(true);
 });
 // LIF-1282/LIF-1584: a known CRM refusal names its cause and next step, never "could not be verified".
 it.each([
@@ -203,7 +212,7 @@ it('explains a refusal with a retry of the same attempt, keeps listening and sho
   // Only the state and the safe refusal hints survive, so a reload explains the same refusal.
   expect(page.location.href).toBe('https://api.lifty.test/connect/email/return?intent=capability&error_type=api%2Falready_exists&error_detail=acc_old');
   connected=true;await vi.runAllTimersAsync();await work;
-  expect(page.elements['confirmation-title']!.textContent).toBe('email is connected');expect(page.elements['confirmation-actions']!.hidden).toBe(true);
+  expect(page.elements['confirmation-title']!.textContent).toBe('Email is connected');expect(page.elements['confirmation-actions']!.hidden).toBe(true);
 });
 it('never forwards a refusal detail that is not an account id, and offers no retry without an entry',async()=>{
   vi.useFakeTimers();const bodies:Record<string,string>[]=[];
@@ -292,7 +301,7 @@ it.each(['email','linkedin'])('waits for delayed %s authorization after return w
   expect(reload.elements['confirmation-title']!.textContent).toBe('Checking your connection');
   expect(reload.elements['confirmation-actions']!.hidden).toBe(true);
   connected=true;await vi.runAllTimersAsync();await again;
-  expect(reload.elements['confirmation-title']!.textContent).toBe(channel==='email'?'email is connected':'LinkedIn is connected');
+  expect(reload.elements['confirmation-title']!.textContent).toBe(channel==='email'?'Email is connected':'LinkedIn is connected');
   expect(reload.elements['confirmation-actions']!.hidden).toBe(true);
   expect(requests.every(request=>request.path.endsWith('/status'))).toBe(true);
   expect(requests.every(request=>Object.keys(request.body as object).join() === 'state')).toBe(true);

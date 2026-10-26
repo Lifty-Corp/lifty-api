@@ -214,7 +214,9 @@ export function createAccountConnection(settings: AccountConnectionSettings) {
   }
   function result(current: Snapshot): ConfirmationResult {
     const { attempt } = current;
-    if (attempt.internal_state === "completed" || attempt.state === "connected") return { status: "connected", account: null, reference: attempt.id };
+    // A new mailbox still needs its warmup sign-in; a reconnected one keeps its warmup.
+    if (attempt.internal_state === "completed" || attempt.state === "connected") return { status: "connected", account: null, reference: attempt.id,
+      ...(attempt.channel === "email" && !attempt.reconnect && !settings.connectionOnly ? { next: "warmup" as const } : {}) };
     if (attempt.state === "failed") return { status: "failed", reason: attempt.reason ? failureReason[attempt.reason] : "ended", reference: attempt.id };
     if (attempt.state === "expired") return { status: "failed", reason: "ended", reference: attempt.id };
     if (attempt.progress.stage === "sign_in_required") {
