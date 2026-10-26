@@ -179,7 +179,7 @@ Browser and agent progress come from the same database projection. There is no
 compatibility layer: deploy this API immediately after that migration.
 
 LIF-1629 requires Functions migration
-`20261026170000_lif1629_connection_recovery.sql` before this API revision; deploy
+`20261026220000_lif1629_connection_recovery.sql` before this API revision; deploy
 this API right after it (no compatibility layer: attempt reads return 502 in the
 gap). A received authorization finishes without any open page: the server runs
 a recovery pass every 15 seconds (`startConnectionRecovery`), claiming due
