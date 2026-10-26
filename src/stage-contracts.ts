@@ -4,7 +4,6 @@ import { researchOperationDefinitions } from "./research-operations.js";
 import { identityOperationDefinitions, type IdentityDefinition } from "./identity-operations.js";
 import { linkedinOperationDefinitions } from "./linkedin-operations.js";
 import { crmPreferencesOperationDefinitions } from "./crm-preferences.js";
-import { crmRulesOperationDefinitions } from "./crm-rules.js";
 import { crmSyncControlsOperationDefinitions } from "./crm-sync-controls.js";
 import { customerExclusionsOperationDefinitions } from "./customer-exclusions.js";
 import { RunProgressQuerySchema, RunProgressSchema } from "./run-progress.js";
@@ -105,7 +104,6 @@ const definitionCatalog = (definitions: Record<string, Record<string, IdentityDe
 const identityCatalog = definitionCatalog(identityOperationDefinitions);
 const linkedinCatalog = definitionCatalog(linkedinOperationDefinitions);
 const crmPreferencesCatalog = definitionCatalog(crmPreferencesOperationDefinitions);
-const crmRulesCatalog = definitionCatalog(crmRulesOperationDefinitions);
 const crmSyncControlsCatalog = definitionCatalog(crmSyncControlsOperationDefinitions);
 const customerExclusionsCatalog = definitionCatalog(customerExclusionsOperationDefinitions);
 const outreachCatalog = Object.fromEntries(Object.entries(outreachOperationDefinitions).map(([resource, entries]) => [resource,
@@ -167,7 +165,6 @@ export const stageOperations: Record<string, Record<string, StageOperation>> = {
     mapping_sync: operation("POST", "/v1/workspace/crm/mapping/sync", "Queue updates to existing contacts and companies in the current workspace's connected HubSpot or Attio account for up to 25 explicitly selected leads, using saved mappings, the current preview_digest and a stable request_ref. Mapping write policies may overwrite existing field values. Repeating the same request reuses its exact run_ref. Returns an asynchronous receipt, not verified completion. Does not create CRM records, discover leads or send outreach.", CrmMappingSyncSchema, CrmMappingSyncRequestSchema),
     mapping_status: operation("GET", "/v1/workspace/crm/mapping/status", "Read the exact mapping replay receipt, including per-field live readback and skipped or stale values. Partial or failed runs are not full success.", CrmMappingStatusSchema, null, CrmMappingStatusQuerySchema),
     ...crmPreferencesCatalog.crm!,
-    ...crmRulesCatalog.crm!,
     ...crmSyncControlsCatalog.crm!,
     records: { ...operation("GET", "/v1/workspace/crm/records", "Read verified HubSpot or Attio contact and company links for the existing sync cohort. Supply the known run_ref or omit for the latest CRM sync. This never starts a sync." + CrmMaintenance, CrmRecordsSchema, null, CrmRecordsQuerySchema), readOnly: false },
     get: operation("GET", stageRoute("crm"), "Without attempt_ref read the connected CRM (HubSpot or Attio; provider null when none). With it verify only that exact authorization attempt, including reconnection.", z.union([CrmConnectionStatusSchema, ConnectionAttemptStatusSchema]), null, ConnectionAttemptQuerySchema),

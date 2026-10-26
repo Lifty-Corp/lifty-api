@@ -88,8 +88,6 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   CRM_TEST_SYNC_NO_LEADS: "There are no qualified leads to test yet. Run research first; a test needs at least one qualified lead.",
   CRM_TEST_SYNC_LEADS_INVALID: "Choose one to five qualified leads of this workspace, each once, or omit lead_refs to let Lifty pick them.",
   CRM_TEST_SYNC_NOT_FOUND: "This test sync is not available in the selected workspace. Read the latest test instead.",
-  // CRM counting rules (LIF-1477).
-  CRM_RULES_INVALID: "Repair the CRM counting rules using the current operation schema.",
   CUSTOMER_EXCLUSIONS_INVALID: "Repair the customer CSV using the current import schema.",
   CUSTOMER_EXCLUSIONS_TOO_LARGE: "The customer list exceeds the import limit. Use the current CSV size and row limits.",
   CUSTOMER_EXCLUSIONS_REVISION_CONFLICT: "This import revision already records different customer data. Read status and import the intended file again.",
