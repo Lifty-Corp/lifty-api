@@ -1,0 +1,35 @@
+{
+  "display_information": {
+    "name": "Lifty",
+    "description": "lifty your work",
+    "background_color": "#4d594d"
+  },
+  "features": {
+    "bot_user": { "display_name": "Lifty", "always_online": false }
+  },
+  "oauth_config": {
+    "redirect_urls": [
+      "https://www.integromat.com/oauth/cb/slack3",
+      "https://api.liftygtm.com/slack/callback",
+      "https://lifty-api-staging-ox2h9.ondigitalocean.app/slack/callback"
+    ],
+    "scopes": {
+      "bot": ["chat:write", "groups:history", "incoming-webhook", "channels:read", "groups:read"]
+    },
+    "pkce_enabled": false
+  },
+  "settings": {
+    "event_subscriptions": {
+      "request_url": "https://ycwarkyijoeunmgjbikm.supabase.co/functions/v1/slack-events",
+      "bot_events": ["message.groups"]
+    },
+    "interactivity": {
+      "is_enabled": true,
+      "request_url": "https://ycwarkyijoeunmgjbikm.supabase.co/functions/v1/slack-interactivity"
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false,
+    "is_mcp_enabled": false
+  }
+}
