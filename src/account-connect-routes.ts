@@ -2,7 +2,7 @@ import { Hono, type Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { createConfirmationRouter, withConnectionDeadline, type ConfirmationLog } from "./connection-confirmation.js";
 import type { AccountConnection, ConnectOutcome } from "./account-connection.js";
-import { renderConnectMessagePage, renderConnectPage } from "./connect-page.js";
+import { CONNECT_HELP_SCRIPT_HASH, renderConnectMessagePage, renderConnectPage } from "./connect-page.js";
 import { hostedReturnError } from "./hosted-return-error.js";
 import { PENDING_SUBMIT_SCRIPT_HASH } from "./lifty-brand.js";
 import { PublicError } from "./errors.js";
@@ -10,7 +10,7 @@ import type { ConnectChannel } from "./connect-state.js";
 
 const MAX_FORM_BYTES = 4096;
 const fields: Record<ConnectChannel, string[]> = {
-  email: ["intent", "mailbox_use"],
+  email: ["intent", "mailbox_use", "provider", "admin_approval"],
   linkedin: ["intent", "habitual_personal_account", "no_other_automation"],
 };
 
@@ -23,13 +23,13 @@ export function createAccountConnectRouter(connection: AccountConnection,
   const render = (c: Context, channel: ConnectChannel, intent: string, outcome: ConnectOutcome) => {
     if (outcome.kind === "redirect") return c.redirect(outcome.url, 303);
     if (outcome.kind === "checking" || outcome.kind === "preparing") return c.redirect(`/connect/${channel}/return?intent=${encodeURIComponent(intent)}${outcome.kind === "preparing" ? "&prepare=1" : ""}`, 303);
-    return c.html(renderConnectPage(channel, intent, outcome.senderName));
+    return c.html(renderConnectPage(channel, intent, outcome.senderName, connection.emailSetup));
   };
   app.use("/connect/*", async (c, next) => {
     c.header("cache-control", "no-store, no-transform"); c.header("x-content-type-options", "nosniff");
     // same-origin keeps the form's Origin check usable without leaking the link to the provider.
     c.header("referrer-policy", "same-origin");
-    c.header("content-security-policy", `default-src 'none'; style-src 'unsafe-inline'; script-src '${PENDING_SUBMIT_SCRIPT_HASH}'; form-action 'self' ${options.hostedOrigins.join(" ")}; base-uri 'none'; frame-ancestors 'none'`);
+    c.header("content-security-policy", `default-src 'none'; style-src 'unsafe-inline'; script-src '${PENDING_SUBMIT_SCRIPT_HASH}' '${CONNECT_HELP_SCRIPT_HASH}'; form-action 'self' ${options.hostedOrigins.join(" ")}; base-uri 'none'; frame-ancestors 'none'`);
     await withConnectionDeadline(8_000, next);
   });
   // Never log intents, provider URLs or bodies; the page shows a safe next step.
@@ -64,14 +64,19 @@ export function createAccountConnectRouter(connection: AccountConnection,
         }
       } finally { reader.releaseLock(); }
       const form = new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
+      // Approval is a browser acknowledgement, never evidence of tenant trust.
       const keys = fields[channel];
       if (keys.some(key => form.getAll(key).length !== 1) || [...form.keys()].some(key => !keys.includes(key))) {
         return message(c, 400, "Connection needs attention", channel === "email"
-          ? "Say how you use this mailbox before continuing." : "Confirm both statements before continuing.");
+          ? "Reopen your Lifty connection link, choose your provider and confirm company approval before continuing." : "Confirm both statements before continuing.");
       }
-      const intent = form.get("intent")!;
+      let intent = form.get("intent")!;
       if (channel === "email") {
         const use = form.get("mailbox_use");
+        const provider = form.get("provider");
+        if (provider !== "google" && provider !== "outlook") return message(c, 400, "Connection needs attention", "Choose Google or Microsoft.");
+        if (form.get("admin_approval") !== provider) return message(c, 400, "Company approval required", "Confirm that your organization allows Lifty for the selected provider before connecting.");
+        intent = connection.selectEmailProvider(intent, provider);
         if (use !== "habitual" && use !== "dedicated") return message(c, 400, "Connection needs attention", "Say how you use this mailbox before continuing.");
         return render(c, channel, intent, await connection.declare(channel, intent, { mailbox_use: use }));
       }
@@ -86,7 +91,7 @@ export function createAccountConnectRouter(connection: AccountConnection,
       // link (asking again is safe) and never replaces a stored one.
       process: input => connection.prepare(channel, input.state),
       status: input => connection.confirm(channel, input.state, hostedReturnError(input.errorType), input.errorDetail),
-    }, { origin: options.origin, ...(options.log ? { log: options.log } : {}) }));
+    }, { origin: options.origin, ...(connection.dashboardOrigin ? { returnUrl: connection.dashboardOrigin } : {}), ...(options.log ? { log: options.log } : {}) }));
   }
   return app;
 }

@@ -21,6 +21,7 @@ export interface IdentityDefinition {
   route: string;
   cli?: { operation: string };
   rpc: string;
+  connectionRpc?: string;
   path: z.ZodType;
   query: z.ZodType;
   request: z.ZodType | null;
@@ -46,12 +47,12 @@ const accountAction = (action: "pause" | "resume", description: string): Identit
 export const identityOperationDefinitions = {
   senders: {
     get: {
-      method: "GET", route: sendersRoute, rpc: "get_lifty_senders", path: Empty, query: Empty, request: null,
+      method: "GET", route: sendersRoute, rpc: "get_lifty_senders", connectionRpc: "get_lifty_connection_senders", path: Empty, query: Empty, request: null,
       invalid: invalidRequest, response: contracts.SendersGetSchema, success: 200, args: () => ({}),
       description: "Read the selected workspace's senders (named people) with their name, signature, booking link, version and every account they own, including disconnected history. Find a known person here and use the returned id; names are not identifiers. Deleted senders are not listed. Read-only.",
     },
     post: {
-      method: "POST", route: sendersRoute, rpc: "create_lifty_sender", path: Empty, query: Empty,
+      method: "POST", route: sendersRoute, rpc: "create_lifty_sender", connectionRpc: "create_lifty_connection_sender", path: Empty, query: Empty,
       request: contracts.SenderCreateSchema, invalid: senderInvalid, response: contracts.SenderResultSchema, success: 201,
       args: input => ({ p_payload: input.body }),
       description: "Create a new person at version 1 with no accounts. Only for someone absent from the senders roster: it never looks up or reuses a person by name, and two people may share a name. Signature is the founder's own words (plain text, at most 500 characters, links only with https). Never connects, activates or sends. After a lost response read the roster before retrying.",
@@ -72,13 +73,13 @@ export const identityOperationDefinitions = {
   },
   "sending-accounts": {
     get: {
-      method: "GET", route: accountsRoute, rpc: "get_lifty_sending_accounts", path: Empty,
+      method: "GET", route: accountsRoute, rpc: "get_lifty_sending_accounts", connectionRpc: "get_lifty_connection_accounts", path: Empty,
       query: contracts.AccountsQuerySchema, request: null, invalid: invalidRequest,
       response: contracts.AccountsGetSchema, success: 200, args: input => ({ p_query: input.query }),
       description: "Read sending accounts, optionally filtered by sender_id and channel, including disconnected history: connection status, usage state (active/paused), sending (allowed now, else reason), daily limits, last verified check, observation (verified/unverified), access removal, declaration and sends. Read-only; never checks or changes a provider. Unverified means the last known facts are older than the freshness window, not a disconnection.",
     },
     connect: {
-      method: "POST", route: `${accountsRoute}/connect`, cli: { operation: "connect" }, rpc: "connect_lifty_sending_account",
+      method: "POST", route: `${accountsRoute}/connect`, cli: { operation: "connect" }, rpc: "connect_lifty_sending_account", connectionRpc: "connect_lifty_connection_account",
       path: Empty, query: Empty, request: contracts.ConnectSchema, invalid: invalidRequest,
       response: contracts.ConnectResultSchema, success: 200, args: input => ({ p_payload: input.body }),
       description: "Start connecting a LinkedIn account or mailbox for an existing sender_id (from the senders roster). Returns connection_url and durable progress: declaration_required, preparing, sign_in_required, verifying or complete. Until verifying, show connection_url: the connect page asks the declaration and opens the sign-in. A live attempt for the same sender and channel is reused (created:false), even when its link text changes; an expired one never blocks a new connect. The account exists only after verified authorization. Connecting never activates a campaign or sends.",
@@ -174,7 +175,7 @@ type RpcClient = { rpc(name: string, args: Record<string, unknown>): Promise<{ d
 const StartedAttempt = contracts.ConnectStartSchema.extend({ channel: contracts.Channel }).strip();
 
 export async function executeIdentityOperation(session: AuthSession, key: string, input: IdentityInput,
-  connector: AccountConnector, signal?: AbortSignal): Promise<IdentityResult> {
+  connector: AccountConnector, signal?: AbortSignal, profile: "full" | "connections" = "full"): Promise<IdentityResult> {
   const entry = identityEntries().find(item => item.key === key);
   if (!entry) throw new Error("Unknown Identity operation");
   const { definition } = entry;
@@ -190,7 +191,8 @@ export async function executeIdentityOperation(session: AuthSession, key: string
     if (!parsed.success) throw new PublicError({ status: 502, ...unavailable });
     return parsed.data;
   };
-  const data = await call(definition.rpc, definition.args(input));
+  const operationRpc = profile === "connections" && definition.connectionRpc ? definition.connectionRpc : definition.rpc;
+  const data = await call(operationRpc, definition.args(input));
   if (key === "sending-accounts.connect" || key === "sending-accounts.reconnect") {
     const { channel, ...started } = verified(StartedAttempt, data);
     const attempt = verified(contracts.AttemptSchema, await call("get_lifty_sending_account_attempt", { p_attempt_id: started.id }));

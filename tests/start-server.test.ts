@@ -15,6 +15,7 @@ describe("HTTP server bootstrap", () => {
       {
         host: "127.0.0.1",
         port: 8787,
+        publicBaseUrl: "https://api.lifty.test",
         supabase: {
           supabaseUrl: "https://project.supabase.test",
           publishableKey: "sb_publishable_test_abcdefghijklmnopqrstuvwxyz",
