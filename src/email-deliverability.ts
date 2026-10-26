@@ -13,8 +13,12 @@ import {
 import { createPlacementReportReader, type PlacementReportReader } from "./email-deliverability-placement.js";
 
 // Canonical rules this presentation explains; none of them is decided here.
-/** lifty_email_warmup_unlocked / outreach_email_warmup_status: 24-hour evidence. */
-const MAILIVERY_EVIDENCE_FRESH_HOURS = 24;
+/**
+ * A warmup check is overdue after 24 hours without counting Saturdays and
+ * Sundays (UTC): the Jobs reconcile reads warmup on weekdays only, 09:00 to
+ * 17:00 New York. Presentation only; the send gates keep their own rule.
+ */
+const WARMUP_CHECK_OVERDUE_WEEKDAY_HOURS = 24;
 /**
  * Placement evidence is current for 10 days: outreach_email_mailbox_ready /
  * lifty_email_sender_gate for Unipile connections under the strict policy.
@@ -46,6 +50,28 @@ function freshness(observedAt: string | null | undefined, maxAgeMs: number | nul
   if (!Number.isFinite(observed)) return { observed_at: null, freshness: "unknown", fresh_until: null };
   if (maxAgeMs === null) return { observed_at: iso(observed), freshness: "unknown", fresh_until: null };
   return { observed_at: iso(observed), freshness: now.getTime() <= observed + maxAgeMs ? "fresh" : "stale", fresh_until: iso(observed + maxAgeMs) };
+}
+
+/** The instant `budgetMs` of weekday time after `from`; Saturdays and Sundays (UTC) don't count. */
+function afterWeekdayTime(from: number, budgetMs: number): number {
+  let at = from;
+  let left = budgetMs;
+  while (left > 0) {
+    const date = new Date(at);
+    const nextDay = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1);
+    const weekend = date.getUTCDay() === 0 || date.getUTCDay() === 6;
+    const step = weekend ? nextDay - at : Math.min(left, nextDay - at);
+    at += step;
+    if (!weekend) left -= step;
+  }
+  return at;
+}
+
+function warmupCheck(observedAt: string | null | undefined, now: Date): Evidence {
+  const observed = ms(observedAt);
+  if (!Number.isFinite(observed)) return { observed_at: null, freshness: "unknown", fresh_until: null };
+  const until = afterWeekdayTime(observed, WARMUP_CHECK_OVERDUE_WEEKDAY_HOURS * HOUR);
+  return { observed_at: iso(observed), freshness: now.getTime() <= until ? "fresh" : "stale", fresh_until: iso(until) };
 }
 
 // ------------------------------------------------------------- placement
@@ -173,8 +199,13 @@ function mailiveryWarmup(item: SourceMailivery, connection: SourceConnection | u
   if (binding?.requested_action === "resume") reasons.push(reason("resume_requested", "Resuming warmup at the next check."));
   if (binding?.requested_action === "remove") reasons.push(reason("remove_requested", "Removing warmup at the next check."));
   if (evidence?.healthy === false) reasons.push(reason("warmup_unhealthy", "The latest warmup check was not healthy. Days with a problem don't count."));
-  const check = freshness(evidence?.observed_at, MAILIVERY_EVIDENCE_FRESH_HOURS * HOUR, now);
-  if (check.freshness === "stale") reasons.push(reason("warmup_check_stale", `The latest warmup check is older than ${MAILIVERY_EVIDENCE_FRESH_HOURS} hours.`));
+  // Setup verification starts a binding without reading it back, so a
+  // never-read warming binding counts from that start (its last change).
+  const started = binding?.state === "warming" && !binding.last_readback_at ? binding.updated_at ?? binding.created_at : null;
+  const checked = [evidence?.observed_at, binding?.last_readback_at, started].map(ms).filter(Number.isFinite);
+  const check = warmupCheck(checked.length ? iso(Math.max(...checked)) : null, now);
+  if (check.freshness === "stale") reasons.push(reason("warmup_check_stale",
+    `No warmup check in the last ${WARMUP_CHECK_OVERDUE_WEEKDAY_HOURS} hours, not counting weekends.`));
   let state: WarmupSource["state"];
   switch (binding?.state) {
     case "warming": state = make("active", "Warming", blocking || evidence?.healthy === false ? "warn" : "ok", "Lifty is warming this inbox.", reasons); break;
@@ -200,7 +231,7 @@ function mailiveryWarmup(item: SourceMailivery, connection: SourceConnection | u
     estimated_completion: complete === false && remaining !== null ? { at: null, on: addUtcDays(now, remaining),
       basis: "Estimated if warmup runs every day from today. Paused days and days with a problem don't count, so the date moves later if warmup stops." } : null,
     outreach_unlocked: personal ? null : n(item.outreach_unlocked),
-    last_check: { ...check, observed_at: check.observed_at ?? (binding?.last_readback_at ? iso(ms(binding.last_readback_at)) : null) },
+    last_check: check,
     metrics: { warmup_emails_today: n(snapshot?.emails_sent_today), ramp_target: n(snapshot?.email_per_day_target) },
     checks: snapshot ? { spf: checkValue(snapshot.spf), dmarc: checkValue(snapshot.dmarc), mx: checkValue(snapshot.mx) } : null,
     provider_detail: null,
@@ -233,12 +264,16 @@ function presentWarmup(mailbox: SourceMailbox, now: Date, account?: Account): De
 
 // ------------------------------------------------------ readiness and gates
 
+/** The send gate's mailbox readiness (outreach_email_mailbox_ready): warmup set up, a dedicated
+ * inbox's initial period complete and a passing placement test from the last 10 days. */
+const MAILBOX_NOT_READY = "This inbox hasn't completed warmup and passed a placement test yet.";
+
 const controlReasons: Record<string, string> = {
   workspace_suspended: "This workspace is paused.",
   sender_inactive: "The sender for this connection is inactive.",
   connection_unavailable: "The connection is not connected.",
   channel_paused: "Email is paused for this workspace.",
-  sender_mailbox_ineligible: "This inbox hasn't passed its warmup and placement checks for sending.",
+  sender_mailbox_ineligible: MAILBOX_NOT_READY,
   owner_mismatch: "The lead belongs to a different sender.",
   email_declaration_required: "A current workspace member must declare this mailbox's use before sending.",
   email_sender_unhealthy: "The connected account needs a current successful health check before sending.",
@@ -555,6 +590,12 @@ function presentVerdict(parts: {
       }
       case "email_critical_hold":
         return blocked("on_hold", "On hold", "bad", "A safety hold stops sends from this inbox.", LIFTY_REVIEW);
+      case "sender_mailbox_ineligible": {
+        // Warmup or its placement test resolves this; nobody reviews it.
+        const source = currentWarmupSource(warmup);
+        return blocked(active ? "blocked_in_campaign" : "not_ready", "Not ready to send", "warn", MAILBOX_NOT_READY,
+          source?.state.code === "active" && source.period_complete !== false ? placementStep(warmup, placement.status.code === "failed") : warmupStep(warmup));
+      }
       default:
         return blocked(active ? "blocked_in_campaign" : "not_ready", "Not ready to send", "warn",
           connection.send_gate.reasons[0]?.message ?? "A send check stops this inbox from sending.", LIFTY_REVIEW);
@@ -636,9 +677,11 @@ function presentAccount(account: Account | undefined, connections: Connection[],
 }
 
 function presentMailbox(source: SourceMailbox, workspaces: Map<string, { slug: string; name: string }>, now: Date, detail: PlacementDetail[] | null, accounts?: Account[]): DeliverabilityMailbox {
-  const matches = accounts?.filter(item => item.channel === "email" && item.identity?.toLowerCase() === source.email.toLowerCase());
-  // The canonical read selects routes and retained identities. Never guess across owners.
-  const account = matches?.length === 1 ? matches[0] : undefined;
+  const matches = accounts?.filter(item => item.channel === "email" && item.identity?.toLowerCase() === source.email.toLowerCase()) ?? [];
+  // The canonical read selects routes and retained identities. A reconnected
+  // inbox keeps its disconnected accounts as history; never guess between two live ones.
+  const live = matches.filter(item => item.status !== "disconnected");
+  const account = live.length === 1 ? live[0] : matches.length === 1 ? matches[0] : undefined;
   const connections = source.connections.map(connection => presentConnection(source, connection));
   const connected = new Set(connections.filter(item => item.status === "connected").map(item => item.provider));
   // A disconnected connection is history when the same provider has a live one.
