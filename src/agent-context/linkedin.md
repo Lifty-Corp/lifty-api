@@ -14,9 +14,9 @@ Send the chosen workspace as `references.common` describes.
   LinkedIn account and connecting it. Connect with
   `lifty post sending-accounts connect --input -` and
   `{"body":{"sender_id":"<sender id>","channel":"linkedin"}}`
-  (`sending_accounts_connect`), show the returned link, then check that attempt
+  (`sending_accounts_connect`), show the returned link, then read that attempt
   with `lifty get sending-accounts attempt --input -` and
-  `{"path":{"id":"<attempt id>"}}`.
+  `{"path":{"id":"<attempt id>"},"query":{"wait_seconds":25}}`.
 - **LinkedIn** (this stage) reports what was done and why work waits.
 
 Connecting an account never starts outreach. LinkedIn work runs only for an

@@ -57,11 +57,9 @@ delete`) with `path.id` and `{"expected_version":…,"confirm":true}`. The perso
 leaves the roster and every account they own is disconnected exactly like
 `sending_accounts_disconnect`; history stays and it is not reversible.
 200 means Lifty's access was removed from every account. 202 means the accounts
-are already blocked but removal at the provider is not confirmed yet
-(`access_revoked_at: null`): repeat the same request a few times with short
-waits; no new consent is needed. If it is still unconfirmed, tell the founder
-the accounts are blocked and removal is pending, and repeat it later on the same
-sender. Never claim access was removed without `access_revoked_at`.
+are already blocked and Lifty keeps removing access at the provider on its own
+(`access_revoked_at: null`): do not repeat the request; tell the founder removal
+is pending. Never claim access was removed without `access_revoked_at`.
 
 A deleted sender cannot receive connections or be chosen for campaigns.
 Removing or replacing a person's account never moves their leads to someone

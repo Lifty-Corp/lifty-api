@@ -178,6 +178,19 @@ another attempt; an expired attempt without one never blocks its sender.
 Browser and agent progress come from the same database projection. There is no
 compatibility layer: deploy this API immediately after that migration.
 
+LIF-1629 requires Functions migration
+`20261026215000_lif1629_connection_recovery.sql` before this API revision; deploy
+this API right after it (no compatibility layer: attempt reads return 502 in the
+gap). A received authorization finishes without any open page: the server runs
+a recovery pass every 15 seconds (`startConnectionRecovery`), claiming due
+attempts through the provider RPC's `recovery_claim` and verifying them exactly
+as the page and the attempt read do. The database schedules each retry before
+the check, so several servers or a restart never lose or repeat one. Members
+close or replace an attempt (`sending_accounts_close_attempt`,
+`sending_accounts_replace_attempt`); attempt reads add `action_owner`, `actions`,
+`next_step` and `wait_seconds`. Jobs' release cron alerts on recoveries past
+their 30-minute budget.
+
 Microsoft warmup setup (LIF-1385) requires the Functions migration
 `20261011090000_lif1385_microsoft_warmup.sql` and the matching Jobs Microsoft
 Graph pending-campaign handling before this API revision. Deploy database,

@@ -23,7 +23,7 @@ export type ConnectionFlow = keyof typeof CONNECTION_FLOWS;
  * work), or that a warmup handoff is starting. Never terminal evidence.
  */
 export const ConfirmationAttention = z.enum(['released','exists','in_use','already_connected','canceled','provider','starting',
-  'microsoft_sign_in','microsoft_preparing','microsoft_recovery','warmup_action','sign_in_unavailable']);
+  'microsoft_sign_in','microsoft_preparing','microsoft_recovery','warmup_action','sign_in_unavailable','verification_delayed']);
 export type ConfirmationAttention = z.infer<typeof ConfirmationAttention>;
 export const ConfirmationResult = z.discriminatedUnion('status', [
   z.object({status:z.literal('pending'), attention:ConfirmationAttention.optional(), progress:AccountConnectionProgress.optional(), reference:z.uuid().optional()}),
@@ -35,8 +35,9 @@ export const ConfirmationResult = z.discriminatedUnion('status', [
   // Named CRM refusals (LIF-1282), the attempt's own error codes: account_in_use
   // (connected in another Lifty workspace, never named), account_mismatch,
   // permission_missing and crm_provider_conflict.
+  // LIF-1629: closed and replaced attempts, and a sign-in Lifty could not verify in time.
   z.object({status:z.literal('failed'), reason:z.enum(['canceled','exists','provider','verification','ended','invalid','mailbox_in_other_warmup','provider_rejected',
-    'account_in_use','account_mismatch','permission_missing','crm_provider_conflict']), reference:z.uuid().optional()}),
+    'account_in_use','account_mismatch','permission_missing','crm_provider_conflict','closed','replaced','unverified']), reference:z.uuid().optional()}),
 ]);
 export type ConfirmationResult = z.infer<typeof ConfirmationResult>;
 const Input = z.strictObject({state:z.string().min(1).max(4096),code:z.string().min(1).max(4096).optional(),
@@ -98,14 +99,15 @@ var notes={
  exists:['This account is already linked','This '+label+' account is already linked to Lifty, so it could not be added again. Try again, or return to Lifty if it keeps happening.',1],
  in_use:['Connected in another workspace','This '+label+' account is connected in another Lifty workspace. Disconnect it there first, or try again with a different account.',1],
  already_connected:['Already connected','This '+label+' account is already connected to this workspace. Return to Lifty to continue.',0],
- canceled:['Sign-in not finished','The sign-in was canceled before it finished. Try again when you are ready.',1],
+ canceled:['Sign-in was canceled','The sign-in was canceled before it finished. If you finished signing in anyway, this page still confirms it. Otherwise, try again when you are ready.',1],
  provider:['The sign-in did not finish','The sign-in stopped before Lifty received the account. Try again. If it fails again, return to Lifty for help.',1],
  starting:['Starting warmup','Mailbox access is confirmed. Lifty is starting warmup now, usually within a few minutes, and this page updates when it does. You can also close it and return to Lifty.',0],
  microsoft_sign_in:['Continue with Microsoft','Sign in to the mailbox shown on the setup page and approve Mailivery. Microsoft opens in a new tab. Keep this page open: it confirms when warmup is running.',0],
  microsoft_preparing:['Preparing Microsoft sign-in','Lifty is preparing secure Microsoft authorization. This page will show the sign-in button when it is ready.',0],
  microsoft_recovery:['Sign-in preparation needs checking','Lifty could not confirm the sign-in link. Check this same attempt, or return to Lifty for help. Warmup has not been confirmed.',0],
  warmup_action:['Warmup needs attention','Mailbox authorization was received, but warmup could not start. Return to Lifty to see the required mailbox or DNS fix, then check this same attempt.',0],
- sign_in_unavailable:['Sign-in could not open','Lifty could not open the '+label+' sign-in page. Nothing was connected. Return to Lifty with the connection reference for help.',0]
+ sign_in_unavailable:['Sign-in could not open','Lifty could not open the '+label+' sign-in page. Nothing was connected. Return to Lifty with the connection reference for help.',0],
+ verification_delayed:['Still verifying','Lifty received your sign-in and keeps verifying the account on its own. You can close this page: Lifty shows the result when you return. Our team has been alerted.',0]
 };
 function attend(attention){
  var note=notes[attention];if(!note||shown===attention)return;shown=attention;
@@ -118,6 +120,7 @@ function attend(attention){
  }
  if(attention==='microsoft_preparing')spinner.hidden=false;
  if(attention==='starting'||attention==='microsoft_sign_in'){until=Math.max(until,Date.now()+1500000);cap=30000;}
+ if(attention==='verification_delayed'){spinner.hidden=false;cap=30000;}
 }
 function progress(p,ref){
  if(!p||typeof p.stage!=='string')return;
@@ -149,7 +152,7 @@ function show(result){
  finished=true;spinner.hidden=true;actions.hidden=true;check.hidden=true;
  if(result.status==='connected'&&result.next==='warmup'){title.textContent='One more step: set up warmup';detail.textContent='Lifty verified your mailbox. To warm it up and test where your email lands, Lifty needs one more sign-in to this same mailbox. Go back to Lifty to get that link.';}
  else if(result.status==='connected'){title.textContent=warmup?'Warmup is running':label.charAt(0).toUpperCase()+label.slice(1)+' is connected';detail.textContent='Lifty verified '+(result.account||'the connection')+'.'+(warmup?placement(result.placement):'')+' Return to Lifty to continue. Connecting does not start outreach.';if(label==='Slack')detail.textContent+=' Invite @Lifty to the channel where you want notifications, then tell Lifty which channel you chose.';}
- else{title.textContent='Connection needs attention';detail.textContent=result.reason==='account_in_use'?'This '+label+' account is connected in another Lifty workspace. Disconnect it there first, or try again with a different account.':result.reason==='account_mismatch'?'This is a different '+label+' account from the one connected to this workspace, so nothing changed. Try again and sign in to the same account. To switch accounts, disconnect '+label+' in Lifty first.':result.reason==='permission_missing'?label+' did not grant every permission Lifty needs, so nothing changed. Try again and approve all requested permissions, or ask a '+label+' admin to connect.':result.reason==='crm_provider_conflict'?'Another CRM is connected to this workspace. Disconnect it in Lifty before connecting '+label+'.':result.reason==='mailbox_in_other_warmup'?'This mailbox is already registered with another warmup service. Remove it there, then start warmup again in Lifty.':result.reason==='provider_rejected'?'The warmup service refused this setup. Our team has been alerted. Once the issue is fixed, start warmup again in Lifty.':result.reason==='canceled'?'Authorization was not completed. Return to Lifty to check this attempt.':result.reason==='verification'?'The selected account could not be verified. Return to Lifty for help.':'Return to Lifty to check this attempt and the next step before requesting another link.';if(label==='HubSpot'&&result.reason==='canceled')detail.textContent+=' If permissions were blocked, ask a HubSpot super admin to approve Lifty in Settings > Integrations > Connected Apps > Approved apps.';}
+ else{title.textContent='Connection needs attention';detail.textContent=result.reason==='account_in_use'?'This '+label+' account is connected in another Lifty workspace. Disconnect it there first, or try again with a different account.':result.reason==='account_mismatch'?'This is a different '+label+' account from the one connected to this workspace, so nothing changed. Try again and sign in to the same account. To switch accounts, disconnect '+label+' in Lifty first.':result.reason==='permission_missing'?label+' did not grant every permission Lifty needs, so nothing changed. Try again and approve all requested permissions, or ask a '+label+' admin to connect.':result.reason==='crm_provider_conflict'?'Another CRM is connected to this workspace. Disconnect it in Lifty before connecting '+label+'.':result.reason==='mailbox_in_other_warmup'?'This mailbox is already registered with another warmup service. Remove it there, then start warmup again in Lifty.':result.reason==='provider_rejected'?'The warmup service refused this setup. Our team has been alerted. Once the issue is fixed, start warmup again in Lifty.':result.reason==='canceled'?'Authorization was not completed. Return to Lifty to check this attempt.':result.reason==='verification'?'The selected account could not be verified. Return to Lifty for help.':result.reason==='replaced'?'This link was replaced by a newer one. Use the latest link from Lifty.':result.reason==='closed'?'This connection link was closed. Ask Lifty for a new link if you still want to connect.':result.reason==='unverified'?'Lifty received a sign-in but could not verify the account in time, so nothing was connected. Return to Lifty for a new link.':'Return to Lifty to check this attempt and the next step before requesting another link.';if(label==='HubSpot'&&result.reason==='canceled')detail.textContent+=' If permissions were blocked, ask a HubSpot super admin to approve Lifty in Settings > Integrations > Connected Apps > Approved apps.';}
 }
 async function request(stage,payload,ms){
  var controller=new AbortController(),timer=setTimeout(function(){controller.abort()},ms);
@@ -165,7 +168,7 @@ async function poll(){
  while(!finished&&Date.now()<until){await request('status',body,10000);if(finished)break;await new Promise(function(resolve){setTimeout(resolve,delay)});delay=Math.min(delay*2,cap);}
  if(!finished){
   spinner.hidden=true;check.hidden=false;
-  if(!shown||shown==='starting'||lastProgress==='preparing'||lastProgress==='verifying'){
+  if(!shown||shown==='starting'||(shown!=='verification_delayed'&&(lastProgress==='preparing'||lastProgress==='verifying'))){
    actions.hidden=true;
    if(lastProgress==='preparing'){title.textContent='Sign-in has not opened yet';detail.textContent='Lifty could not open the sign-in page yet. Check status to try again, or return to Lifty with the connection reference for help.';}
    else{title.textContent='Still checking';detail.textContent='The result is not confirmed yet. Check the status of this same attempt, or return to Lifty with the connection reference for help.';}
@@ -173,7 +176,10 @@ async function poll(){
  }
  polling=false;
 }
-check.addEventListener('click',function(){if(finished||polling)return;until=Date.now()+90000;delay=1000;poll();});
+function recheck(){if(finished||polling)return;until=Date.now()+90000;delay=1000;poll();}
+check.addEventListener('click',recheck);
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')recheck();});
+window.addEventListener('pageshow',function(e){if(e.persisted)recheck();});
 await poll();
 })();`;
 const scriptHash = createHash('sha256').update(CONFIRMATION_SCRIPT).digest('base64');

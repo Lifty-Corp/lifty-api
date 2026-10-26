@@ -159,7 +159,7 @@ export function registerStageRoutes(app: OpenAPIHono<AppEnvironment>, dependenci
         ...(definition.method === "GET" ? { query: definition.query as z.ZodObject } : {}),
         ...(definition.request ? { body: { required: true, content: { "application/json": { schema: definition.request } } } } : {}) },
       responses: { [definition.success === 201 ? 201 : 200]: { description: definition.description, content: { "application/json": { schema: definition.response } } },
-        ...(definition.success === 202 ? { 202: { description: "Accounts blocked; access removal at the provider is not yet confirmed. Repeat the request to finish it.", content: { "application/json": { schema: definition.response } } } } : {}),
+        ...(definition.success === 202 ? { 202: { description: "Accounts blocked; access removal at the provider is not yet confirmed and continues on its own.", content: { "application/json": { schema: definition.response } } } } : {}),
         ...Object.fromEntries([400, 401, 403, 404, 409, 413, 422, 429, 502, 503].map(code => [code, { description: "Typed resource error", content: { "application/json": { schema: StageErrorSchema } } }])) },
     });
   }

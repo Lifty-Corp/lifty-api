@@ -24,6 +24,8 @@ describe("runtime context discovery and connection handoff", () => {
       get: "GET /v1/workspace/sending-accounts",
       connect: "POST /v1/workspace/sending-accounts/connect",
       attempt: "GET /v1/workspace/sending-accounts/attempts/{id}",
+      close_attempt: "POST /v1/workspace/sending-accounts/attempts/{id}/close",
+      replace_attempt: "POST /v1/workspace/sending-accounts/attempts/{id}/replace",
       reconnect: "POST /v1/workspace/sending-accounts/{id}/reconnect",
       pause: "POST /v1/workspace/sending-accounts/{id}/pause",
       resume: "POST /v1/workspace/sending-accounts/{id}/resume",
