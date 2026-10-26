@@ -264,12 +264,16 @@ function presentWarmup(mailbox: SourceMailbox, now: Date, account?: Account): De
 
 // ------------------------------------------------------ readiness and gates
 
+/** The send gate's mailbox readiness (outreach_email_mailbox_ready): warmup set up, a dedicated
+ * inbox's initial period complete and a passing placement test from the last 10 days. */
+const MAILBOX_NOT_READY = "This inbox hasn't completed warmup and passed a placement test yet.";
+
 const controlReasons: Record<string, string> = {
   workspace_suspended: "This workspace is paused.",
   sender_inactive: "The sender for this connection is inactive.",
   connection_unavailable: "The connection is not connected.",
   channel_paused: "Email is paused for this workspace.",
-  sender_mailbox_ineligible: "This inbox hasn't passed its warmup and placement checks for sending.",
+  sender_mailbox_ineligible: MAILBOX_NOT_READY,
   owner_mismatch: "The lead belongs to a different sender.",
   email_declaration_required: "A current workspace member must declare this mailbox's use before sending.",
   email_sender_unhealthy: "The connected account needs a current successful health check before sending.",
@@ -586,6 +590,12 @@ function presentVerdict(parts: {
       }
       case "email_critical_hold":
         return blocked("on_hold", "On hold", "bad", "A safety hold stops sends from this inbox.", LIFTY_REVIEW);
+      case "sender_mailbox_ineligible": {
+        // Warmup or its placement test resolves this; nobody reviews it.
+        const source = currentWarmupSource(warmup);
+        return blocked(active ? "blocked_in_campaign" : "not_ready", "Not ready to send", "warn", MAILBOX_NOT_READY,
+          source?.state.code === "active" && source.period_complete !== false ? placementStep(warmup, placement.status.code === "failed") : warmupStep(warmup));
+      }
       default:
         return blocked(active ? "blocked_in_campaign" : "not_ready", "Not ready to send", "warn",
           connection.send_gate.reasons[0]?.message ?? "A send check stops this inbox from sending.", LIFTY_REVIEW);

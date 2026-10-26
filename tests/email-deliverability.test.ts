@@ -320,6 +320,16 @@ describe("member verdict and next step (LIF-1603)", () => {
     expect(missing).toMatchObject({ status: { code: "setup_needed" }, next_step: { code: "connect_warmup", owner: "member" } });
   });
 
+  it("explains the mailbox gate by warmup and placement, never as a Lifty review", () => {
+    const missing = verdict("sender_mailbox_ineligible", item => { item.warmup.mailivery = []; });
+    expect(missing).toMatchObject({ status: { code: "blocked_in_campaign", label: "Not ready to send" }, next_step: { code: "connect_warmup", owner: "member" } });
+    expect(missing.status.description).toMatch(/hasn't completed warmup and passed a placement test yet/);
+    const warming = verdict("sender_mailbox_ineligible", item => { item.connections[0]!.mailbox_use = "outreach"; }).next_step;
+    expect(warming).toMatchObject({ code: "wait", label: "Wait for warmup" });
+    const warmed = verdict("sender_mailbox_ineligible", item => { item.campaigns = []; item.warmup.mailivery[0]!.evidence!.active_duration_days = 25; });
+    expect(warmed).toMatchObject({ status: { code: "not_ready" }, next_step: { code: "wait", label: "Wait for the placement test" } });
+  });
+
   it("sends a missing placement test to the domain records when they fail", () => {
     const dns = verdict("email_placement_required", item => {
       item.warmup.mailivery[0]!.binding!.snapshot = { spf: "valid", dmarc: "not_valid", mx: "valid" };
