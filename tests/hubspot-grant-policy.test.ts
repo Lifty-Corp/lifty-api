@@ -13,6 +13,6 @@ test("HubSpot grant artifacts match the reviewed manifest", async () => {
   assert.deepEqual(Object.keys(manifest.files).sort(), ["hubspot-grant-policy-cases.ts", "hubspot-grant-policy.ts"]);
   for (const [file, sha256] of Object.entries(manifest.files)) {
     const bytes = await readFile(new URL(`../src/generated/${file}`, import.meta.url));
-    assert.equal(createHash("sha256").update(bytes).digest("hex"), sha256, `${file} drifted; regenerate from canonical workspace source`);
+    assert.equal(createHash("sha256").update(bytes).digest("hex"), sha256, `${file} drifted; regenerate from lifty-api/contracts with its sync-hubspot-grant-policy script`);
   }
 });
