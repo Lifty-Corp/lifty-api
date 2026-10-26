@@ -4,7 +4,6 @@ import { researchEntries, validateResearchInput } from "./research-operations.js
 import { identityEntries, validateIdentityInput } from "./identity-operations.js";
 import { linkedinEntries } from "./linkedin-operations.js";
 import { crmPreferencesEntries } from "./crm-preferences.js";
-import { crmRulesEntries } from "./crm-rules.js";
 import { crmSyncControlsEntries, crmSyncControlsRunRef } from "./crm-sync-controls.js";
 import type { crmOperationEntries } from "./crm-operations.js";
 import { customerExclusionsEntries, validateCustomerExclusionsInput } from "./customer-exclusions.js";
@@ -202,23 +201,6 @@ export function registerStageRoutes(app: OpenAPIHono<AppEnvironment>, dependenci
   };
   // CRM preferences (LIF-1239).
   crmRoutes(crmPreferencesEntries(), "crmPreferencesOperation", [400, 401, 403, 409, 413, 422, 429, 502]);
-  // CRM counting rules (LIF-1477): the database resolves the workspace and its
-  // selected CRM, like CRM preferences.
-  for (const { key, definition } of crmRulesEntries()) {
-    app.on(definition.method, definition.route, async (context: Context<AppEnvironment>) => {
-      context.header("cache-control", "no-store");
-      const query = validateIdentityInput(definition.query, readQuery(context, definition.query), { status: 400, code: "INVALID_REQUEST" }) as Record<string, unknown>;
-      const body = definition.request
-        ? validateIdentityInput(definition.request, await readBody(context, definition.invalid.code), definition.invalid)
-        : undefined;
-      return context.json(definition.response.parse(await dependencies.crmRulesOperation(context.get("authSession"), key, { path: {}, query, body })));
-    });
-    app.openAPIRegistry.registerPath({ method: definition.method.toLowerCase() as "get" | "post" | "patch", path: definition.route, security: [{ bearerAuth: [] }],
-      request: { headers: z.object({ "x-lifty-workspace": z.string().max(100).optional() }), query: definition.query as z.ZodObject,
-        ...(definition.request ? { body: { required: true, content: { "application/json": { schema: definition.request } } } } : {}) },
-      responses: { 200: { description: definition.description, content: { "application/json": { schema: definition.response } } },
-        ...Object.fromEntries([400, 401, 403, 409, 413, 422, 429, 502].map(code => [code, { description: "Typed resource error", content: { "application/json": { schema: StageErrorSchema } } }])) } });
-  }
   // CRM automatic sync and test sync (LIF-1622): the database creates the CRM
   // run; this route wakes lifty-crm-sync for it. The run-scoped key is
   // idempotent, so a reattached run is enqueued again.

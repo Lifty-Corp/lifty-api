@@ -35,7 +35,7 @@ const openWorld = new Set(["sample-review.post", "research-schedule.activate", "
 const nonDestructive = new Set(["business.post", "senders.post", "journeys.post", "campaigns.post"]);
 // Writes that commit synchronously, with no authorization link or receipt.
 const synchronousStages = new Set(["business", "targeting", "research-criteria", "commercial-voice", "setup", "research-schedule", "journeys", "campaigns"]);
-const synchronousOperations = new Set(["sending-accounts.resume_campaigns", "sending-accounts.declare", "crm.preferences_patch", "crm.rules_patch", "customer-exclusions.import", "notifications.patch"]);
+const synchronousOperations = new Set(["sending-accounts.resume_campaigns", "sending-accounts.declare", "crm.preferences_patch", "customer-exclusions.import", "notifications.patch"]);
 const pendingOperations = new Set(["campaigns.reply_review_post", "campaigns.message_rewrite_post", "campaigns.lead_stop_post"]);
 // Live CRM reads can replace credentials or connection health synchronously
 // under the existing authorization; they do not start a new business write.
