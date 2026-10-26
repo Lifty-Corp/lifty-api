@@ -35,12 +35,6 @@ export type CrmValueSource =
   | "constant"
   | "runtime"
   | "counterpart_property";
-export type CrmComparisonRule =
-  | "exact"
-  | "case_insensitive"
-  | "normalize_then_exact"
-  | "numeric_tolerance"
-  | "set_overlap";
 
 export type JsonObject = Record<string, unknown>;
 
@@ -63,9 +57,6 @@ export interface CrmFieldMappingRow {
   value_source: CrmValueSource;
   enabled: boolean;
   required_from_agent: boolean;
-  clay_path: string[] | null;
-  comparison_rule: CrmComparisonRule | null;
-  comparison_config: JsonObject;
   sort_order: number;
   created_at: string;
   updated_at: string;
