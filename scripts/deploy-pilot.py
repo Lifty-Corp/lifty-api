@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deploy the isolated API from verified develop; never resolve the production app by its misleading name."""
+"""Deploy the isolated API from verified staging; never resolve the production app by its misleading name."""
 import json
 import os
 from pathlib import Path
@@ -29,7 +29,10 @@ def check_spec(spec, installed=True):
     if spec.get('name') != NAME or len(spec.get('services',[])) != 1 or any(spec.get(x) for x in ['workers','jobs','static_sites','functions']):
         raise RuntimeError('Unexpected pilot app structure')
     service = spec['services'][0]
-    if service.get('name') != 'api' or service.get('git',{}).get('branch') != 'develop' or service.get('git',{}).get('repo_clone_url') != REPOSITORY:
+    # Only the existing pilot may migrate from its former source. The final
+    # spec and active deployment must both use staging.
+    branches = {'staging'} if installed else {'staging', 'develop'}
+    if service.get('name') != 'api' or service.get('git',{}).get('branch') not in branches or service.get('git',{}).get('repo_clone_url') != REPOSITORY:
         raise RuntimeError('Unexpected pilot source')
     values = {e['key']:e.get('value') for e in spec.get('envs',[]) + service.get('envs',[])}
     for key, value in {'LIFTY_RUNTIME_PROFILE':'connections','SUPABASE_URL':DATABASE,
@@ -55,10 +58,10 @@ def probe(url, data=None, headers=None):
 
 def main():
     sha = os.environ.get('GITHUB_SHA','')
-    if os.environ.get('GITHUB_ACTIONS') != 'true' or os.environ.get('GITHUB_REF') != 'refs/heads/develop' or len(sha) != 40:
-        raise RuntimeError('Pilot deployment belongs to verified develop CI')
-    remote = subprocess.check_output(['git','ls-remote',REPOSITORY,'refs/heads/develop'],text=True).split()[0]
-    if remote != sha: raise RuntimeError('Superseded develop source')
+    if os.environ.get('GITHUB_ACTIONS') != 'true' or os.environ.get('GITHUB_REF') != 'refs/heads/staging' or len(sha) != 40:
+        raise RuntimeError('Pilot deployment belongs to verified staging CI')
+    remote = subprocess.check_output(['git','ls-remote',REPOSITORY,'refs/heads/staging'],text=True).split()[0]
+    if remote != sha: raise RuntimeError('Superseded staging source')
     ready = probe(DATABASE+'/rest/v1/rpc/lifty_connection_profile_ready',
         {'p_server_key':os.environ['LIFTY_EMAIL_SERVER_KEY'],
          'p_linkedin_server_key':os.environ['LIFTY_LINKEDIN_SERVER_KEY']},
@@ -89,7 +92,9 @@ def main():
         spec = app['spec']
         envs = spec['services'][0].setdefault('envs', [])
         current = {e['key']: e for e in spec.get('envs', []) + envs}
-        changed = False
+        source = spec['services'][0]['git']
+        changed = source['branch'] != 'staging'
+        source['branch'] = 'staging'
         if 'LIFTY_LINKEDIN_SERVER_KEY' not in current:
             envs.append({'key': 'LIFTY_LINKEDIN_SERVER_KEY', 'value': key, 'type': 'SECRET', 'scope': 'RUN_TIME'})
             changed = True
@@ -113,7 +118,7 @@ def main():
     deployment = doctl('get-deployment',app['id'],app['active_deployment']['id'])[0]
     check_spec(deployment['spec'])
     sources = [x.get('source_commit_hash') for x in deployment.get('services',[]) if x['name']=='api']
-    if deployment.get('phase') != 'ACTIVE' or sources != [sha]: raise RuntimeError('Active pilot source differs from develop')
+    if deployment.get('phase') != 'ACTIVE' or sources != [sha]: raise RuntimeError('Active pilot source differs from staging')
     ingress = app['default_ingress'].rstrip('/')
     if probe(ingress+'/healthz').get('status') != 'ok' or probe(ingress+'/readyz').get('status') != 'ready':
         raise RuntimeError('Pilot health/readiness failed')

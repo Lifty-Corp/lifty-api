@@ -43,6 +43,11 @@ workflow also runs `python3 -m unittest discover -s scripts -p test_deploy_pilot
 
 ## Release
 
+Feature PRs target `develop`, which only verifies. Move a selected batch to
+`staging`, then promote its tested candidate to `main`. The staging workflow
+can migrate the existing pilot app source from `develop` to `staging` in its
+single deployment, preserving the app identity and encrypted settings.
+
 Merging to `main` starts the `Deploy` workflow. It runs `npm run verify` (or
 reuses a passing pull request Verify run on the identical tree), deploys that
 exact commit to `lifty-api-staging`, checks the active commit and runs the
@@ -57,7 +62,7 @@ authorized internal workspace and seed data, and must stop before live sending.
 Confirm the target and issue scope first. Public health and fail-closed
 authentication checks are safe.
 
-`develop` deploys to the separate `lifty-api-pilot` (isolated connection
+`staging` deploys to the separate `lifty-api-pilot` (isolated connection
 profile, staging database) through the Verify workflow and
 `scripts/deploy-pilot.py`, only when `CONNECTION_PROFILE_ENABLED=true`. Never
 use `do:*` for the pilot; see RUNBOOK "Connection pilot preparation".
