@@ -1,72 +1,79 @@
 [
   {
-    "source_commit": "0033f88d735f01ae593875e12862e5a132d165d7",
+    "source_commit": "1766b07afe83f6ada4c47f4f64e03566f63a5192",
     "source": "lib/crm-shared/evaluator.ts",
     "target": "src/generated/crm-shared/evaluator.ts",
-    "source_sha256": "131230ac663dc4f2b14e3338fe5761c2c3210cf48929545fd5a5d9fb01ba913e",
-    "generated_sha256": "c603419ef85f715a1340f0719a71a4da5798dde1d25f36ea322ee0261670be4b"
+    "source_sha256": "ae5fd28a64cf7361f9397fa9f71124af0c27f4874791e839de4e27d4b9833c82",
+    "generated_sha256": "84a1c4c66b4e47b71d73b85cbdaf72191ae449acc772cf25c75656434d1d5c5e"
   },
   {
-    "source_commit": "0033f88d735f01ae593875e12862e5a132d165d7",
+    "source_commit": "1766b07afe83f6ada4c47f4f64e03566f63a5192",
     "source": "lib/crm-shared/executable.ts",
     "target": "src/generated/crm-shared/executable.ts",
     "source_sha256": "ee25ac482f981eae69bb58a4a230496d2bf02263069f67bdddf2c41a32adb02a",
     "generated_sha256": "fe8471328909ff6bc42e05afd1c2cbc94a215a7862ce186e491ab5836de03fb9"
   },
   {
-    "source_commit": "0033f88d735f01ae593875e12862e5a132d165d7",
+    "source_commit": "1766b07afe83f6ada4c47f4f64e03566f63a5192",
     "source": "lib/crm-shared/types.ts",
     "target": "src/generated/crm-shared/types.ts",
-    "source_sha256": "2852869226d7e81b1d1a09a7a3057be3d918911dc1d412d629e0a8ef9a684a01",
-    "generated_sha256": "0bf586133cc1789de1235e6684c1b2b74945e96fe1ae86196019c2c26e13fae8"
+    "source_sha256": "e2b9ec2f1f7dd3d82a2118653d089e6772189a249be137e7e95de5f5a193a2e9",
+    "generated_sha256": "bb88781c0adaf60e0146772868ad1665f4d6a4e5a8422d31964ea4ffc06cf90f"
   },
   {
-    "source_commit": "0033f88d735f01ae593875e12862e5a132d165d7",
+    "source_commit": "1766b07afe83f6ada4c47f4f64e03566f63a5192",
     "source": "lib/crm-shared/scout-input.ts",
     "target": "src/generated/crm-shared/scout-input.ts",
-    "source_sha256": "7a79039261af71db48ba33f3e83890c112a7119f8e39b79ea0680bfdaa60018d",
-    "generated_sha256": "73d9fb77c89040f3585384c95cca456ffb284b7336bd6d47b3cee5eda83d72ba"
+    "source_sha256": "eb96fd55a3c7533bce64d28f122f12616aee4191d40a97a444c3015f7d1e1661",
+    "generated_sha256": "18f6875ca5165acb94b7620c9a848c7b6a657243fc9815e820b3bc0785d43e7d"
   },
   {
-    "source_commit": "0033f88d735f01ae593875e12862e5a132d165d7",
+    "source_commit": "1766b07afe83f6ada4c47f4f64e03566f63a5192",
     "source": "lib/crm-shared/scout-contract.ts",
     "target": "src/generated/crm-shared/scout-contract.ts",
     "source_sha256": "32a57f1011df4e01e661e36f63276ad98f34a29563bf423ad5064be513e0bb9b",
     "generated_sha256": "8accaa1df619d6aed7abf960967146ce8b382a6b0915baa60cb6a2c2906d9b0c"
   },
   {
-    "source_commit": "0033f88d735f01ae593875e12862e5a132d165d7",
+    "source_commit": "1766b07afe83f6ada4c47f4f64e03566f63a5192",
     "source": "lib/crm-shared/sha256.ts",
     "target": "src/generated/crm-shared/sha256.ts",
     "source_sha256": "03c4340c16059c3f1699c9e6ee9d059ae6b1fc9c5984df3e6a2870e9c4a5e25f",
     "generated_sha256": "6d206aef9abaaf41e374e8e799973e0206abdadfb9ec223b646c19ef8434ee02"
   },
   {
-    "source_commit": "0033f88d735f01ae593875e12862e5a132d165d7",
+    "source_commit": "1766b07afe83f6ada4c47f4f64e03566f63a5192",
     "source": "lib/crm-shared/index.ts",
     "target": "src/generated/crm-shared/index.ts",
     "source_sha256": "39dcc289739fc0be4467523c617ed2596e1894c0d393bd42ced9351b0be5fbf9",
     "generated_sha256": "a2bfbbacd8af003b3fba41ef12f7d6fbc73f78bc1b3beced1be05d2bf686a66b"
   },
   {
-    "source_commit": "0033f88d735f01ae593875e12862e5a132d165d7",
+    "source_commit": "1766b07afe83f6ada4c47f4f64e03566f63a5192",
     "source": "lib/crm-shared/conformance-fixtures.ts",
     "target": "src/generated/crm-shared/conformance-fixtures.ts",
-    "source_sha256": "7d46f3597b6cae1f0573e0dbf89a56e9cf58ea8ac3d2a7d7b77b71831081efa0",
-    "generated_sha256": "5967ce6953bfb26892cf45a02606e752bb786ed41cb752b56bfe2f6056d59674"
+    "source_sha256": "7abc07c79bfcd9049c1160e5e5329a5801dce54bd06aeb6992b5a154b2c04b8c",
+    "generated_sha256": "9c296739104b71d64f8d3cd6b8b28065e475f29a63c0e65db0c3c3a912403ecb"
   },
   {
-    "source_commit": "0033f88d735f01ae593875e12862e5a132d165d7",
+    "source_commit": "1766b07afe83f6ada4c47f4f64e03566f63a5192",
     "source": "lib/crm-field-mappings.ts",
     "target": "src/generated/crm-field-mappings.ts",
-    "source_sha256": "8f8071504c1905a3ef84ab17f07e70a9d273c228cb17d7e7e428269fe612085e",
-    "generated_sha256": "3df349f176f450b9a408b7f50adb498fdc3262fd806baa2ad38aae05b53dae09"
+    "source_sha256": "2082029fb2e7d81f6c16236a0fee5e95e1fe221ff792b4e8eb2a9cd4551ddacb",
+    "generated_sha256": "9e6e2ef7b8b8aee33bf01f26abc65d2b8d9f22856827a2effc79791b8725fee2"
   },
   {
-    "source_commit": "911bfd0b9baee1b9aed966fd12733b75e36e8d3c",
+    "source_commit": "1766b07afe83f6ada4c47f4f64e03566f63a5192",
     "source": "lib/crm-source-catalog.ts",
     "target": "src/generated/crm-source-catalog.ts",
     "source_sha256": "8817ed52f90020b01e3513ba0fe2f2de5b67e377da35c41c0bb4ddaaa815b4b0",
     "generated_sha256": "977ed3f7126873cb17447b915e08fcc2c9798f77358c0e3d9a4f8a9b6f388b38"
+  },
+  {
+    "source_commit": "1766b07afe83f6ada4c47f4f64e03566f63a5192",
+    "source": "lib/dashboard-errors/policy.ts",
+    "target": "src/generated/dashboard-errors/policy.ts",
+    "source_sha256": "79055970a63e42a264734e452ce38b1f13d27c525ec635a049575cd2d33fcae9",
+    "generated_sha256": "ca39a4c9786aedde0062530a23274bd942c566a3f2d2cd0949781bc7ddb0becb"
   }
 ]

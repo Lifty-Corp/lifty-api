@@ -5,16 +5,30 @@ export type ScoutContractField = Pick<CrmFieldMapping,
   "source_stage" | "source_entity" | "source_field" | "source_path" | "label" |
   "transform_config" | "enabled" | "required_from_agent"> & Partial<Pick<CrmFieldMapping, "transform" | "write_rule" | "value_source">>;
 
-/** Browser-safe counterpart of the jobs Scout input contract boundary. */
-export function scoutInputFields(input: unknown): ScoutContractField[] {
-  if (input == null) return [];
-  const fail = () => { throw new Error("Invalid version 1 Scout input contract"); };
-  if (!input || typeof input !== "object" || Array.isArray(input)) return fail();
-  const contract = input as Record<string, unknown>;
-  if (contract.version !== 1 || !Array.isArray(contract.fields) || Object.keys(contract).some((key) => key !== "version" && key !== "fields")) return fail();
-  for (const field of contract.fields) {
-    if (!field || typeof field !== "object" || Array.isArray(field)) return fail();
-    if (!["discovery", "research", "outreach", "verification"].includes(field.source_stage) || !["lead", "company"].includes(field.source_entity) || typeof field.source_field !== "string" || !field.source_field || !Array.isArray(field.source_path) || !field.source_path.length || field.source_path.some((part: unknown) => typeof part !== "string" || !part) || !(field.label === null || typeof field.label === "string") || !field.transform_config || typeof field.transform_config !== "object" || Array.isArray(field.transform_config) || typeof field.enabled !== "boolean" || typeof field.required_from_agent !== "boolean") return fail();
-  }
-  return contract.fields as ScoutContractField[];
+export const RESEARCH_FIELD_TYPES = ["text", "number", "boolean", "list", "object"] as const;
+export type ResearchFieldType = (typeof RESEARCH_FIELD_TYPES)[number];
+
+/** A Scout research criterion: a value Scout must report under `custom_fields.<key>`. */
+export type ResearchField = { key: string; description: string; type: ResearchFieldType };
+
+const SOURCE_TYPE: Record<ResearchFieldType, string> = {
+  text: "string",
+  number: "number",
+  boolean: "boolean",
+  list: "array",
+  object: "object",
+};
+
+/** Browser-safe counterpart of the jobs adapter from research fields to the internal Scout contract. */
+export function scoutResearchFields(fields: readonly ResearchField[]): ScoutContractField[] {
+  return fields.map((field) => ({
+    source_stage: "research",
+    source_entity: "lead",
+    source_field: field.key,
+    source_path: ["custom_fields", ...field.key.split(".")],
+    label: field.description,
+    transform_config: { source_type: SOURCE_TYPE[field.type] },
+    enabled: true,
+    required_from_agent: true,
+  }));
 }

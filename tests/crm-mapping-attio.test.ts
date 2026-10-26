@@ -16,7 +16,7 @@ function attioFixture(options: { self?: Record<string, unknown>; selfStatus?: nu
       id: "12380000-0000-4000-a000-000000000021", workspace_id: ws, provider: "attio", source_stage: "discovery", source_entity: "lead",
       source_field: "industry", label: "Industry", source_path: ["industry"], destination_object: "company", destination_field: "industry",
       write_rule: "only_if_empty", transform: "none", transform_config: {}, value_source: "path", enabled: true, required_from_agent: false,
-      clay_path: null, comparison_rule: null, comparison_config: {}, fallback_group: null, fallback_priority: null, sort_order: 1,
+      fallback_group: null, fallback_priority: null, sort_order: 1,
       created_at: "2026-10-05", updated_at: "2026-10-05",
     }],
   };

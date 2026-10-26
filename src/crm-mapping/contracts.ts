@@ -54,19 +54,6 @@ export const MappingValuesSchema = z
     ]),
     enabled: z.boolean(),
     required_from_agent: z.boolean(),
-    // LIF-1643: the Clay comparison keys may be absent from edits and state rows.
-    clay_path: z.array(z.string()).nullable().default(null),
-    comparison_rule: z
-      .enum([
-        "exact",
-        "case_insensitive",
-        "normalize_then_exact",
-        "numeric_tolerance",
-        "set_overlap",
-      ])
-      .nullable()
-      .default(null),
-    comparison_config: Json.default({}),
     fallback_group: z.string().nullable(),
     fallback_priority: z.number().int().nonnegative().nullable(),
     sort_order: z.number().int(),
@@ -77,10 +64,18 @@ export const MappingSchema = MappingValuesSchema.extend({
   created_at: z.string(),
   updated_at: z.string(),
 }).strip();
-export const MappingEditSchema = MappingValuesSchema.extend({
-  id: Ref.nullable(),
-  expected_updated_at: z.string().nullable(),
-});
+// LIF-1643: the database dropped the Clay comparison columns. For one release,
+// drop their keys from edits so a stale agent payload is not rejected.
+const RETIRED_EDIT_KEYS = new Set(["clay_path", "comparison_rule", "comparison_config"]);
+export const MappingEditSchema = z.preprocess(
+  (value) => value && typeof value === "object" && !Array.isArray(value)
+    ? Object.fromEntries(Object.entries(value).filter(([key]) => !RETIRED_EDIT_KEYS.has(key)))
+    : value,
+  MappingValuesSchema.extend({
+    id: Ref.nullable(),
+    expected_updated_at: z.string().nullable(),
+  }),
+);
 export const ScopeSchema = z.object({
   workspace_ref: Ref,
   integration_ref: Ref,

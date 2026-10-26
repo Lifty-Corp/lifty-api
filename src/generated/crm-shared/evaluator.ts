@@ -1,4 +1,6 @@
 // Generated from lift-gtm-dashboard/lib/crm-shared/evaluator.ts; regenerate with scripts/sync-crm-contract.mjs.
+
+import { expectedDashboardRecovery } from "../dashboard-errors/policy.js";
 // Shared pure CRM contract from lift-gtm-jobs (LIF-740/741/742/743).
 // Keep behavior aligned; crm-shared-conformance.test.ts runs the jobs fixtures.
 
@@ -421,6 +423,7 @@ function extractDomain(url: string | undefined): string | null {
     const hostname = new URL(url.startsWith("http") ? url : `https://${url}`).hostname;
     return hostname.replace(/^www\./, "");
   } catch {
+      expectedDashboardRecovery("invalid-input", undefined);
     return null;
   }
 }
