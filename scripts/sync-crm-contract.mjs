@@ -21,6 +21,8 @@ const files = [
 files.push(
   ["lib/crm-field-mappings.ts", "src/generated/crm-field-mappings.ts"],
   ["lib/crm-source-catalog.ts", "src/generated/crm-source-catalog.ts"],
+  // The evaluator imports its no-op recovery marker from here.
+  ["lib/dashboard-errors/policy.ts", "src/generated/dashboard-errors/policy.ts"],
 );
 const sourceCommit = execFileSync("git", ["-C", source, "rev-parse", "HEAD"], {
   encoding: "utf8",

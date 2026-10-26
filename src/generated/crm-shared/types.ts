@@ -29,12 +29,6 @@ export type CrmTransform =
   | "json_string"
   | "scale_number"
   | "normalize_domain";
-export type ComparisonRule =
-  | "exact"
-  | "case_insensitive"
-  | "normalize_then_exact"
-  | "numeric_tolerance"
-  | "set_overlap";
 
 export type JsonObject = Record<string, unknown>;
 
@@ -55,9 +49,6 @@ export interface CrmFieldMapping {
   value_source: CrmValueSource;
   enabled: boolean;
   required_from_agent: boolean;
-  clay_path: string[] | null;
-  comparison_rule: ComparisonRule | null;
-  comparison_config: JsonObject;
   fallback_group: string | null;
   fallback_priority: number | null;
   sort_order: number;

@@ -20,7 +20,7 @@ const base: Partial<AppDependencies> = {
 const edit = { workspace_id: workspaceRef, provider: "hubspot", source_stage: "discovery", source_entity: "lead", source_field: "industry",
   label: "Industry", source_path: ["industry"], destination_object: "company", destination_field: "industry", write_rule: "only_if_empty",
   transform: "none", transform_config: {}, value_source: "path", enabled: true, required_from_agent: false,
-  clay_path: null, comparison_rule: null, comparison_config: {}, fallback_group: null, fallback_priority: null, sort_order: 20,
+  fallback_group: null, fallback_priority: null, sort_order: 20,
   id: null, expected_updated_at: null };
 const property = { name: "industry", label: "Industry", type: "enumeration", fieldType: "select", groupName: "companyinformation", options: [{ label: "Software", value: "COMPUTER_SOFTWARE" }] };
 const receipt = { run_ref: runRef, workspace_ref: workspaceRef, status: "queued", result: null };
@@ -74,18 +74,21 @@ describe("full CRM mapping stage surface", () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
-  // LIF-1643: the Clay comparison columns leave the database after this release.
-  it("accepts edits and state rows with or without the Clay comparison keys", async () => {
+  // LIF-1643: for one release, a stale agent edit may still carry the dropped Clay comparison keys.
+  it("strips the retired Clay comparison keys from edits and reads state rows without them", async () => {
     const { id: _id, expected_updated_at: _expected, ...values } = edit;
-    const { clay_path: _path, comparison_rule: _rule, comparison_config: _config, ...withoutClay } = values;
     const stored = { id: runRef, created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" };
-    const dispatch = vi.fn(async () => ({ ...state, state: "applied", mappings: [{ ...withoutClay, ...stored }, { ...values, ...stored }] }));
-    const input = { ...scope, schema_version: schemaVersion, edits: [{ ...withoutClay, id: null, expected_updated_at: null }, edit] };
-    const response = await request(createApp({ ...base, runCrmMapping: dispatch }), "apply", "POST", input);
+    const dispatch = vi.fn(async () => ({ ...state, state: "applied", mappings: [{ ...values, ...stored }] }));
+    const app = createApp({ ...base, runCrmMapping: dispatch });
+    const stale = { ...edit, clay_path: ["industry"], comparison_rule: "exact", comparison_config: {} };
+    const input = { ...scope, schema_version: schemaVersion, edits: [stale, edit] };
+    const response = await request(app, "apply", "POST", input);
     expect(response.status).toBe(200);
     expect(dispatch).toHaveBeenCalledExactlyOnceWith(session, "apply", { ...input, edits: [edit, edit] },
       { workspaceRef, signal: expect.any(AbortSignal) });
-    expect((await response.json()).mappings).toEqual([{ ...values, ...stored }, { ...values, ...stored }]);
+    expect((await response.json()).mappings).toEqual([{ ...values, ...stored }]);
+    expect((await request(app, "apply", "POST", { ...input, edits: [{ ...edit, unknown: null }] })).status).toBe(400);
+    expect(dispatch).toHaveBeenCalledTimes(1);
   });
 
   it("does not expose a response from another workspace", async () => {
