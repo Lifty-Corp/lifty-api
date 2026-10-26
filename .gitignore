@@ -8,3 +8,4 @@ coverage/
 
 # Copy rehearsal scratch: assembled context dumps, paste prompts, and local drafts
 copy-rehearsal/scratch/
+__pycache__/
