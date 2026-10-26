@@ -40,7 +40,6 @@ const state: State = {
   portal_id: "52044090",
   provider: "hubspot",
   mapping_version: "a".repeat(64),
-  allow_provisioning: false,
   mappings: [mapping],
 };
 const lead: LeadSource = {

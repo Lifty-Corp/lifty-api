@@ -18,7 +18,6 @@ export function fixture() {
     portal_id: "52044090",
     provider: "hubspot",
     mapping_version: "a".repeat(64),
-    allow_provisioning: true,
     mappings: [
       {
         id: "89700000-0000-4000-a000-000000000005",
@@ -104,6 +103,8 @@ export function fixture() {
     portal_id: state.portal_id,
     scopes: [...HUBSPOT_OAUTH_SCOPES],
   };
+  // A bare token is an older HubSpot private app's; HubSpot reports its scopes.
+  const credential: { secret: string | null; privateAppScopes: string[] | null } = { secret: null, privateAppScopes: null };
   let saved: Record<string, unknown> | null = null;
   const rpc = vi.fn(
     async (
@@ -128,7 +129,7 @@ export function fixture() {
         return {
           data: {
             ...scope(),
-            secret: JSON.stringify(grant),
+            secret: credential.secret ?? JSON.stringify(grant),
             credential_version: "c".repeat(64),
           },
           error: null,
@@ -171,6 +172,10 @@ export function fixture() {
     );
     if (String(url).includes("account-info"))
       return Response.json({ portalId: 52044090 });
+    if (String(url).includes("private-apps/get/access-token-info"))
+      return credential.privateAppScopes
+        ? Response.json({ hubId: 52044090, appId: 1, userId: 2, scopes: credential.privateAppScopes })
+        : new Response("unavailable", { status: 500 });
     const object = String(url).includes("/companies") ? "company" : "contact";
     if (String(url).includes("/batch/read"))
       return Response.json({
@@ -217,6 +222,7 @@ export function fixture() {
     properties,
     records,
     grant,
+    credential,
     rpc,
     provider,
     writes,

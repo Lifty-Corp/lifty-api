@@ -39,7 +39,7 @@ const synchronousOperations = new Set(["sending-accounts.resume_campaigns", "sen
 const pendingOperations = new Set(["campaigns.reply_review_post", "campaigns.message_rewrite_post", "campaigns.lead_stop_post"]);
 // Live CRM reads can replace credentials or connection health synchronously
 // under the existing authorization; they do not start a new business write.
-const crmMaintenanceOperations = new Set(["crm.mapping_catalog", "crm.mapping_preview", "crm.records", "crm.mapping_context", "crm.client_mapping_context"]);
+const crmMaintenanceOperations = new Set(["crm.capabilities", "crm.mapping_catalog", "crm.mapping_preview", "crm.records", "crm.mapping_context", "crm.client_mapping_context"]);
 const plainObject = (value: unknown): value is JsonSchema => !!value && typeof value === "object" && !Array.isArray(value);
 // Clients load every tool definition on every turn; the dialect marker adds
 // nothing to an input schema a client already treats as JSON Schema.

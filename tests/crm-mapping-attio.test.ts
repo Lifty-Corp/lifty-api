@@ -8,10 +8,10 @@ const person = "bbbbbbbb-1238-4000-a000-000000000002";
 const company = "cccccccc-1238-4000-a000-000000000003";
 const token = `attio-access-${"x".repeat(40)}`;
 
-function attioFixture(options: { self?: Record<string, unknown>; selfStatus?: number; allowProvisioning?: boolean } = {}) {
+function attioFixture(options: { self?: Record<string, unknown>; selfStatus?: number } = {}) {
   const state: State = {
     provider: "attio", workspace_ref: ws, workspace_name: "Acme", integration_ref: "12380000-0000-4000-a000-000000000011",
-    portal_id: attioWorkspace, mapping_version: "a".repeat(64), allow_provisioning: options.allowProvisioning ?? true,
+    portal_id: attioWorkspace, mapping_version: "a".repeat(64),
     mappings: [{
       id: "12380000-0000-4000-a000-000000000021", workspace_id: ws, provider: "attio", source_stage: "discovery", source_entity: "lead",
       source_field: "industry", label: "Industry", source_path: ["industry"], destination_object: "company", destination_field: "industry",
@@ -110,6 +110,21 @@ describe("Attio CRM mapping", () => {
     expect(rejected.issues).toEqual(expect.arrayContaining([expect.objectContaining({ object: "company", reason: "invalid_enum" })]));
   });
 
+  // LIF-1584: operator workspaces also map to Attio LIFT objects, with research descriptions as labels.
+  it("keeps saved LIFT-object mappings readable without previewing or enabling them here", async () => {
+    const f = attioFixture();
+    f.state.mappings.push({ ...f.state.mappings[0]!, id: "12380000-0000-4000-a000-000000000022", destination_object: "lift_company",
+      destination_field: "gifting_insights", source_stage: "research", source_field: "gifting_insights",
+      source_path: ["custom_fields", "gifting_insights"], label: "Gifting insights: ".padEnd(600, "x"), required_from_agent: true });
+    const catalog = await f.run("catalog") as { schema_version: string; mappings: Array<{ destination_object: string }> };
+    expect(catalog.mappings.map(m => m.destination_object)).toEqual(["company", "lift_company"]);
+    const preview = await f.run("preview", { ...f.scope, lead_refs: [f.lead.lead_ref] }) as { plan: { records: Array<{ proposed: unknown }> } };
+    expect(preview.plan.records).toEqual([expect.objectContaining({ proposed: { industry: "Software" } })]);
+    const { created_at: _c, updated_at: updated, ...values } = f.state.mappings[1]!;
+    await expect(f.run("apply", { ...f.scope, schema_version: catalog.schema_version,
+      edits: [{ ...values, destination_field: "other", expected_updated_at: updated }] })).rejects.toMatchObject({ code: "MAPPING_PROPERTY_UNAVAILABLE" });
+  });
+
   it("returns Attio's own verified record URLs and checks every identity value", async () => {
     const f = attioFixture();
     const records = await f.run("records", {}) as { provider: string; leads: Array<Record<string, unknown>> };
@@ -120,17 +135,24 @@ describe("Attio CRM mapping", () => {
     });
   });
 
-  it("creates an Attio select attribute under provisioning governance and reads it back", async () => {
-    const f = attioFixture();
-    const catalog = await f.run("catalog") as { schema_version: string };
+  it("creates an Attio select attribute when the token can change the schema, and reads it back", async () => {
+    const f = attioFixture({ self: { scope: "meeting:read note:read-write object_configuration:read-write record_permission:read-write" } });
+    const catalog = await f.run("catalog") as { schema_version: string; capabilities: unknown };
+    expect(catalog.capabilities).toEqual({ credential: "oauth",
+      scopes: ["meeting:read", "note:read-write", "object_configuration:read-write", "record_permission:read-write"],
+      map_fields: { state: "available", missing_scopes: [] },
+      create_fields: { contact: { state: "available", missing_scopes: [] }, company: { state: "available", missing_scopes: [] } } });
     const created = await f.run("property_create", { ...f.scope, schema_version: catalog.schema_version, object: "company",
       property: { name: "icp_tier", label: "ICP tier", type: "select", options: [{ label: "A" }, { label: "B" }] } }) as { state: string; property: Record<string, unknown> };
     expect(created).toMatchObject({ state: "created", property: { name: "icp_tier", type: "select", options: [{ value: "A" }, { value: "B" }] } });
     expect(f.requests.filter(r => r.method === "POST" && /attributes/.test(r.path)).map(r => r.path)).toEqual([
       "/objects/companies/attributes", "/objects/companies/attributes/icp_tier/options", "/objects/companies/attributes/icp_tier/options"]);
-    const disabled = attioFixture({ allowProvisioning: false });
-    await expect(disabled.run("property_create", { ...disabled.scope, schema_version: catalog.schema_version, object: "company",
-      property: { name: "tier", label: "Tier", type: "text" } })).rejects.toMatchObject({ code: "ATTIO_PROVISIONING_DISABLED" });
+    // A token Attio reports without schema write is refused before any write, naming the scope.
+    const readOnly = attioFixture({ self: { scope: "object_configuration:read record_permission:read-write" } });
+    await expect(readOnly.run("property_create", { ...readOnly.scope, schema_version: catalog.schema_version, object: "company",
+      property: { name: "tier", label: "Tier", type: "text" } })).rejects.toMatchObject({ code: "ATTIO_PERMISSION_REQUIRED", status: 409,
+      issues: [expect.objectContaining({ message: "The Attio connection lacks object_configuration:read-write." })] });
+    expect(readOnly.requests.some(r => r.method === "POST")).toBe(false);
     // A HubSpot property definition never creates an Attio attribute.
     await expect(f.run("property_create", { ...f.scope, schema_version: catalog.schema_version, object: "company",
       property: { name: "tier", label: "Tier", groupName: "companyinformation", type: "string", fieldType: "text" } }))

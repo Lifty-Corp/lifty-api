@@ -131,9 +131,12 @@ describe("scoped CRM mapping runtime", () => {
       false,
     );
   });
-  it("creates a property only through explicit permission and verified schema", async () => {
+  it("creates a property when the connection's own scopes allow it and verifies the schema", async () => {
     const f = fixture(),
       catalog = C.CrmMappingCatalogSchema.parse(await f.run("catalog"));
+    expect(catalog.capabilities).toMatchObject({ credential: "oauth",
+      map_fields: { state: "available" }, create_fields: { contact: { state: "available" }, company: { state: "available" } } });
+    expect(catalog).not.toHaveProperty("allow_provisioning");
     const request = {
       ...f.scope(),
       schema_version: catalog.schema_version,
@@ -146,17 +149,64 @@ describe("scoped CRM mapping runtime", () => {
         fieldType: "text",
       },
     };
-    f.state.allow_provisioning = false;
-    await expect(f.run("property_create", request)).rejects.toMatchObject({
-      code: "HUBSPOT_PROVISIONING_DISABLED",
-    });
-    expect(f.writes).toEqual([]);
-    f.state.allow_provisioning = true;
+    // The database's retired allow_provisioning flag no longer decides.
+    f.rpc.mockImplementationOnce(async () => ({ data: { ...structuredClone(f.state), allow_provisioning: false }, error: null }));
     expect(await f.run("property_create", request)).toMatchObject({
       state: "created",
       property: { name: "lifty_test" },
     });
     expect(f.writes).toEqual(["lifty_test"]);
+  });
+  it("reads a private-app token's scopes from HubSpot and refuses creation it does not allow", async () => {
+    const f = fixture();
+    f.credential.secret = "scoped-access";
+    f.credential.privateAppScopes = ["crm.objects.companies.write", "crm.objects.contacts.write", "crm.schemas.contacts.write"];
+    const catalog = C.CrmMappingCatalogSchema.parse(await f.run("catalog"));
+    expect(catalog.capabilities).toEqual({
+      credential: "private_app",
+      scopes: ["crm.objects.companies.write", "crm.objects.contacts.write", "crm.schemas.contacts.write"],
+      map_fields: { state: "available", missing_scopes: [] },
+      create_fields: { contact: { state: "available", missing_scopes: [] },
+        company: { state: "missing_permission", missing_scopes: ["crm.schemas.companies.write"] } },
+    });
+    const info = f.provider.mock.calls.find(([url]) => String(url).includes("access-token-info"))!;
+    expect(JSON.parse(String(info[1]!.body))).toEqual({ tokenKey: "scoped-access" });
+    await expect(f.run("property_create", {
+      ...f.scope(), schema_version: catalog.schema_version, object: "company",
+      property: { name: "lifty_tier", label: "Lifty tier", groupName: "companyinformation", type: "string", fieldType: "text" },
+    })).rejects.toMatchObject({ code: "HUBSPOT_PERMISSION_REQUIRED", status: 409,
+      issues: [expect.objectContaining({ message: "The HubSpot connection lacks crm.schemas.companies.write." })] });
+    expect(f.writes).toEqual([]);
+    // Unreadable scopes are unknown: HubSpot decides, and its refusal is the same named state.
+    const unknown = fixture();
+    unknown.credential.secret = "scoped-access";
+    const unread = C.CrmMappingCatalogSchema.parse(await unknown.run("catalog"));
+    expect(unread.capabilities).toMatchObject({ credential: "private_app", scopes: null,
+      map_fields: { state: "unknown" }, create_fields: { company: { state: "unknown", missing_scopes: [] } } });
+    const provider = unknown.provider.getMockImplementation()!;
+    unknown.provider.mockImplementation(async (url, init) => init?.method === "POST" && String(url).includes("/crm/v3/properties/")
+      ? Response.json({ category: "MISSING_SCOPES" }, { status: 403 }) : provider(url, init));
+    await expect(unknown.run("property_create", {
+      ...unknown.scope(), schema_version: unread.schema_version, object: "company",
+      property: { name: "lifty_tier", label: "Lifty tier", groupName: "companyinformation", type: "string", fieldType: "text" },
+    })).rejects.toMatchObject({ code: "HUBSPOT_PERMISSION_REQUIRED", status: 409 });
+  });
+  it("reports the connection state the CRM page gates on instead of failing", async () => {
+    const f = fixture();
+    expect(await f.run("capabilities")).toMatchObject({ workspace_ref: f.state.workspace_ref, connection: "connected",
+      provider: "hubspot", portal_id: "52044090", capabilities: { credential: "oauth", create_fields: { company: { state: "available" } } } });
+    for (const [message, expected] of [
+      ["lifty_attio_reconnect_required", { connection: "reconnect_required", provider: "attio" }],
+      ["lifty_hubspot_reconnect_required", { connection: "reconnect_required", provider: "hubspot" }],
+      ["lifty_company_mapping_unsupported", { connection: "not_connected", provider: null }],
+      ["lifty_hubspot_connection_unavailable", { connection: "not_connected", provider: null }],
+    ] as const) {
+      f.rpc.mockImplementationOnce(async () => ({ data: null, error: { code: "PT409", message } }));
+      expect(await f.run("capabilities")).toEqual({ workspace_ref: f.state.workspace_ref, ...expected });
+    }
+    // Anything else stays an error, never a guessed state.
+    f.rpc.mockImplementationOnce(async () => ({ data: null, error: { code: "PT403", message: "lifty_crm_mapping_forbidden" } }));
+    await expect(f.run("capabilities")).rejects.toMatchObject({ code: "FORBIDDEN_WORKSPACE" });
   });
   it("finds existing Industry before creating a duplicate property", async () => {
     const f = fixture(),

@@ -180,6 +180,23 @@ another attempt; an expired attempt without one never blocks its sender.
 Browser and agent progress come from the same database projection. There is no
 compatibility layer: deploy this API immediately after that migration.
 
+## CRM capabilities and reconnect
+
+LIF-1584: `GET /v1/workspace/crm/capabilities` and the mapping catalog's
+`capabilities` report what the stored CRM credential can do (map fields, create
+fields per object) from the scopes the provider reports: Attio `/v2/self`, a
+HubSpot OAuth grant's stored token scopes, or HubSpot's private-app token info
+endpoint (cached five minutes per credential version). `property_create` no
+longer reads `allow_provisioning`; a missing scope, or a provider 403, returns
+`HUBSPOT_PERMISSION_REQUIRED` / `ATTIO_PERMISSION_REQUIRED`. HubSpot and Attio
+callbacks record named refusal codes (`account_in_use`, `account_mismatch`,
+`permission_missing`, `crm_provider_conflict`); the attempt read and the browser
+page return the same codes. Ship this API revision before the
+Functions migration `20261026131000_lif1584_crm_reconnect_same_account.sql`:
+that migration refuses a reconnect to a different account
+(`lifty_crm_account_mismatch`), which an older API cannot name and leaves pending.
+An older database stores the new codes as `callback_failed`, so API-first is safe.
+
 ## Sample review confirmation
 
 LIF-1303 records the founder's confirmation of the calibration sample

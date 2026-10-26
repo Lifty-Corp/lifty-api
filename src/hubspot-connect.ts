@@ -7,7 +7,7 @@ import {
   type HubspotConnectionStatus,
 } from "./contracts.js";
 import { PublicError } from "./errors.js";
-import { recordOAuthFailure } from "./connection-attempt.js";
+import { CRM_REFUSAL_CODES, recordOAuthFailure } from "./connection-attempt.js";
 import {
   HUBSPOT_REQUIRED_SCOPES,
   exchangeAuthorizationCode,
@@ -55,6 +55,14 @@ function mapConnectRpcError(error: unknown): PublicError {
       status: 401,
       code: "UNAUTHORIZED",
       message: "A valid LIFTY session is required.",
+      cause: error,
+    });
+  }
+  if (code === "PT409" && message.includes("lifty_crm_provider_conflict")) {
+    return new PublicError({
+      status: 409,
+      code: "CRM_PROVIDER_CONFLICT",
+      message: "Attio is this workspace's connected CRM. Disconnect Attio before connecting HubSpot.",
       cause: error,
     });
   }
@@ -106,6 +114,10 @@ const COMPLETION_FAILURES: ReadonlyArray<[string, string, number, string]> = [
     "This connection link expired. Ask Lifty for a new HubSpot connection link."],
   ["lifty_portal_already_connected", "portal_taken", 409,
     "That HubSpot account is already connected to another LIFTY workspace."],
+  ["lifty_crm_account_mismatch", "account_mismatch", 409,
+    "That is a different HubSpot account from the one connected to this workspace. Sign in to the same account."],
+  ["lifty_crm_provider_conflict", "crm_provider_conflict", 409,
+    "Another CRM is connected to this workspace. Disconnect it in Lifty before connecting HubSpot."],
 ];
 
 export interface HubspotConnectOperations {
@@ -298,7 +310,7 @@ export function createHubspotConnectOperations(
       try { return await completeCallback(input); }
       catch (error) {
         if (error instanceof HubspotCallbackError && error.status < 500 && !["link_invalid", "link_used", "link_expired"].includes(error.reason)) {
-          try { await failCallback(input.state, "failed", error.reason === "exchange_failed" ? "token_exchange_failed" : "callback_failed"); }
+          try { await failCallback(input.state, "failed", CRM_REFUSAL_CODES[error.reason] ?? "callback_failed"); }
           catch { /* Preserve the original safe failure; reads remain unverified if persistence failed. */ }
         }
         throw error;

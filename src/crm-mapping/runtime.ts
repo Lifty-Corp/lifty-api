@@ -43,6 +43,36 @@ function assertScope(state: C.State, input: z.infer<typeof C.ScopeSchema>) {
 function checkScope(state: C.State, input: unknown) {
   assertScope(state, C.ScopeSchema.parse(input));
 }
+// LIF-1584: the scopes each action needs, per provider. Every inner list is
+// one requirement met by any of its scopes. Mapping writes contact/people and
+// company records; creating a field changes that object's schema.
+const REQUIRED_SCOPES: Record<C.CrmProviderName, { map: string[][]; create: Record<Surface, string[][]> }> = {
+  hubspot: {
+    map: [["crm.objects.contacts.write"], ["crm.objects.companies.write"]],
+    create: { contact: [["crm.schemas.contacts.write"]], company: [["crm.schemas.companies.write"]] },
+  },
+  attio: {
+    map: [["record_permission:read-write"], ["object_configuration:read", "object_configuration:read-write"]],
+    create: { contact: [["object_configuration:read-write"]], company: [["object_configuration:read-write"]] },
+  },
+};
+function capability(scopes: string[] | null, required: string[][]): z.infer<typeof C.CrmCapabilitySchema> {
+  if (!scopes) return { state: "unknown", missing_scopes: [] };
+  const missing = required.filter(any => !any.some(scope => scopes.includes(scope))).map(any => any[0]!);
+  return { state: missing.length ? "missing_permission" : "available", missing_scopes: missing };
+}
+async function capabilities(tools: MappingSession, state: C.State): Promise<C.CrmCapabilities> {
+  const { credential, scopes } = await tools.access(state);
+  const required = REQUIRED_SCOPES[state.provider];
+  return {
+    credential, scopes,
+    map_fields: capability(scopes, required.map),
+    create_fields: { contact: capability(scopes, required.create.contact), company: capability(scopes, required.create.company) },
+  };
+}
+// The connection states the CRM page shows instead of an error.
+const RECONNECT: Record<string, C.CrmProviderName> = { HUBSPOT_RECONNECT_REQUIRED: "hubspot", ATTIO_RECONNECT_REQUIRED: "attio" };
+const NOT_CONNECTED = new Set(["HUBSPOT_NOT_CONNECTED", "ATTIO_NOT_CONNECTED", "WORKSPACE_UNSUPPORTED"]);
 function savePlan(state: C.State, edits: CrmFieldMappingSaveInput[]) {
   if (
     new Set(edits.filter((e) => e.id !== null).map((e) => e.id)).size !==
@@ -96,9 +126,10 @@ async function validateDestinations(
   properties: Properties,
 ) {
   for (const edit of edits.filter((e) => e.enabled)) {
-    const property = properties[
-      edit.destination_object === "contact" ? "contact" : "company"
-    ].find((p) => p.name === edit.destination_field);
+    // The catalog has no properties for Attio LIFT objects: never enable one here.
+    const property = (edit.destination_object === "contact" || edit.destination_object === "company"
+      ? properties[edit.destination_object] : []
+    ).find((p) => p.name === edit.destination_field);
     if (
       !property ||
       property.archived ||
@@ -142,6 +173,26 @@ export async function runCrmMapping(
   )
     throw new C.MappingError("MAINTENANCE_READ_ONLY", 503);
   return withMappingSession(session, settings, options, async (tools) => {
+    if (action === "capabilities") {
+      const workspace_ref = options.workspaceRef;
+      if (!workspace_ref) throw new C.MappingError("INVALID_MAPPING_REQUEST", 422);
+      try {
+        const state = C.StateSchema.parse(await tools.rpc("state"));
+        if (state.workspace_ref !== workspace_ref)
+          throw new C.MappingError("WORKSPACE_OR_PORTAL_CHANGED", 409);
+        return C.CrmCapabilitiesReadSchema.parse({
+          workspace_ref, connection: "connected", provider: state.provider,
+          integration_ref: state.integration_ref, portal_id: state.portal_id,
+          capabilities: await capabilities(tools, state),
+        });
+      } catch (error) {
+        if (!(error instanceof C.MappingError)) throw error;
+        const provider = RECONNECT[error.code];
+        if (provider) return { workspace_ref, connection: "reconnect_required" as const, provider };
+        if (NOT_CONNECTED.has(error.code)) return { workspace_ref, connection: "not_connected" as const, provider: null };
+        throw error;
+      }
+    }
     const state = C.StateSchema.parse(await tools.rpc("state"));
     if (options.workspaceRef && state.workspace_ref !== options.workspaceRef)
       throw new C.MappingError("WORKSPACE_OR_PORTAL_CHANGED", 409);
@@ -171,6 +222,7 @@ export async function runCrmMapping(
       const readable = {
         ...next,
         mappings: next.mappings.filter((m) =>
+          (m.destination_object === "contact" || m.destination_object === "company") &&
           properties[m.destination_object].some(
             (p) => p.name === m.destination_field,
           ),
@@ -188,6 +240,7 @@ export async function runCrmMapping(
       const properties = await readProperties(tools, state);
       return C.CrmMappingCatalogSchema.parse({
         ...state,
+        capabilities: await capabilities(tools, state),
         properties,
         schema_version: await C.fingerprint(properties),
         sources: {
@@ -403,12 +456,20 @@ async function createProperty(
   checkScope(state, request);
   const attio = state.provider === "attio";
   const prefix = attio ? "ATTIO" : "HUBSPOT";
-  if (!state.allow_provisioning)
-    throw new C.MappingError(`${prefix}_PROVISIONING_DISABLED`, 403);
   const definition = request.property;
   // A HubSpot property definition never creates an Attio attribute, or vice versa.
   if (attio === "fieldType" in definition)
     throw new C.MappingError("INVALID_PROPERTY_DEFINITION", 422);
+  // The connection's own permission decides (LIF-1584). Unknown scopes let the
+  // provider decide; its 403 is the same PERMISSION_REQUIRED (transport).
+  const allowed = (await capabilities(tools, state)).create_fields[request.object];
+  if (allowed.state === "missing_permission")
+    throw new C.MappingError(`${prefix}_PERMISSION_REQUIRED`, 409, [{
+      code: `${prefix}_PERMISSION_REQUIRED`,
+      path: "/object",
+      message: `The ${attio ? "Attio" : "HubSpot"} connection lacks ${allowed.missing_scopes.join(", ")}.`,
+      suggestion: `Reconnect ${attio ? "Attio" : "HubSpot"} and approve every permission Lifty requests, or map an existing field.`,
+    }]);
   const properties = await readProperties(tools, state);
   if (request.schema_version !== (await C.fingerprint(properties)))
     throw new C.MappingError("STALE_SCHEMA", 409);
@@ -461,8 +522,6 @@ async function createProperty(
   }
   const fresh = C.StateSchema.parse(await tools.rpc("state"));
   checkScope(fresh, request);
-  if (!fresh.allow_provisioning)
-    throw new C.MappingError(`${prefix}_PROVISIONING_DISABLED`, 403);
   let verified: C.Property;
   if (!("fieldType" in definition)) {
     verified = await createAttioAttribute(tools, state, request.object, definition);

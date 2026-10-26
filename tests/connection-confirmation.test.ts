@@ -165,6 +165,21 @@ it.each([
   expect(page.elements['confirmation-detail']!.textContent).toContain('Lifty verified founder@example.test.');
   expect(page.elements['confirmation-detail']!.textContent).toContain(promise);
 });
+// LIF-1282/LIF-1584: a known CRM refusal names its cause and next step, never "could not be verified".
+it.each([
+  ['account_in_use','This HubSpot account is connected in another Lifty workspace. Disconnect it there first'],
+  ['account_mismatch','This is a different HubSpot account from the one connected to this workspace, so nothing changed. Try again and sign in to the same account.'],
+  ['permission_missing','HubSpot did not grant every permission Lifty needs, so nothing changed. Try again and approve all requested permissions'],
+  ['crm_provider_conflict','Another CRM is connected to this workspace. Disconnect it in Lifty before connecting HubSpot.'],
+] as const)('names the %s refusal on the CRM page',async(reason,text)=>{
+  vi.useFakeTimers();
+  const page=browser('https://api.lifty.test/hubspot/callback?state=capability',vi.fn(async()=>Response.json({status:'failed',reason})) as typeof fetch);
+  page.elements.confirmation!.dataset.label='HubSpot';
+  const work=page.run();await vi.runAllTimersAsync();await work;
+  expect(page.elements['confirmation-title']!.textContent).toBe('Connection needs attention');
+  expect(page.elements['confirmation-detail']!.textContent).toContain(text);
+  expect(page.elements['confirmation-detail']!.textContent).not.toContain('could not be verified');
+});
 it('a failed status transport never navigates away or spins forever',async()=>{
   vi.useFakeTimers();
   const fetchImpl=vi.fn(async()=>new Response('Bad gateway',{status:502})) as typeof fetch;
