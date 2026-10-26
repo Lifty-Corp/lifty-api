@@ -43,7 +43,7 @@ export const EmailCampaignPreview = z.object({
   email_policy: EmailPolicy.optional(), placement_required: z.boolean().optional(), placement_performed: z.boolean().optional(),
   content: z.object({
     email_policy: EmailPolicy.optional(),
-    name: z.string().max(200), connection_ref: reference, provider: z.enum(["unipile", "smartlead"]), sender_email: z.email(),
+    name: z.string().max(200), connection_ref: reference, provider: z.literal("unipile"), sender_email: z.email(),
     lead_ref: reference, recipient_email: z.email(), start_at: z.string(), daily_limit: z.literal(10), stop_on_reply: z.literal(true),
     steps: z.array(step).min(1).max(5),
   }),
