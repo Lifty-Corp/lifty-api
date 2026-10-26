@@ -244,16 +244,3 @@ The custom domain must resolve to the created app before testing browser
 callbacks. A healthy default ingress proves the deployment; it does not prove
 custom-domain DNS or a real mailbox consent. Record those live checks in
 LIF-1594 before enabling the dashboard's staging deployment.
-
-
-### Temporary own runner for staging
-
-If hosted Actions minutes are unavailable, register an ephemeral repository
-runner with a unique label (no default labels) in `STAGING_RUNNER_LABEL` and
-dispatch Verify on staging with `self_hosted_staging=true`. This single job
-runs the complete API verification and existing release-contract tests before
-using the same guarded pilot deployment script. The machine needs Python,
-doctl and Node installation support; no local database is started. The runner
-is removed after the one requested job. Normal push and production routing
-remain unchanged. The database/replay readiness gate must pass before an app
-is created; do not use the old app named staging, which uses production data.
