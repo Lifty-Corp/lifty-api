@@ -54,7 +54,8 @@ export const MappingValuesSchema = z
     ]),
     enabled: z.boolean(),
     required_from_agent: z.boolean(),
-    clay_path: z.array(z.string()).nullable(),
+    // LIF-1643: the Clay comparison keys may be absent from edits and state rows.
+    clay_path: z.array(z.string()).nullable().default(null),
     comparison_rule: z
       .enum([
         "exact",
@@ -63,8 +64,9 @@ export const MappingValuesSchema = z
         "numeric_tolerance",
         "set_overlap",
       ])
-      .nullable(),
-    comparison_config: Json,
+      .nullable()
+      .default(null),
+    comparison_config: Json.default({}),
     fallback_group: z.string().nullable(),
     fallback_priority: z.number().int().nonnegative().nullable(),
     sort_order: z.number().int(),

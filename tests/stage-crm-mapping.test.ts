@@ -74,6 +74,20 @@ describe("full CRM mapping stage surface", () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
+  // LIF-1643: the Clay comparison columns leave the database after this release.
+  it("accepts edits and state rows with or without the Clay comparison keys", async () => {
+    const { id: _id, expected_updated_at: _expected, ...values } = edit;
+    const { clay_path: _path, comparison_rule: _rule, comparison_config: _config, ...withoutClay } = values;
+    const stored = { id: runRef, created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" };
+    const dispatch = vi.fn(async () => ({ ...state, state: "applied", mappings: [{ ...withoutClay, ...stored }, { ...values, ...stored }] }));
+    const input = { ...scope, schema_version: schemaVersion, edits: [{ ...withoutClay, id: null, expected_updated_at: null }, edit] };
+    const response = await request(createApp({ ...base, runCrmMapping: dispatch }), "apply", "POST", input);
+    expect(response.status).toBe(200);
+    expect(dispatch).toHaveBeenCalledExactlyOnceWith(session, "apply", { ...input, edits: [edit, edit] },
+      { workspaceRef, signal: expect.any(AbortSignal) });
+    expect((await response.json()).mappings).toEqual([{ ...values, ...stored }, { ...values, ...stored }]);
+  });
+
   it("does not expose a response from another workspace", async () => {
     const app = createApp({ ...base, runCrmMapping: async () => ({ workspace_ref: leadRef, leads: [] }) });
     expect((await request(app, "sources", "POST", { lead_refs: [leadRef] })).status).toBe(403);
