@@ -32,7 +32,10 @@ Headless workers (`claudex -p`, `codex exec`) implement their brief directly: no
 
 Node `>=22.11.0`. Run `npm ci`, then `npm run dev` with the variables from
 `.env.example` exported in the shell; the service does not load `.env` itself.
-`npm run verify` runs the typecheck, the vitest suite and the build. The Verify
+`npm run verify` checks the API-owned HubSpot policy source and generation,
+then runs the typecheck, the vitest suite and the build. See
+[shared contract maintenance](contracts/hubspot-grant-policy.md) before changing
+the policy or distributing it to other repositories. The Verify
 workflow also runs `python3 -m unittest discover -s scripts -p test_deploy_pilot.py`.
 
 - Code, deploy tooling and Markdown under `src/` (packaged agent context) need
