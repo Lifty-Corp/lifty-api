@@ -600,7 +600,7 @@ checks runtime configuration and writes a private spec outside the checkout. It
 never creates or updates resources. The API and Functions release workflows need
 the same dedicated `STAGING_LINKEDIN_SERVER_KEY`, distinct from the email key.
 When installing the capability, the owning deployment updates the app spec with
-`--update-sources` so the new configuration and current develop code deploy
+`--update-sources` so the new configuration and current staging code deploy
 together. A spec-only update reuses the previous source and can fail startup.
 Deploy the Functions profile, then API, then dashboard. See the runbook before
 provisioning.

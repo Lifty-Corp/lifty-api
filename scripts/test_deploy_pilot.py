@@ -26,8 +26,20 @@ def pilot(installed=True):
 
 
 class PilotRelease(unittest.TestCase):
+    def test_only_staging_ci_can_reach_release_dependencies(self):
+        for ref in ['refs/heads/develop', 'refs/heads/main', 'refs/heads/feature/test', 'refs/tags/staging', '']:
+            with self.subTest(ref=ref), patch.dict(os.environ, {
+                    'GITHUB_ACTIONS': 'true', 'GITHUB_REF': ref, 'GITHUB_SHA': 'a' * 40}), \
+                    patch.object(module.subprocess, 'check_output') as git, \
+                    patch.object(module, 'probe') as probe, patch.object(module, 'doctl') as provider:
+                with self.assertRaisesRegex(RuntimeError, 'verified staging CI'):
+                    module.main()
+                git.assert_not_called()
+                probe.assert_not_called()
+                provider.assert_not_called()
+
     def test_live_target_mismatch_stops_before_deployment(self):
-        for field,value in [('branch','main'),('repo_clone_url','https://github.com/other/repo.git')]:
+        for field,value in [('branch','main'),('branch','feature/test'),('repo_clone_url','https://github.com/other/repo.git')]:
             with self.subTest(field=field):
                 app=pilot(); app['services'][0]['git'][field]=value
                 calls=[]
@@ -35,18 +47,18 @@ class PilotRelease(unittest.TestCase):
                     calls.append(args)
                     if args==('list',): return [{'id':'pilot-id','spec':app}]
                     self.fail('Release reached a mutation after a target mismatch')
-                with patch.dict(os.environ,{'GITHUB_ACTIONS':'true','GITHUB_REF':'refs/heads/develop','GITHUB_SHA':'a'*40,
+                with patch.dict(os.environ,{'GITHUB_ACTIONS':'true','GITHUB_REF':'refs/heads/staging','GITHUB_SHA':'a'*40,
                     'LIFTY_EMAIL_SERVER_KEY':'e'*40,'LIFTY_LINKEDIN_SERVER_KEY':'l'*40,'SUPABASE_PUBLISHABLE_KEY':'public'}), \
-                    patch.object(module.subprocess,'check_output',return_value='a'*40+' refs/heads/develop'), \
+                    patch.object(module.subprocess,'check_output',return_value='a'*40+' refs/heads/staging'), \
                     patch.object(module,'probe',return_value={'version':'lifty.connection-profile.v1','sending_available':False}), \
                     patch.object(module,'doctl',side_effect=doctl):
                     with self.assertRaises(RuntimeError): module.main()
                 self.assertEqual(calls,[('list',)])
 
     def test_missing_linkedin_database_capability_stops_before_provider_access(self):
-        with patch.dict(os.environ, {'GITHUB_ACTIONS':'true','GITHUB_REF':'refs/heads/develop','GITHUB_SHA':'a'*40,
+        with patch.dict(os.environ, {'GITHUB_ACTIONS':'true','GITHUB_REF':'refs/heads/staging','GITHUB_SHA':'a'*40,
                 'LIFTY_EMAIL_SERVER_KEY':'e'*40,'LIFTY_LINKEDIN_SERVER_KEY':'l'*40,'SUPABASE_PUBLISHABLE_KEY':'public'}), \
-                patch.object(module.subprocess,'check_output',return_value='a'*40+' refs/heads/develop'), \
+                patch.object(module.subprocess,'check_output',return_value='a'*40+' refs/heads/staging'), \
                 patch.object(module,'probe',side_effect=HTTPError('https://staging.test',404,'Missing capability',{},None)) as probe, \
                 patch.object(module,'doctl') as provider:
             with self.assertRaises(HTTPError): module.main()
@@ -63,12 +75,14 @@ class PilotRelease(unittest.TestCase):
             ('missing',[],[installed_linkedin,google]),
             ('current',[linkedin,google],None),
             ('changed client',[linkedin,stale],[linkedin,google]),
+            ('legacy branch',[linkedin,google],[linkedin,google]),
         ]:
             with self.subTest(case=case):
                 live=pilot(installed=False)
                 live['services'][0]['envs'].append({'key':'UNIPILE_V2_ACCESS_TOKEN','value':'EV[encrypted-existing]','type':'SECRET','scope':'RUN_TIME'})
                 base=json.loads(json.dumps(live['services'][0]['envs']))
                 live['services'][0]['envs']+=json.loads(json.dumps(existing))
+                if case == 'legacy branch': live['services'][0]['git']['branch'] = 'develop'
                 original=json.loads(json.dumps(live))
                 calls=[]
                 def doctl(*args):
@@ -82,7 +96,8 @@ class PilotRelease(unittest.TestCase):
                         path=Path(args[args.index('--spec')+1])
                         self.assertEqual(path.stat().st_mode & 0o077, 0)
                         updated=json.loads(path.read_text())
-                        self.assertEqual(updated, {**original,'services':[{**original['services'][0],'envs':base+expected}]})
+                        self.assertEqual(updated, {**original,'services':[{**original['services'][0],'envs':base+expected,
+                            'git':{**original['services'][0]['git'],'branch':'staging'}}]})
                         live=updated
                         return [app]
                     if args[0]=='create-deployment': return [{}]
@@ -96,9 +111,9 @@ class PilotRelease(unittest.TestCase):
                     if url.endswith('/healthz'): return {'status':'ok'}
                     if url.endswith('/readyz'): return {'status':'ready'}
                     raise HTTPError(url,401,'Unauthenticated',{},None)
-                with patch.dict(os.environ, {'GITHUB_ACTIONS':'true','GITHUB_REF':'refs/heads/develop','GITHUB_SHA':'a'*40,
+                with patch.dict(os.environ, {'GITHUB_ACTIONS':'true','GITHUB_REF':'refs/heads/staging','GITHUB_SHA':'a'*40,
                         'LIFTY_EMAIL_SERVER_KEY':'e'*40,'LIFTY_LINKEDIN_SERVER_KEY':'l'*40,'SUPABASE_PUBLISHABLE_KEY':'public'}), \
-                        patch.object(module.subprocess,'check_output',return_value='a'*40+' refs/heads/develop'), \
+                        patch.object(module.subprocess,'check_output',return_value='a'*40+' refs/heads/staging'), \
                         patch.object(module,'probe',side_effect=probe), patch.object(module,'doctl',side_effect=doctl), \
                         patch('sys.stdout',new_callable=io.StringIO):
                     module.main()
@@ -113,6 +128,8 @@ class PilotRelease(unittest.TestCase):
                 app=pilot()
                 app['services'][0]['envs']=[e for e in app['services'][0]['envs'] if e['key']!=key]+[{'key':key,'value':value}]
                 with self.assertRaises(RuntimeError): module.check_spec(app)
+        app=pilot();app['services'][0]['git']['branch']='develop'
+        with self.assertRaises(RuntimeError): module.check_spec(app)
         app=pilot();app['name']='lifty-api-staging'
         with self.assertRaises(RuntimeError): module.check_spec(app)
 
