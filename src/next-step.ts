@@ -545,7 +545,7 @@ export async function getNextStep(
           ? `${reconnect.sender}'s LinkedIn account needs reconnecting, so its LinkedIn work waits. Explain this plainly and reconnect only after the founder agrees.`
           : `LinkedIn accounts of several senders need reconnecting (${names(reconnects)}), so their LinkedIn work waits. Explain this plainly, ask which to reconnect now, and reconnect each one the founder agrees to, one at a time.`,
         `${tool("sending-accounts", "reconnect")} with path.id ${reconnects.map(account => reconnects.length === 1 ? account.id : `${account.id} (${account.sender})`).join(", ")}, then show the returned connection_url right away as a clickable link. The same LinkedIn profile must sign in.`,
-        `${tool("sending-accounts", "attempt")} with the returned attempt id, with bounded backoff, until it is connected. A failed read is unknown, not a failure.`,
+        `${tool("sending-accounts", "attempt")} with the returned attempt id and query.wait_seconds 25 until it is connected, following its next_step. A failed read is unknown, not a failure.`,
         "Reconnecting never resumes or activates a campaign. When it is connected, call next_step.",
       ],
       [tool("sending-accounts", "get"), tool("sending-accounts", "reconnect"), tool("sending-accounts", "attempt"), tool("linkedin", "get")],

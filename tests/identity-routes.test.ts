@@ -21,7 +21,7 @@ const blocked = (id = accountId) => account(id, { status: "disconnected", state:
 const sender = { id: senderId, version: 2, name: "Ana Pérez", signature: null, booking_url: null, accounts: [account()] };
 const attempt = (state: string, extra: Record<string, unknown> = {}) => ({ workspace, id: attemptId, sender_id: senderId, channel: "email",
   state, reason: null, account_id: null, declaration: null, expires_at: "2099-01-01T00:00:00Z",
-  progress: {stage: state === "pending" ? "verifying" : "complete"}, ...extra });
+  progress: {stage: state === "pending" ? "verifying" : "complete"}, recovery: null, replaced_by: null, provider_hint: null, ...extra });
 
 type Rpc = (name: string, args: Record<string, unknown>) => unknown;
 function harness(rpc: Rpc, connector: Partial<AccountConnector> = {}, profile: "full" | "connections" = "full") {
@@ -266,7 +266,79 @@ describe("Identity member routes", () => {
     expect(mailbox.next_step.message).toContain("in the same reply");
     expect(await read(harness(() => attempt("connected", { channel: "linkedin", account_id: accountId })))).not.toHaveProperty("next_step");
     expect(await read(harness(() => attempt("connected", { account_id: accountId }), {}, "connections"))).not.toHaveProperty("next_step");
-    expect(await read(harness(() => attempt("failed", { reason: "canceled" })))).not.toHaveProperty("next_step");
+  });
+
+  // LIF-1629: every client reads the same outcome: who acts next and what is permitted.
+  it.each([
+    ["an unopened link", attempt("pending", { progress: { stage: "declaration_required" } }), "full",
+      { action_owner: "account_owner", actions: ["open_link", "wait", "close", "replace"], connection_url: `https://api.lifty.test/connect/email?intent=sealed-${attemptId}`,
+        next_step: { operation: "sending_accounts_attempt", path: { id: attemptId }, query: { wait_seconds: 25 } } }],
+    ["a sign-in Lifty is verifying", attempt("pending", { recovery: { state: "active", attempts: 1, checked_at: now, next_at: now } }), "full",
+      { action_owner: "lifty", actions: ["wait"], next_step: { operation: "sending_accounts_attempt", query: { wait_seconds: 25 } } }],
+    ["a sign-in past its recovery budget", attempt("pending", { recovery: { state: "exhausted", attempts: 8, checked_at: now, next_at: now } }), "full",
+      { action_owner: "lifty", actions: ["wait", "close", "replace"] }],
+    ["an expired link", attempt("expired", { progress: { stage: "sign_in_required" } }), "full",
+      { action_owner: "agent", actions: ["replace"], next_step: { operation: "sending_accounts_replace_attempt", path: { id: attemptId } } }],
+    ["a canceled sign-in", attempt("failed", { reason: "canceled" }), "full",
+      { action_owner: "agent", actions: ["replace"], next_step: { operation: "sending_accounts_replace_attempt", message: expect.stringContaining("canceled") } }],
+    ["a replaced attempt", attempt("failed", { reason: "replaced", replaced_by: otherAccount }), "full",
+      { action_owner: "agent", actions: [], next_step: { operation: "sending_accounts_attempt", path: { id: otherAccount } } }],
+    ["the connection profile", attempt("pending", { progress: { stage: "sign_in_required" } }), "connections",
+      { action_owner: "account_owner", actions: ["open_link", "wait"] }],
+  ] as const)("tells who acts next for %s", async (_name, row, profile, expected) => {
+    const body = await (await harness(() => row, {}, profile).request("GET", `/v1/workspace/sending-accounts/attempts/${attemptId}`)).json();
+    expect(body).toMatchObject(expected);
+    if (expected.action_owner !== "account_owner") expect(body).not.toHaveProperty("connection_url");
+  });
+
+  it("names no next step a new link could not fix, and none for closed operations in the connection profile", async () => {
+    const read = async (h: ReturnType<typeof harness>) => (await h.request("GET", `/v1/workspace/sending-accounts/attempts/${attemptId}`)).json();
+    expect(await read(harness(() => attempt("failed", { reason: "account_in_use" })))).toMatchObject({ action_owner: "account_owner", actions: [] });
+    expect(await read(harness(() => attempt("failed", { reason: "account_in_use" })))).not.toHaveProperty("next_step");
+    expect(await read(harness(() => attempt("failed", { reason: "canceled" }), {}, "connections"))).not.toHaveProperty("next_step");
+  });
+
+  it("verifies a received sign-in before replacing, then returns the one successor with its own link", async () => {
+    const successor = "77777777-7777-4777-8777-777777777777";
+    const h = harness((name, args) => {
+      if (name === "replace_lifty_sending_account_attempt") return { workspace, disposition: "replaced", retry_after: null,
+        attempt: attempt("failed", { reason: "replaced", replaced_by: successor }),
+        successor: { workspace, id: successor, channel: "email", expires_at: "2099-01-01T00:00:00Z", created: true } };
+      expect(name).toBe("get_lifty_sending_account_attempt");
+      return args.p_attempt_id === successor ? attempt("pending", { id: successor, progress: { stage: "declaration_required" } }) : attempt("pending");
+    });
+    const response = await h.request("POST", `/v1/workspace/sending-accounts/attempts/${attemptId}/replace`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ workspace, disposition: "replaced", retry_after: null,
+      attempt: expect.objectContaining({ reason: "replaced", action_owner: "agent", next_step: expect.objectContaining({ path: { id: successor } }) }),
+      successor: { workspace, id: successor, expires_at: "2099-01-01T00:00:00Z", created: true, progress: { stage: "declaration_required" },
+        connection_url: `https://api.lifty.test/connect/email?intent=sealed-${successor}` } });
+    expect(h.effects.reconcileAttempt).toHaveBeenCalledExactlyOnceWith("email", attemptId);
+    expect(h.calls.map(call => call.name)).toEqual(["get_lifty_sending_account_attempt", "get_lifty_sending_account_attempt",
+      "replace_lifty_sending_account_attempt", "get_lifty_sending_account_attempt"]);
+    expect(h.calls[2]!.args).toEqual({ p_workspace_id: null, p_attempt_id: attemptId });
+  });
+
+  it("closes without a successor and keeps a sign-in Lifty can still verify open", async () => {
+    const retryAfter = "2026-10-26T12:30:00Z";
+    const h = harness(name => name === "close_lifty_sending_account_attempt"
+      ? { workspace, disposition: "recovering", retry_after: retryAfter, attempt: attempt("pending", { recovery: { state: "active", attempts: 2, checked_at: now, next_at: now } }), successor: null }
+      : attempt("pending"), { reconcileAttempt: vi.fn(async () => { throw new Error("provider timeout"); }) });
+    const response = await h.request("POST", `/v1/workspace/sending-accounts/attempts/${attemptId}/close`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ disposition: "recovering", retry_after: retryAfter, successor: null, attempt: { action_owner: "lifty" } });
+  });
+
+  it("holds a read with wait_seconds until the attempt changes", async () => {
+    let reads = 0;
+    const h = harness(() => ++reads === 1 ? attempt("pending", { progress: { stage: "sign_in_required" } }) : attempt("pending", { recovery: { state: "active", attempts: 0, checked_at: null, next_at: now } }),
+      { reconcileAttempt: vi.fn(async () => {}) });
+    const started = Date.now();
+    const body = await (await h.request("GET", `/v1/workspace/sending-accounts/attempts/${attemptId}?wait_seconds=10`)).json();
+    expect(body).toMatchObject({ progress: { stage: "verifying" }, action_owner: "lifty" });
+    expect(reads).toBe(2);
+    expect(Date.now() - started).toBeLessThan(5_000);
+    expect((await h.request("GET", `/v1/workspace/sending-accounts/attempts/${attemptId}?wait_seconds=26`)).status).toBe(400);
   });
 });
 

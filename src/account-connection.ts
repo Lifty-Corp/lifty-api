@@ -7,7 +7,7 @@ import { HostedReturnError } from "./hosted-return-error.js";
 import { parseHostedAuthOrigin } from "./hosted-auth-branding.js";
 import { unipileV2AuthState } from "./unipile-v2-state.js";
 import { PublicError } from "./errors.js";
-import { AccountConnectionProgress, type Account } from "./identity-contracts.js";
+import { AccountConnectionProgress, AttemptReason, AttemptRecovery, type Account } from "./identity-contracts.js";
 
 // One controller for every sending-account connection: the browser connect
 // page, the shared confirmation shell, the attempt read's reconciliation and
@@ -33,7 +33,8 @@ const Snapshot = z.object({
     expected_identity: z.union([z.object({ email: z.email() }).strict(), z.object({ profile_id: z.string().min(1) }).strict()]).nullable(),
     internal_state: z.enum(["pending", "ready", "completed", "failed"]),
     state: z.enum(["pending", "connected", "failed", "expired"]),
-    reason: z.enum(["canceled", "account_in_use", "identity_mismatch", "provider_rejected"]).nullable(),
+    reason: AttemptReason.nullable(),
+    recovery: AttemptRecovery.nullable(),
     declaration: z.record(z.string(), z.unknown()).nullable(),
     expires_at: z.iso.datetime({ offset: true }),
     hosted_url: z.string().nullable(),
@@ -48,6 +49,13 @@ const Conflict = z.discriminatedUnion("conflict", [
   z.object({ conflict: z.enum(["none", "live_here", "live_elsewhere", "released", "kept"]) }).strip(),
   z.object({ conflict: z.literal("retained"), account_id: Uuid }).strip(),
 ]);
+// LIF-1629: due received authorizations, already moved to their next retry.
+const RecoveryClaim = z.object({ items: z.array(z.object({ attempt_id: Uuid, attempts: z.number().int().positive(),
+  final: z.boolean() }).strict()).max(20) }).strict();
+export const RECOVERY_BATCH = 10;
+/** One recovery decision. References and outcomes only: no identity, URL or provider body. */
+export type RecoveryEvent = { event: "connection_recovery"; channel: ConnectChannel; outcome: "connected" | "failed" | "unready"
+  | "unverified" | "unavailable" | "claim_unavailable"; reference?: string; attempt?: number; final?: boolean; elapsed_ms?: number };
 export type ConnectOutcome =
   | { kind: "declare"; senderName: string }
   | { kind: "redirect"; url: string }
@@ -61,6 +69,8 @@ export type LinkedinDeclaration = { habitual_personal_account: true; no_other_au
 const tokens: Record<string, [number, string, string]> = {
   account_attempt_expired: [410, "CONNECT_LINK_EXPIRED", "This link expired. Ask Lifty for a new connection link."],
   account_attempt_unavailable: [409, "CONNECT_LINK_ENDED", "This connection attempt has ended. Return to Lifty to check it."],
+  account_attempt_replaced: [409, "CONNECT_LINK_REPLACED", "This link was replaced by a newer one. Use the latest link from Lifty."],
+  account_attempt_closed: [409, "CONNECT_LINK_CLOSED", "This connection link was closed. Ask Lifty for a new link if you still want to connect."],
   account_declaration_required: [409, "CONNECT_DECLARATION_REQUIRED", "Answer the questions on the connection page first."],
   account_declaration_conflict: [409, "CONNECT_DECLARATION_CONFLICT", "This link already has an answer. Continue with it, or ask Lifty for a new link."],
   account_provider_forbidden: [400, "CONNECT_LINK_INVALID", "Open the connection link from Lifty."],
@@ -75,7 +85,8 @@ function rpcError(body: unknown): PublicError {
     : new PublicError({ status: 502, code: "CONNECT_UNAVAILABLE", message: "Lifty could not reach its connection service. Try again shortly." });
 }
 const linkInvalid = () => new PublicError({ status: 400, code: "CONNECT_LINK_INVALID", message: "Open the connection link from Lifty." });
-const failureReason = { canceled: "canceled", account_in_use: "exists", identity_mismatch: "verification", provider_rejected: "provider" } as const;
+const failureReason = { canceled: "canceled", account_in_use: "exists", identity_mismatch: "verification", provider_rejected: "provider",
+  closed: "closed", replaced: "replaced", unverified: "unverified" } as const;
 
 export function createAccountConnection(settings: AccountConnectionSettings) {
   for (const key of Object.values(settings.serverKeys)) if (key && key.length < 32) throw new Error("Invalid connection server key.");
@@ -129,7 +140,8 @@ export function createAccountConnection(settings: AccountConnectionSettings) {
     const attempt = current.attempt;
     if (attempt.internal_state === "completed" || current.authorization.received) return { kind: "checking" };
     if (attempt.state === "expired") throw rpcError({ message: "account_attempt_expired" });
-    if (attempt.state === "failed") throw rpcError({ message: "account_attempt_unavailable" });
+    if (attempt.state === "failed") throw rpcError({ message: attempt.reason === "replaced" ? "account_attempt_replaced"
+      : attempt.reason === "closed" ? "account_attempt_closed" : "account_attempt_unavailable" });
     if (!attempt.declaration) return { kind: "declare", senderName: attempt.sender.name };
     if (attempt.hosted_url) return { kind: "redirect", url: hosted(attempt.hosted_url) };
     return { kind: "preparing" };
@@ -223,7 +235,10 @@ export function createAccountConnection(settings: AccountConnectionSettings) {
       if (!attempt.hosted_url) throw rpcError(null);
       hosted(attempt.hosted_url);
     }
-    return { status: "pending", progress: attempt.progress, reference: attempt.id };
+    // Lifty keeps verifying a received sign-in on its own; past its budget the
+    // page says so instead of a spinner that never ends.
+    return { status: "pending", progress: attempt.progress, reference: attempt.id,
+      ...(attempt.recovery?.state === "exhausted" ? { attention: "verification_delayed" as const } : {}) };
   }
 
   return {
@@ -266,6 +281,44 @@ export function createAccountConnection(settings: AccountConnectionSettings) {
       await reconcile(channel, await snapshot(channel, "context", { attempt_id: attemptId }));
     },
     /**
+     * Finish received authorizations with every page closed. Each claim has
+     * already scheduled its next retry, so a failure here only waits for it.
+     * Verification is the same as the page's and the attempt read's. At the
+     * final check, a sign-in still unverified ends as `unverified`.
+     */
+    async recover(signal?: AbortSignal): Promise<RecoveryEvent[]> {
+      const events: RecoveryEvent[] = [];
+      for (const channel of ["email", "linkedin"] as const) {
+        if (!settings.serverKeys[channel]) continue;
+        let items: z.infer<typeof RecoveryClaim>["items"];
+        try {
+          items = RecoveryClaim.parse(await rpc(channel, "recovery_claim", { channel, limit: RECOVERY_BATCH }, signal)).items;
+        } catch {
+          events.push({ event: "connection_recovery", channel, outcome: "claim_unavailable" });
+          continue;
+        }
+        for (const item of items) {
+          if (signal?.aborted) return events;
+          const started = Date.now();
+          let outcome: RecoveryEvent["outcome"];
+          try {
+            const current = await reconcile(channel, await snapshot(channel, "context", { attempt_id: item.attempt_id }));
+            outcome = current.attempt.internal_state === "completed" ? "connected"
+              : current.attempt.internal_state === "failed" ? "failed" : "unready";
+          } catch { outcome = "unavailable"; }
+          if (item.final && (outcome === "unready" || outcome === "unavailable")) {
+            try {
+              await rpc(channel, "fail", { attempt_id: item.attempt_id, reason: "unverified" }, signal);
+              outcome = "unverified";
+            } catch { /* the final check repeats */ }
+          }
+          events.push({ event: "connection_recovery", channel, outcome, reference: item.attempt_id, attempt: item.attempts,
+            final: item.final, elapsed_ms: Date.now() - started });
+        }
+      }
+      return events;
+    },
+    /**
      * Remove Lifty's access to locally blocked accounts, one at a time, until
      * the shared deadline. Only provider evidence confirms; everything else
      * stays unconfirmed for a retry of the same request.
@@ -279,3 +332,22 @@ export function createAccountConnection(settings: AccountConnectionSettings) {
   };
 }
 export type AccountConnection = ReturnType<typeof createAccountConnection>;
+
+/**
+ * Run recovery on this server every `intervalMs`, one pass at a time. The
+ * database decides what is due, so several servers never verify the same
+ * attempt twice in one slot, and a restart resumes where it stopped.
+ */
+export function startConnectionRecovery(connection: Pick<AccountConnection, "recover">,
+  log: (event: RecoveryEvent) => void, intervalMs = 15_000): () => void {
+  let running = false;
+  const pass = async () => {
+    if (running) return;
+    running = true;
+    try { for (const event of await connection.recover()) log(event); } catch { /* the next pass retries */ } finally { running = false; }
+  };
+  void pass();
+  const timer = setInterval(() => void pass(), intervalMs);
+  timer.unref();
+  return () => clearInterval(timer);
+}

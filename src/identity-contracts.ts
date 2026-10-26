@@ -98,30 +98,79 @@ export const AccountConnectionProgress = z.object({
   stage: z.enum(["declaration_required", "preparing", "sign_in_required", "verifying", "complete"]),
 }).strict();
 export type AccountConnectionProgress = z.infer<typeof AccountConnectionProgress>;
+// LIF-1629: closed and replaced end an attempt a member no longer wants;
+// unverified ends a received authorization Lifty could not verify in time.
+export const AttemptReason = z.enum(["canceled", "account_in_use", "identity_mismatch", "provider_rejected",
+  "closed", "replaced", "unverified"]);
+/** Lifty's own verification of a received authorization; null when there is none to verify. */
+export const AttemptRecovery = z.object({
+  state: z.enum(["active", "exhausted"]), attempts: Count, checked_at: Timestamp.nullable(), next_at: Timestamp.nullable(),
+}).strict();
 export const AttemptSchema = z.object({
   ...Workspace,
   id: Id,
   sender_id: Id,
   channel: Channel,
   state: z.enum(["pending", "connected", "failed", "expired"]),
-  reason: z.enum(["canceled", "account_in_use", "identity_mismatch", "provider_rejected"]).nullable(),
+  reason: AttemptReason.nullable(),
   account_id: Id.nullable(),
   declaration: Declaration.nullable(),
   expires_at: Timestamp,
   progress: AccountConnectionProgress,
+  recovery: AttemptRecovery.nullable(),
+  replaced_by: Id.nullable(),
+  // What the provider's return page reported. History only: never the attempt's outcome.
+  provider_hint: z.object({ code: z.enum(["canceled", "account_exists", "provider_rejected"]), at: Timestamp }).strict().nullable(),
 }).strict();
 export type Attempt = z.infer<typeof AttemptSchema>;
-/** A connected mailbox still needs its own warmup consent, so the attempt read names that step. */
+export const AttemptActionOwner = z.enum(["account_owner", "agent", "lifty", "none"]);
+export const AttemptAction = z.enum(["open_link", "wait", "close", "replace"]);
+const AttemptStep = z.object({
+  operation: z.enum(["sending_accounts_attempt", "sending_accounts_replace_attempt"]),
+  path: z.object({ id: Id }).strict(),
+  query: z.object({ wait_seconds: z.number().int().min(1).max(25) }).strict().optional(),
+  message: z.string(),
+}).strict();
+const WarmupStep = z.object({
+  operation: z.literal("sending_accounts_warmup_start"),
+  body: z.object({ workspace: Id, connection_ref: Id }).strict(),
+  message: z.string(),
+}).strict();
+/**
+ * The attempt with who acts next and what is permitted, the same for the
+ * agent and the dashboard. `connection_url` is present while the account
+ * owner still has to open it; a connected mailbox's next step is its warmup.
+ */
 export const AttemptReadSchema = AttemptSchema.extend({
-  next_step: z.object({
-    operation: z.literal("sending_accounts_warmup_start"),
-    body: z.object({ workspace: Id, connection_ref: Id }).strict(),
-    message: z.string(),
-  }).strict().optional(),
+  connection_url: z.url().optional(),
+  action_owner: AttemptActionOwner,
+  actions: z.array(AttemptAction),
+  next_step: z.union([WarmupStep, AttemptStep]).optional(),
+}).strict();
+export type AttemptRead = z.infer<typeof AttemptReadSchema>;
+export const AttemptQuerySchema = z.object({
+  wait_seconds: z.coerce.number().int().min(0).max(25).optional()
+    .describe("Wait up to this many seconds while the attempt still waits on someone and has not changed."),
 }).strict();
 // The database opens or reuses the durable attempt; the API adds the link.
 export const ConnectStartSchema = z.object({ ...Workspace, id: Id, expires_at: Timestamp, created: z.boolean() }).strict();
 export const ConnectResultSchema = ConnectStartSchema.extend({ connection_url: z.url(), progress: AccountConnectionProgress }).strict();
+/**
+ * LIF-1629 close/replace receipt: what happened to the attempt (connected,
+ * recovering, closed, replaced or ended), when a still-verifying
+ * authorization may be closed, the attempt itself and its one successor.
+ */
+export const AttemptCloseResultSchema = z.object({
+  ...Workspace,
+  disposition: z.enum(["connected", "recovering", "closed", "replaced", "ended"]),
+  retry_after: Timestamp.nullable(),
+  attempt: AttemptReadSchema,
+  successor: ConnectResultSchema.nullable(),
+}).strict();
+// The database's receipt before the API adds links and next steps.
+export const AttemptCloseReceiptSchema = AttemptCloseResultSchema.extend({
+  attempt: AttemptSchema, successor: ConnectStartSchema.extend({ channel: Channel }).strict().nullable(),
+}).strict();
 
 export const IdPath = z.object({ id: Id }).strict();
 export const SenderCreateSchema = z.object({

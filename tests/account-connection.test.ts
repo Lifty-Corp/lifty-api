@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadConfig } from "../src/config.js";
 import { createProductionApp } from "../src/service.js";
-import { createAccountConnection } from "../src/account-connection.js";
+import { createAccountConnection, startConnectionRecovery } from "../src/account-connection.js";
 import { sealConnectAttempt } from "../src/connect-state.js";
 
 // LIF-1182 sending-account connections through the production app: Lifty's
@@ -30,6 +30,8 @@ function attemptDb(channel: "email" | "linkedin" = "email") {
     ops: [] as string[], payloads: {} as Record<string, Record<string, unknown>>,
     // The conflict read's answer (undefined: the read is unavailable) and the revocation context.
     conflict: undefined as Record<string, unknown> | undefined, revocation: null as Record<string, unknown> | null,
+    // LIF-1629: server recovery of a received authorization, and what the recovery claim returns.
+    recovery: null as Record<string, unknown> | null, claim: [] as Record<string, unknown>[],
   };
 }
 function progress(db: Db) {
@@ -44,7 +46,8 @@ const snapshot = (db: Db, extra: Record<string, unknown> = {}) => ({
     sender: { id: "33333333-3333-4333-8333-333333333333", name: "Ana <Pérez>" }, channel: db.channel, reconnect: db.expected_identity !== null,
     account_id: null, expected_identity: db.expected_identity, internal_state: db.internal_state, state: db.state, reason: db.reason,
     declaration: db.declaration, declaration_required: true, issuer_user_id: "44444444-4444-4444-8444-444444444444",
-    created_at: "2026-10-02T12:00:00Z", expires_at: "2099-01-01T00:00:00Z", hosted_url: db.hosted_url, progress: progress(db) },
+    created_at: "2026-10-02T12:00:00Z", expires_at: "2099-01-01T00:00:00Z", hosted_url: db.hosted_url, progress: progress(db),
+    recovery: db.recovery, replaced_by: null },
   transport: db.transport,
   authorization: { ...db.authorization, event_id: null, at: null }, ...extra });
 
@@ -80,6 +83,7 @@ function stub(db: Db, provider: Partial<Provider> = {}) {
     if (op === "fail") { db.internal_state = "failed"; db.state = "failed"; db.reason = String(payload.reason); }
     if (op === "complete") { db.internal_state = "completed"; db.state = "connected"; }
     if (op === "revocation_context") return Response.json(db.revocation);
+    if (op === "recovery_claim") return Array.isArray(db.claim) ? Response.json({ items: db.claim.splice(0) }) : Response.json({ message: "unavailable" }, { status: 503 });
     if (op === "revocation_confirmed") return Response.json({ account: {} });
     return Response.json(snapshot(db));
   });
@@ -478,5 +482,69 @@ describe("access removal", () => {
     }) as typeof fetch;
     await settings(fetchImpl).revoke([blocked("a0000000-0000-4000-8000-000000000001"), blocked("a0000000-0000-4000-8000-000000000002")] as never, controller.signal);
     expect(operations).toEqual(["revocation_context"]);
+  });
+});
+
+describe("server recovery of received authorizations (LIF-1629)", () => {
+  // One channel key, so each pass claims only email attempts.
+  const connection = () => createAccountConnection({ ...loadConfig(env).accounts!, serverKeys: { email: emailKey } });
+  const authorized = (db: Db) => {
+    db.declaration = { mailbox_use: "habitual" }; db.internal_state = "ready"; db.hosted_url = hostedLink;
+    db.authorization = { received: true, account_id: "acc_new", return_error: null };
+    db.recovery = { state: "active", attempts: 1, checked_at: "2026-10-26T12:00:00Z", next_at: "2026-10-26T12:00:15Z" };
+  };
+
+  it("completes a claimed authorization with every page closed, using the page's own verification", async () => {
+    const db = attemptDb(); authorized(db); db.claim = [{ attempt_id: attemptId, attempts: 1, final: false }];
+    const { provider } = stub(db);
+    const events = await connection().recover();
+    expect(db.payloads.recovery_claim).toEqual({ channel: "email", limit: 10 });
+    expect(db.ops).toEqual(["recovery_claim", "context", "complete"]);
+    expect(provider.calls).toEqual(["GET /v2/accounts/acc_new", "GET /v2/acc_new/email-senders"]);
+    expect(events).toEqual([expect.objectContaining({ event: "connection_recovery", channel: "email", outcome: "connected",
+      reference: attemptId, attempt: 1, final: false })]);
+    expect(JSON.stringify(events)).not.toMatch(/acc_new|ana@example|connect\.lifty/);
+  });
+
+  it("keeps an unready or unreachable provider for the next retry and ends it only at the final check", async () => {
+    const db = attemptDb(); authorized(db); db.claim = [{ attempt_id: attemptId, attempts: 3, final: false }];
+    stub(db, { accountStatus: 503 });
+    expect((await connection().recover())[0]).toMatchObject({ outcome: "unavailable", final: false });
+    expect(db.ops).not.toContain("fail");
+    db.claim = [{ attempt_id: attemptId, attempts: 9, final: true }];
+    expect((await connection().recover())[0]).toMatchObject({ outcome: "unverified", final: true });
+    expect(db.payloads.fail).toEqual({ attempt_id: attemptId, reason: "unverified" });
+  });
+
+  it("reports an unavailable claim and runs one pass at a time", async () => {
+    const db = attemptDb(); (db as { claim: unknown }).claim = null; stub(db);
+    expect(await connection().recover()).toEqual([{ event: "connection_recovery", channel: "email", outcome: "claim_unavailable" }]);
+    vi.useFakeTimers();
+    let release!: () => void;
+    const recover = vi.fn(() => new Promise<never[]>(resolve => { release = () => resolve([]); }));
+    const stop = startConnectionRecovery({ recover }, vi.fn(), 1000);
+    await vi.advanceTimersByTimeAsync(3500);
+    expect(recover).toHaveBeenCalledOnce();
+    release(); await vi.advanceTimersByTimeAsync(1000);
+    expect(recover).toHaveBeenCalledTimes(2);
+    stop();
+  });
+
+  it("says verification is delayed once the budget is spent, without failing the attempt", async () => {
+    const db = attemptDb(); authorized(db); db.recovery = { ...db.recovery, state: "exhausted" };
+    stub(db, { verificationStatus: "pending" });
+    const response = await app().request("/connect/email/return/status", status("email", intent()));
+    expect(await response.json()).toEqual({ status: "pending", progress: { stage: "verifying" }, reference: attemptId, attention: "verification_delayed" });
+  });
+
+  it("tells a replaced or closed link to use the latest one", async () => {
+    for (const [reason, text] of [["replaced", "replaced by a newer one"], ["closed", "link was closed"]] as const) {
+      const db = attemptDb(); db.internal_state = "failed"; db.state = "failed"; db.reason = reason; stub(db);
+      const page = await app().request(`/connect/email?intent=${encodeURIComponent(intent())}`);
+      expect(page.status).toBe(409);
+      expect(await page.text()).toContain(text);
+      const result = await app().request("/connect/email/return/status", status("email", intent()));
+      expect(await result.json()).toEqual({ status: "failed", reason, reference: attemptId });
+    }
   });
 });

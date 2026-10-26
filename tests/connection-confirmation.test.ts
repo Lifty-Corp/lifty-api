@@ -100,8 +100,13 @@ function browser(href:string,fetchImpl:typeof fetch){
     ...(href.includes('/connect/email/')?{retry:'/connect/email'}:{})};
   const location={href,replace:vi.fn((path:string)=>{location.href=new URL(path,location.href).href;})};
   const history={replaceState:vi.fn((_state:unknown,_title:string,path:string)=>{location.href=new URL(path,location.href).href;})};
-  const context={URL,AbortController,JSON,Date,Promise,setTimeout,clearTimeout,location,history,fetch:fetchImpl,document:{getElementById:(id:string)=>elements[id]}};
-  return {elements,location,history,run:()=>runInNewContext(CONFIRMATION_SCRIPT,context) as Promise<void>};
+  // Page lifecycle listeners, so a test can bring the page back into view.
+  const listeners:Record<string,((event:{persisted?:boolean})=>void)[]>={};
+  const listen=(type:string,listener:(event:{persisted?:boolean})=>void)=>{(listeners[type]??=[]).push(listener);};
+  const document={getElementById:(id:string)=>elements[id],addEventListener:listen,visibilityState:'visible'};
+  const context={URL,AbortController,JSON,Date,Promise,setTimeout,clearTimeout,location,history,fetch:fetchImpl,document,window:{addEventListener:listen}};
+  const emit=(type:string,event:{persisted?:boolean}={})=>{for(const listener of listeners[type]??[])listener(event);};
+  return {elements,location,history,document,emit,run:()=>runInNewContext(CONFIRMATION_SCRIPT,context) as Promise<void>};
 }
 it('keeps the Microsoft status page open during consent and shows verified warmup plus initial placement',async()=>{
   vi.useFakeTimers();let finished=false;const requests:string[]=[];
@@ -380,4 +385,34 @@ it.each(['google/callback','microsoft/return'])('renders a warmup refusal and ne
   expect(page.elements['confirmation-detail']!.textContent).toBe('This mailbox is already registered with another warmup service. Remove it there, then start warmup again in Lifty.');
   expect(page.elements['confirmation-detail']!.textContent).not.toMatch(/Mailivery/);
   expect(page.elements['confirmation-spinner']!.hidden).toBe(true);
+});
+// LIF-1629: a result can arrive while the page is hidden or after its visible wait.
+it('checks again when the person returns to the page and shows a result that arrived meanwhile',async()=>{
+  vi.useFakeTimers();let connected=false;
+  const page=browser('https://api.lifty.test/connect/email/return?intent=capability',vi.fn(async()=>Response.json(connected
+    ?{status:'connected',account:'ana@example.test',reference:'11111111-1111-4111-8111-111111111111'}
+    :{status:'pending',progress:{stage:'verifying'}})) as typeof fetch);
+  const work=page.run();await vi.runAllTimersAsync();await work;
+  expect(page.elements['confirmation-title']!.textContent).toBe('Still checking');
+  connected=true;
+  page.emit('visibilitychange');await vi.runAllTimersAsync();
+  expect(page.elements['confirmation-title']!.textContent).toBe('Email is connected');
+  page.emit('pageshow',{persisted:true});await vi.runAllTimersAsync();
+  expect(page.elements['confirmation-title']!.textContent).toBe('Email is connected');
+});
+it('keeps saying Lifty is still verifying once its recovery budget is spent',async()=>{
+  vi.useFakeTimers();
+  const page=browser('https://api.lifty.test/connect/email/return?intent=capability',vi.fn(async()=>Response.json(
+    {status:'pending',progress:{stage:'verifying'},attention:'verification_delayed'})) as typeof fetch);
+  const work=page.run();await vi.runAllTimersAsync();await work;
+  expect(page.elements['confirmation-title']!.textContent).toBe('Still verifying');
+  expect(page.elements['confirmation-detail']!.textContent).toContain('You can close this page');
+  expect(page.elements['confirmation-check']!.hidden).toBe(false);
+});
+it.each([['replaced','replaced by a newer one'],['closed','link was closed'],['unverified','could not verify the account in time']])(
+  'explains a %s attempt instead of a generic failure',async(reason,text)=>{
+  const page=browser('https://api.lifty.test/connect/email/return?intent=capability',vi.fn(async()=>Response.json({status:'failed',reason})) as typeof fetch);
+  await page.run();
+  expect(page.elements['confirmation-title']!.textContent).toBe('Connection needs attention');
+  expect(page.elements['confirmation-detail']!.textContent).toContain(text);
 });

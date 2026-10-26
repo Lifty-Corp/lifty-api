@@ -40,26 +40,23 @@ never report an account as disconnected or missing from a failed read.
    are offered for new mailboxes. Use the owner’s primary mailbox; aliases and shared/delegated
    mailboxes are not supported. A sender has at most one LinkedIn account
    (`LINKEDIN_ALREADY_CONNECTED`: reconnect that one instead).
-3. For `declaration_required`, `preparing` or `sign_in_required`, show
-   `connection_url` as a clickable link naming the account owner. Do not open
-   it yourself. `preparing` means the browser can open sign-in, not that an
-   account is being verified. `created:false` and the same `id` mean the same
-   attempt even if its URL changes. Expired attempts never block a new one.
-   For `verifying` or `complete`, read the attempt for its authoritative result;
-   do not ask the person to sign in again.
-4. Read `sending_accounts_attempt` with `path.id` = the attempt `id` and
-   bounded backoff. `connected` returns `account_id`. A failed or timed-out
-   read means unknown: retry the same read, then report unconfirmed if needed.
-   Pending reads follow `progress` above. Failure reasons:
-   `canceled` — offer a new attempt when ready;
-   `account_in_use` — another workspace owns it; another link cannot fix this;
-   `identity_mismatch` — sign in with the intended profile/mailbox;
-   `provider_rejected` — offer one retry, then LIFT review.
-   Expired attempts need a new connect. The return page explains refusals and
-   offers "Try again" on the same link until expiry. If it reports removal of
-   an old Lifty connection, sign in again with the same account.
-5. A connected mailbox's attempt carries `next_step`, its warmup setup:
-   follow it in the same reply.
+3. Show `connection_url` once as a clickable link naming the account owner; do
+   not open it yourself. `created:false` with the same `id` is the same attempt.
+4. Read `sending_accounts_attempt` with `path.id` and `query.wait_seconds` 25:
+   it returns when the attempt changes. Follow its `action_owner`, `actions` and
+   `next_step`; do not reread next_step, context or schemas meanwhile.
+   `verifying` means Lifty received the sign-in and finishes it on its own, even
+   with every page closed: never ask for another sign-in. A failed or timed-out
+   read is unknown, not a failure.
+5. For a stuck, expired or failed link, `sending_accounts_replace_attempt` with
+   `path.id`, then show only `successor.connection_url`; repeating it returns the
+   same successor. `sending_accounts_close_attempt` ends an attempt the person no
+   longer wants. Neither disconnects an account. A failed attempt's `next_step`
+   says what to do; `account_in_use` means another workspace owns the account
+   and no new link fixes it. If the page says it removed an old Lifty
+   connection, sign in again with the same account.
+6. A connected mailbox's attempt carries `next_step`, its warmup setup: follow
+   it in the same reply.
 
 Connecting never activates a campaign or sends anything.
 
@@ -90,11 +87,9 @@ is paused and disconnected at once (new sends stop; already submitted sends
 keep their history and limits), then Lifty removes its access at the provider.
 200 means access removal is confirmed (`access_revoked_at`) or not applicable
 (`access_removal: not_applicable`: a previous tool's account; connect it again
-to use it). 202 means the
-account is blocked but removal is not confirmed yet: repeat the same request a
-few times with short waits; no new consent is needed. If it stays unconfirmed,
-tell the user the account is blocked and removal is pending, and repeat it later
-on the same account. Never claim access was removed without `access_revoked_at`.
+to use it). 202 means the account is blocked and Lifty keeps removing its access
+on its own: do not repeat the request; say removal is pending. Never claim
+access was removed without `access_revoked_at`.
 Other accounts are unaffected. To change mailboxes, connect the new one and
 disconnect the old one.
 
