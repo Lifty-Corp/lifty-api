@@ -65,7 +65,7 @@ const server = createServer(async (req, res) => {
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const origin = `http://127.0.0.1:${server.address().port}`;
 await writeFile(path.join(authHome, ".lifty/credentials.json"), JSON.stringify({ schema_version: 1, supabase_url: origin, user_email: "juan@liftleadershipgroup.com", access_token: "fixture-session", refresh_token: "unused-fixture", expires_at: 9999999999 }), { mode: 0o600 });
-const packageRoot = path.join(cliRoot, "packages/lifty-cli");
+const packageRoot = cliRoot;
 const { createLifty } = await import(pathToFileURL(path.join(packageRoot, "src/core.mjs")));
 const installer = createLifty({ bundleDir: path.join(packageRoot, "bundle"), packageVersion: JSON.parse(await readFile(path.join(packageRoot, "package.json"))).version,
   recoveryRunnerSource: await readFile(path.join(packageRoot, "dist/cli.js"), "utf8"), output: () => {},
