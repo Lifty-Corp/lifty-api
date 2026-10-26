@@ -131,7 +131,7 @@ const SourceMailivery = z.object({
     binding_ref: Uuid, state: z.string().max(40), requested_action: z.string().max(40).nullish(),
     blocking_reason: z.string().max(64).nullish(), provider_campaign_bound: z.boolean().nullish(),
     last_readback_at: Timestamp.nullish(), snapshot: SourceMailiverySnapshot.nullish(),
-    created_at: Timestamp, removed_at: Timestamp.nullish(),
+    created_at: Timestamp, updated_at: Timestamp.nullish(), removed_at: Timestamp.nullish(),
   }).nullish(),
   evidence: z.object({
     observed_at: Timestamp, started_at: Timestamp.nullish(), active_duration_days: Count.nullish(),

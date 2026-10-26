@@ -231,9 +231,26 @@ describe("warmup states", () => {
       reasons: [{ code: "dns_invalid_dmarc", message: expect.stringMatching(/no valid DMARC record/) }] });
     expect(mailivery(item => { item.binding!.requested_action = "resume"; item.binding!.state = "paused"; }).status.reasons)
       .toEqual([{ code: "resume_requested", message: "Resuming warmup at the next check." }]);
-    const stale = mailivery(item => { item.evidence!.observed_at = "2026-09-27T00:00:00Z"; });
+    const stale = mailivery(item => { item.evidence!.observed_at = item.binding!.last_readback_at = "2026-09-27T00:00:00Z"; });
     expect(stale.sources[0]!.last_check.freshness).toBe("stale");
     expect(stale.status.reasons.map(item => item.code)).toContain("warmup_check_stale");
+  });
+
+  it("counts warmup checks against the weekday schedule and a just-started binding as checked", () => {
+    const at = (when: string, edit: (item: Source["mailboxes"][number]["warmup"]["mailivery"][number]) => void) =>
+      inbox(presentDeliverability(withInbox("uni-only@a.test", item => edit(item.warmup.mailivery[0]!)), new Date(when)), "uni-only@a.test")
+        .warmup.sources[0]!.last_check;
+    const friday: Parameters<typeof at>[1] = item => { item.evidence!.observed_at = item.binding!.last_readback_at = "2026-10-02T21:00:00Z"; };
+    expect(at("2026-10-05T13:00:00Z", friday)).toMatchObject({ freshness: "fresh", fresh_until: "2026-10-05T21:00:00.000Z" });
+    expect(at("2026-10-05T21:01:00Z", friday).freshness).toBe("stale");
+    // Setup verification set `warming` at 14:27 without a readback; older evidence came from a removed binding.
+    const started = at("2026-10-05T14:30:00Z", item => {
+      item.evidence!.observed_at = "2026-09-25T13:00:00Z";
+      item.binding!.created_at = "2026-10-05T14:26:00Z";
+      item.binding!.updated_at = "2026-10-05T14:27:00Z";
+      item.binding!.last_readback_at = null;
+    });
+    expect(started).toMatchObject({ observed_at: "2026-10-05T14:27:00.000Z", freshness: "fresh" });
   });
 
   it("keeps a completed period separate from campaign readiness", () => {
@@ -250,7 +267,7 @@ describe("warmup states", () => {
 describe("member verdict and next step (LIF-1603)", () => {
   type Edit = (mailbox: Source["mailboxes"][number]) => void;
   /** uni-only@a.test as its current account sees it: connected, no holds, the given gate reason. */
-  function verdict(reason: string | null, edit: Edit = () => {}, account: Partial<Account> = {}) {
+  function verdict(reason: string | null, edit: Edit = () => {}, account: Partial<Account> = {}, history: Partial<Account>[] = []) {
     const value = withInbox("uni-only@a.test", item => {
       item.connections[0]!.holds = [];
       item.connections[0]!.controls = [];
@@ -261,9 +278,19 @@ describe("member verdict and next step (LIF-1603)", () => {
     const current: Account = { id: mailbox.connections[0]!.connection_ref, sender_id: mailbox.connections[0]!.sender_ref!, channel: "email",
       identity: mailbox.email, status: "connected", state: "active", checked_at: now.toISOString(), observation: { state: "verified" },
       connected_at: now.toISOString(), disconnected_at: null, access_revoked_at: null, declaration: null, sends: { today: 0, last_7_days: 0 }, ...account };
-    return inbox(presentDeliverability(value, now, { accounts: new Map([[mailbox.workspace_ref, [current]]]) }), "uni-only@a.test");
+    const others = history.map((item, index) => ({ ...current, id: `10393000-0000-4000-8000-00000000009${index}`, ...item }));
+    return inbox(presentDeliverability(value, now, { accounts: new Map([[mailbox.workspace_ref, [...others, current]]]) }), "uni-only@a.test");
   }
   const noCampaigns: Edit = item => { item.campaigns = []; };
+
+  it("finds a reconnected inbox's current account past its disconnected history", () => {
+    const old = { status: "disconnected" as const, disconnected_at: now.toISOString() };
+    const reconnected = verdict(null, noCampaigns, {}, [old, old]);
+    expect(reconnected.account?.connection_ref).toBe("10393000-0000-4000-8000-000000000001");
+    expect(reconnected.status.code).toBe("ready_idle");
+    // Two live accounts for one address stay unresolved.
+    expect(verdict(null, noCampaigns, {}, [{}]).account).toBeNull();
+  });
 
   it("treats a missing send-time safety check as ready, not blocked", () => {
     const idle = verdict("email_safety_check_required", noCampaigns);
