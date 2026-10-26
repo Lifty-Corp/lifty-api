@@ -1,3 +1,4 @@
+import type { EmailProvider } from "./connect-state.js";
 import { z } from "zod";
 import { connectionFetch } from "./connection-confirmation.js";
 import { PublicError } from "./errors.js";
@@ -53,9 +54,9 @@ export function createAccountProvider(settings: AccountProviderSettings) {
     && error.code === "UNIPILE_IDENTITY_MISMATCH";
 
   return {
-    async createLink(input: { channel: "email" | "linkedin"; state: string; redirectUri: string; expiresAt: string; transport: ProviderTransport }) {
+    async createLink(input: { channel: "email" | "linkedin"; emailProvider?: EmailProvider | undefined; state: string; redirectUri: string; expiresAt: string; transport: ProviderTransport }) {
       if (input.transport.api_version !== "v2" || !input.transport.hosted_auth_origin) throw new PublicError({ status: 503, code: "CONNECT_UNAVAILABLE", message: "Lifty cannot open a sign-in link for this account." });
-      return v2.createLink({ channel: input.channel, state: input.state, redirectUri: input.redirectUri,
+      return v2.createLink({ channel: input.channel, emailProvider: input.emailProvider, state: input.state, redirectUri: input.redirectUri,
         expiresAt: input.expiresAt, transport: transport(input.transport) });
     },
     /**

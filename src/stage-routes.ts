@@ -10,6 +10,7 @@ import type { crmOperationEntries } from "./crm-operations.js";
 import { customerExclusionsEntries, validateCustomerExclusionsInput } from "./customer-exclusions.js";
 import { getWorkspaceSummary } from "./workspace-summary.js";
 import { getNextStep } from "./next-step.js";
+import { getConnectionNextStep } from "./connection-next-step.js";
 import { readAdminOnboarding } from "./admin-onboarding.js";
 import { readAdminContext } from "./context-drafts.js";
 import { RunProgressQuerySchema, RunProgressSchema } from "./run-progress.js";
@@ -86,7 +87,7 @@ export function registerStageRoutes(app: OpenAPIHono<AppEnvironment>, dependenci
   app.get("/v1/workspace/next-step", async context => {
     parse(Empty, context.req.query());
     context.header("cache-control", "no-store");
-    return context.json(await getNextStep(dependencies, context.get("authSession")));
+    return context.json(await (dependencies.runtimeProfile === "connections" ? getConnectionNextStep : getNextStep)(dependencies, context.get("authSession")));
   });
   // LIF-1297: where every workspace sits in next_step, for LIFT admins only.
   app.openAPIRegistry.registerPath({ method: "get", path: "/v1/admin/onboarding", security: [{ bearerAuth: [] }],

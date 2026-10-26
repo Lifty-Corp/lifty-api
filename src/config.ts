@@ -1,3 +1,4 @@
+import { emailConnectSetup } from "./email-connect-setup.js";
 import type { SupabaseEnv } from "@supabase/server";
 import { parseHostedAuthOrigin } from "./hosted-auth-branding.js";
 
@@ -17,6 +18,8 @@ export const DEFAULT_DASHBOARD_ORIGIN = "https://liftygtm.com";
 type Environment = Record<string, string | undefined>;
 
 export interface ServiceConfig {
+  runtimeProfile?: "full" | "connections";
+  publicBaseUrl: string;
   openAiAppsChallenge?: string;
   mcp?: McpSettings | null;
   crm?: { serverKey: string; readOnly: boolean } | null;
@@ -24,7 +27,7 @@ export interface ServiceConfig {
   host: string;
   port: number;
   supabase: SupabaseAuthenticationConfig;
-  hubspot: Omit<HubspotConnectSettings, "fetchImpl">;
+  hubspot: Omit<HubspotConnectSettings, "fetchImpl"> | null;
   slack: Omit<SlackConnectSettings, "fetchImpl"> | null;
   /** LIFT's Attio OAuth app; Attio connection is unavailable without it. */
   attio?: Omit<AttioConnectSettings, "fetchImpl"> | null;
@@ -38,12 +41,12 @@ export interface ServiceConfig {
   trigger: {
     apiUrl: string;
     secretKey: string;
-  };
+  } | null;
   /** The notifications service's own Trigger.dev project (test sends, LIF-1464). */
   notificationsTrigger: {
     apiUrl: string;
     secretKey: string;
-  };
+  } | null;
 }
 
 const FORBIDDEN_SECRET_NAMES = [
@@ -112,6 +115,24 @@ function parsePort(value: string | undefined): number {
 }
 
 export function loadConfig(environment: Environment = process.env): ServiceConfig {
+  const runtimeProfile = environment.LIFTY_RUNTIME_PROFILE?.trim() || "full";
+  if (runtimeProfile !== "full" && runtimeProfile !== "connections") {
+    throw new Error("LIFTY_RUNTIME_PROFILE must be full or connections.");
+  }
+  if (runtimeProfile === "connections") {
+    // An isolated connection rehearsal has no job, CRM or warmup credentials.
+    // Refuse accidental production configuration rather than merely ignoring it.
+    // The public Google client ID stays allowed: the Trusted setup shows it.
+    for (const name of ["TRIGGER_SECRET_KEY", "NOTIFICATIONS_TRIGGER_SECRET_KEY", "HUBSPOT_CLIENT_ID",
+      "HUBSPOT_CLIENT_SECRET", "SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET", "ATTIO_CLIENT_ID", "ATTIO_CLIENT_SECRET",
+      "MAILIVERY_API_KEY", "LIFTY_CRM_SERVER_KEY", "UNIPILE_DSN", "UNIPILE_ACCESS_TOKEN",
+      "LIFTY_WARMUP_GOOGLE_CLIENT_SECRET"]) {
+      if (environment[name]?.trim()) throw new Error(`${name} is unavailable in the connections profile.`);
+    }
+    if (environment.LIFTY_WARMUP_SETUP_ENABLED === "true" || environment.LIFTY_MCP_ENABLED === "true") {
+      throw new Error("Warmup and MCP are unavailable in the connections profile.");
+    }
+  }
   for (const name of FORBIDDEN_SECRET_NAMES) {
     if (environment[name]?.trim()) {
       throw new Error(
@@ -198,6 +219,9 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
   const setupEnabled = environment.LIFTY_WARMUP_SETUP_ENABLED === "true";
   const googleClientId = environment.LIFTY_WARMUP_GOOGLE_CLIENT_ID?.trim();
   const googleClientSecret = environment.LIFTY_WARMUP_GOOGLE_CLIENT_SECRET?.trim();
+  if (googleClientId && (!/^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$/.test(googleClientId) || googleClientId.length > 255)) {
+    throw new Error("LIFTY_WARMUP_GOOGLE_CLIENT_ID must be a Google OAuth client ID.");
+  }
   if (environment.LIFTY_WARMUP_SETUP_ENABLED && !["true", "false"].includes(environment.LIFTY_WARMUP_SETUP_ENABLED)) throw new Error("LIFTY_WARMUP_SETUP_ENABLED must be true or false.");
   if (setupEnabled && (!emailKey || !mailiveryKey || !googleClientId || !googleClientSecret)) {
     throw new Error("Google warmup setup requires email and Mailivery keys and both Google client credentials.");
@@ -207,10 +231,12 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
   }
   if (crmKey && [emailKey, linkedinKey, publishableKey, environment.HUBSPOT_CLIENT_SECRET, attioClientSecret, environment.TRIGGER_SECRET_KEY].includes(crmKey)) throw new Error("CRM requires a distinct dedicated server key.");
   // Notifications is its own Trigger.dev project; the Jobs key must never reach it.
-  const triggerKey = required(environment, "TRIGGER_SECRET_KEY");
-  const notificationsTriggerKey = required(environment, "NOTIFICATIONS_TRIGGER_SECRET_KEY");
-  if (notificationsTriggerKey === triggerKey) throw new Error("NOTIFICATIONS_TRIGGER_SECRET_KEY must be distinct from TRIGGER_SECRET_KEY.");
+  const triggerKey = runtimeProfile === "full" ? required(environment, "TRIGGER_SECRET_KEY") : null;
+  const notificationsTriggerKey = runtimeProfile === "full" ? required(environment, "NOTIFICATIONS_TRIGGER_SECRET_KEY") : null;
+  if (triggerKey && notificationsTriggerKey === triggerKey) throw new Error("NOTIFICATIONS_TRIGGER_SECRET_KEY must be distinct from TRIGGER_SECRET_KEY.");
   return {
+    runtimeProfile,
+    publicBaseUrl: publicBaseUrl.toString().replace(/\/$/, ""),
     mcp,
     ...(openAiAppsChallenge === undefined ? {} : { openAiAppsChallenge }),
     crm: crmKey ? { serverKey: crmKey, readOnly: [environment.DASHBOARD_READ_ONLY_MODE, environment.CONSUMER_READ_ONLY_MODE].some(value => value === "1" || value?.toLowerCase() === "true") } : null,
@@ -222,6 +248,9 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
     } : null,
     serverKeys: { email: emailKey || null },
     accounts: v2 && (emailKey || linkedinKey) ? {
+      connectionOnly: runtimeProfile === "connections",
+      emailSetup: emailConnectSetup(googleClientId),
+      dashboardOrigin: dashboardUrl.origin,
       publicBaseUrl: publicBaseUrl.toString().replace(/\/$/, ""),
       supabaseUrl: supabaseUrl.toString().replace(/\/$/, ""), publishableKey,
       serverKeys: { ...(emailKey ? { email: emailKey } : {}), ...(linkedinKey ? { linkedin: linkedinKey } : {}) },
@@ -234,13 +263,13 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
       publishableKey,
       jwks: parseJwks(environment),
     },
-    hubspot: {
+    hubspot: runtimeProfile === "full" ? {
       clientId: required(environment, "HUBSPOT_CLIENT_ID"),
       clientSecret: required(environment, "HUBSPOT_CLIENT_SECRET"),
       publicBaseUrl: publicBaseUrl.toString().replace(/\/$/, ""),
       supabaseUrl: supabaseUrl.toString().replace(/\/$/, ""),
       publishableKey,
-    },
+    } : null,
     attio: attioClientId && attioClientSecret
       ? {
           clientId: attioClientId,
@@ -259,7 +288,7 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
           publishableKey,
         }
       : null,
-    trigger: {
+    trigger: triggerKey ? {
       apiUrl: secureUrl(
         environment.TRIGGER_API_URL?.trim() || "https://api.trigger.dev",
         "TRIGGER_API_URL",
@@ -267,8 +296,8 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
         .toString()
         .replace(/\/$/, ""),
       secretKey: triggerKey,
-    },
-    notificationsTrigger: {
+    } : null,
+    notificationsTrigger: notificationsTriggerKey ? {
       apiUrl: secureUrl(
         environment.NOTIFICATIONS_TRIGGER_API_URL?.trim() || "https://api.trigger.dev",
         "NOTIFICATIONS_TRIGGER_API_URL",
@@ -276,6 +305,6 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
         .toString()
         .replace(/\/$/, ""),
       secretKey: notificationsTriggerKey,
-    },
+    } : null,
   };
 }

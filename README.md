@@ -379,6 +379,12 @@ Before setting `LIFTY_WARMUP_SETUP_ENABLED=true`:
 2. Save that same client ID and secret in Mailivery (Settings → Team Settings →
    API Access → Google OAuth Credentials) before creating a mailbox, and deploy
    `LIFTY_WARMUP_GOOGLE_CLIENT_ID` / `LIFTY_WARMUP_GOOGLE_CLIENT_SECRET`.
+   This is Lifty's one Google client: configure the same client in the
+   runtime's Unipile application. The email connect page shows the client ID
+   in the Workspace Trusted instructions whenever it is set, without the
+   secret and even while warmup setup is off; the connections profile accepts
+   the ID and refuses the secret. The pilot deploy pins the ID next to its
+   Unipile application.
    Mailivery's partner OAuth endpoint needs no separate enablement: a
    placeholder probe on 2026-09-23 passed its enablement gate (LIF-986).
 3. Keep proxy/APM body capture off for these routes and outbound OAuth calls;
@@ -569,6 +575,38 @@ readers reject the new `disconnect_pause` field. This revision accepts both
 shapes. Recovery becomes usable when that migration is active; deploy the
 compatible dashboard after both. Reconnecting and account Resume remain
 separate from explicit campaign recovery.
+
+## Isolated connection profile
+
+**Verified:** LIF-1619 source and local contract checks, 2026-10-25.
+
+`LIFTY_RUNTIME_PROFILE=connections` composes the same Auth, sender, email and
+LinkedIn connection handlers and shared confirmation controller. Initial
+connections use the isolated Unipile V2 application and distinct email/LinkedIn
+capabilities. It accepts no CRM, Mailivery or Trigger credentials. Its route boundary closes campaigns,
+research, warmup, placement and notification sends before any handler can queue
+work. Its OpenAPI response lists only enabled operations. The default `full`
+profile retains all existing required settings and behavior.
+
+`/readyz` checks Auth, the installed database catalog, replay heartbeat and both
+channel capabilities. LIF-1619 requires Functions' guarded LinkedIn profile
+migration `20261025010000_pilot_linkedin_connections.sql` and its verified staging
+artifact before this API. The deployment preflight checks both capabilities;
+the previous email-only API remains compatible during database rollout. A real
+session, signed authorization and provider identity verification are still
+required to establish a connected account. Connecting never enables sending.
+
+`.do/pilot-app.json` describes the separate `lifty-api-pilot` App Platform app at
+`api.pilot.liftygtm.com`, using one 0.5 GB instance. `scripts/prepare-pilot.mjs`
+pins it to the approved staging Supabase project and pilot Unipile application,
+checks runtime configuration and writes a private spec outside the checkout. It
+never creates or updates resources. The API and Functions release workflows need
+the same dedicated `STAGING_LINKEDIN_SERVER_KEY`, distinct from the email key.
+When installing the capability, the owning deployment updates the app spec with
+`--update-sources` so the new configuration and current develop code deploy
+together. A spec-only update reuses the previous source and can fail startup.
+Deploy the Functions profile, then API, then dashboard. See the runbook before
+provisioning.
 
 ## Mailbox use changes (LIF-1603)
 

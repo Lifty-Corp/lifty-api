@@ -23,11 +23,12 @@ export interface TriggerClientSettings {
 }
 
 async function triggerTask(
-  settings: TriggerClientSettings,
+  settings: TriggerClientSettings | null,
   taskId: string,
   payload: unknown,
   idempotencyKey: string,
 ): Promise<{ id: string }> {
+  if (!settings) throw new PublicError({ status: 503, code: "BACKGROUND_UNAVAILABLE", message: "Background work is unavailable in this environment." });
   const fetchImpl = settings.fetchImpl ?? fetch;
   const baseUrl = settings.apiUrl.replace(/\/$/, "");
 
@@ -63,7 +64,7 @@ async function triggerTask(
 export type EnqueueFirstRun = (runId: string, attempt?: number) => Promise<{ id: string }>;
 
 export function createFirstRunTrigger(
-  settings: TriggerClientSettings,
+  settings: TriggerClientSettings | null,
 ): EnqueueFirstRun {
   // Reattachment reuses the attempt key; resuming a failed ledger run must
   // get a fresh wakeup instead of deduping against its finished Trigger run.
@@ -76,7 +77,7 @@ export function createFirstRunTrigger(
 export type EnqueueCrmSync = (runId: string) => Promise<{ id: string }>;
 
 export function createCrmSyncTrigger(
-  settings: TriggerClientSettings,
+  settings: TriggerClientSettings | null,
 ): EnqueueCrmSync {
   // Same key per ledger run as the first-run trigger: a re-attached
   // `lifty sync` re-triggers idempotently and self-heals a lost enqueue.
@@ -86,7 +87,7 @@ export function createCrmSyncTrigger(
 
 export type EnqueueCrmMapping = (runRef: string, workspaceRef: string) => Promise<void>;
 
-export function createCrmMappingTrigger(settings: TriggerClientSettings): EnqueueCrmMapping {
+export function createCrmMappingTrigger(settings: TriggerClientSettings | null): EnqueueCrmMapping {
   // The saved ledger owns the immutable cohort and proposed values. Reattaching
   // wakes that same run; no mapping payload or provider credential reaches ingress.
   return async runRef => {
@@ -99,7 +100,7 @@ export type EnqueueIntegrationRevocation = (revocationId: string) => Promise<{ i
 
 /** LIF-681: one revoke job per detached grant; the revocation row id is the key. */
 export function createIntegrationRevocationTrigger(
-  settings: TriggerClientSettings,
+  settings: TriggerClientSettings | null,
 ): EnqueueIntegrationRevocation {
   return async (revocationId) =>
     triggerTask(
@@ -120,7 +121,7 @@ export type EnqueueNotificationTest = (request: NotificationTestRequest) => Prom
 
 /** One test message to one Slack destination. A 2xx is acceptance, not delivery. */
 export function createNotificationTestTrigger(
-  settings: TriggerClientSettings,
+  settings: TriggerClientSettings | null,
 ): EnqueueNotificationTest {
   return async ({ workspaceId, destinationId, requestId }) =>
     triggerTask(
@@ -136,7 +137,8 @@ export type EnqueueWarmupVerify = (senderRef: string, attempt: string) => Promis
 /** Mailivery accepted a founder's warmup handoff: Jobs verifies and starts that
  * binding now instead of at its next scheduled pass. One run per OAuth attempt.
  * Bounded, because it runs inside the founder's confirmation request. */
-export function createWarmupVerifyTrigger(settings: TriggerClientSettings): EnqueueWarmupVerify {
+export function createWarmupVerifyTrigger(settings: TriggerClientSettings | null): EnqueueWarmupVerify {
+  if (!settings) return async () => { throw new PublicError({ status: 503, code: "BACKGROUND_UNAVAILABLE", message: "Warmup is unavailable in this environment." }); };
   const fetchImpl = connectionFetch(settings.fetchImpl ?? fetch);
   const bounded: TriggerClientSettings = { ...settings,
     fetchImpl: (input, init) => fetchImpl(input, { ...init, signal: AbortSignal.timeout(WARMUP_VERIFY_TIMEOUT_MS) }) };
@@ -154,7 +156,7 @@ function enqueueFailed(cause: unknown): PublicError {
   });
 }
 
-export function createAcquisitionVerificationTrigger(settings: TriggerClientSettings) {
+export function createAcquisitionVerificationTrigger(settings: TriggerClientSettings | null) {
   return async (recoveryRef: string) => {
     const validReference = /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(recoveryRef);
     if (!validReference) {
