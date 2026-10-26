@@ -152,7 +152,7 @@ operate it with `npm run do:doctor`, `do:status`, `do:logs`, `do:smoke`, and
 `do:deploy -- <full-sha>`; the runbook documents the guardrails and
 prerequisites.
 
-Admin Slack invitations reuse `/slack/start` and `/slack/callback`. Reissuing replaces unused Slack invitations only for the selected workspace. The database rechecks the issuer's admin status, membership, and workspace activity when the callback consumes an admin invitation. Store neither generated links nor OAuth tokens in logs or durable evidence. Deploy migration `20260914180009_lif639_admin_slack_connect_links.sql` before this API, then the dashboard Settings card.
+Admin Slack invitations reuse `/slack/start` and `/slack/callback`. Reissuing replaces unused Slack invitations only for the selected workspace. The database rechecks the issuer's admin status, membership, and workspace activity when the callback consumes an admin invitation. Store neither generated links nor OAuth tokens in logs or durable evidence.
 
 ## Senders and sending accounts (LIF-1182)
 
@@ -481,9 +481,7 @@ plan and reports per-field readback. Queue acceptance is not verified success.
 Maintenance mode blocks mapping apply, property creation and replay submission;
 read operations remain available.
 
-Release the LIF-897 database migration through its owning CI, then deploy the
-matching Jobs task before this API. The existing dedicated CRM capability key
-also gates `lifty_crm_mapping_tools`; no API service-role key is introduced.
+The dedicated CRM capability key also gates `lifty_crm_mapping_tools`; no API service-role key is introduced.
 `/readyz/crm-mapping` must return
 `{status:"ready",capability:"lifty-crm-mapping.v1"}` alongside the existing
 `/readyz/crm` capability. Deployment smoke enforces both. This static probe

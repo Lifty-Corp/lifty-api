@@ -276,8 +276,9 @@ describe("member verdict and next step (LIF-1603)", () => {
     });
     const mailbox = value.mailboxes.find(item => item.email === "uni-only@a.test")!;
     const current: Account = { id: mailbox.connections[0]!.connection_ref, sender_id: mailbox.connections[0]!.sender_ref!, channel: "email",
-      identity: mailbox.email, status: "connected", state: "active", checked_at: now.toISOString(), observation: { state: "verified" },
-      connected_at: now.toISOString(), disconnected_at: null, access_revoked_at: null, declaration: null, sends: { today: 0, last_7_days: 0 }, ...account };
+      identity: mailbox.email, status: "connected", state: "active", sending: { allowed: true, reason: null, scope: null },
+      limits: { emails_per_day: 10 }, checked_at: now.toISOString(), observation: { state: "verified" }, connected_at: now.toISOString(),
+      disconnected_at: null, access_revoked_at: null, access_removal: null, declaration: null, sends: { today: 0, last_7_days: 0 }, ...account };
     const others = history.map((item, index) => ({ ...current, id: `10393000-0000-4000-8000-00000000009${index}`, ...item }));
     return inbox(presentDeliverability(value, now, { accounts: new Map([[mailbox.workspace_ref, [...others, current]]]) }), "uni-only@a.test");
   }
