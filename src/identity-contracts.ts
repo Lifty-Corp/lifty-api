@@ -111,6 +111,14 @@ export const AttemptSchema = z.object({
   progress: AccountConnectionProgress,
 }).strict();
 export type Attempt = z.infer<typeof AttemptSchema>;
+/** A connected mailbox still needs its own warmup consent, so the attempt read names that step. */
+export const AttemptReadSchema = AttemptSchema.extend({
+  next_step: z.object({
+    operation: z.literal("sending_accounts_warmup_start"),
+    body: z.object({ workspace: Id, connection_ref: Id }).strict(),
+    message: z.string(),
+  }).strict().optional(),
+}).strict();
 // The database opens or reuses the durable attempt; the API adds the link.
 export const ConnectStartSchema = z.object({ ...Workspace, id: Id, expires_at: Timestamp, created: z.boolean() }).strict();
 export const ConnectResultSchema = ConnectStartSchema.extend({ connection_url: z.url(), progress: AccountConnectionProgress }).strict();

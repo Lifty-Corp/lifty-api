@@ -58,6 +58,8 @@ never report an account as disconnected or missing from a failed read.
    Expired attempts need a new connect. The return page explains refusals and
    offers "Try again" on the same link until expiry. If it reports removal of
    an old Lifty connection, sign in again with the same account.
+5. A connected mailbox's attempt carries `next_step`, its warmup setup:
+   follow it in the same reply.
 
 Connecting never activates a campaign or sends anything.
 
@@ -106,10 +108,12 @@ omitted; with several it is required and the operation returns
 POST inputs belong in body. Every workspace uses the same operations, and each
 mailbox has its own warmup: starting one never stops another.
 
-Warmup authorization is a separate step from the outreach account
-connection. Show the returned Lifty setup link for that exact mailbox; Lifty
-verifies its provider and selects Google or Microsoft automatically. The owner
-must authorize the same mailbox. Microsoft consent opens in another tab;
+Warmup needs the owner's second sign-in. As soon as a mailbox connects,
+whatever its use, call `warmup_start` once and show the returned setup link in
+the same reply: until the owner finishes it, Lifty can neither warm up nor
+test the mailbox. A null `connect_url` means warmup is already set up. Lifty
+selects Google or Microsoft automatically, and the owner must authorize that
+same mailbox. Microsoft consent opens in another tab;
 keep the Lifty confirmation page open until it verifies warmup is running.
 An organization may require Microsoft administrator approval. A canceled or
 blocked consent does not mean warmup is running; read the same attempt's status.
@@ -117,21 +121,20 @@ Preserve existing warmup evidence during a migration until the replacement is
 verified; connecting does not transfer warmup age.
 Never request an App Password or route the founder to a password form.
 
-After the email account is connected, call `warmup_status` and use its
-`mailbox_use` and `recommended_go_live` to explain what happens next. Do not
-compute dates yourself.
+Use the response's `mailbox_use` and `recommended_go_live` to explain what
+happens next. Do not compute dates yourself.
 
 - `personal` (a mailbox the person already uses, declared habitual): a
   lookalike-domain or outreach-only address is really dedicated, so offer
-  `sending_accounts_declare`. Otherwise no initial warmup period is required. Recommend warmup anyway: it runs
-  alongside outreach and protects inbox placement and reply rates. The
-  placement test needs the warmup setup; Lifty runs it once setup is done.
+  `sending_accounts_declare`. Otherwise no initial warmup period is required.
+  Warmup still protects inbox placement and reply rates alongside outreach,
+  and Lifty runs the placement test once setup is done.
   Tradeoff: a warmup service gets access to the mailbox, and warmup emails and
-  replies pass through the inbox. If the founder declines, do not start
-  warmup; say Lifty cannot test the mailbox without it.
-- `outreach` (a dedicated sending mailbox): warmup is required; call
-  `warmup_start` right away. The mailbox needs a healthy check after 21 active
-  warmup days, followed by placement, before it can send. Lifty starts that
+  replies pass through the inbox. If the founder declines, do not push it;
+  say Lifty cannot warm up or test the mailbox without it.
+- `outreach` (a dedicated sending mailbox): warmup is required. The mailbox
+  needs a healthy check after 21 active warmup days, followed by placement,
+  before it can send. Lifty starts that
   placement test by itself when warmup finishes. Paused days and days with a
   problem don't count, so the date moves later if either happens. Give the
   returned date and suggest what to prepare meanwhile: targeting, copy and

@@ -658,9 +658,9 @@ export async function getNextStep(
       "email_connected",
       [
         ...(email.unknown ? [`${name}'s warmup or placement status could not be read: read both before offering anything, because preparation may already be running.`] : []),
-        `${name} is connected. Read ${tool("sending-accounts", "warmup_status")} with connection_ref ${mailbox.id} and use its mailbox_use. If its checks show an SPF, DMARC or MX record not_valid, say which one to publish first. The setup link selects Google or Microsoft for the connected mailbox and asks its owner to authorize that same mailbox for Mailivery. It covers both warmup and the placement test, so ask for no other consent.`,
-        `A dedicated sending mailbox (outreach) needs warmup: call ${tool("sending-accounts", "warmup_start")} right away and show the returned setup link. It needs 21 active warmup days, then Lifty runs one placement test by itself; give the date from recommended_go_live.`,
-        `A mailbox they already use (personal): recommend warmup, because it keeps running alongside outreach and protects inbox placement and reply rates. Lifty tests where the mailbox's email lands as soon as its warmup setup is done. Call ${tool("sending-accounts", "warmup_start")} and show the returned setup link. If the founder declines warmup, do not start it, and say Lifty cannot test the mailbox without that setup.`,
+        `${name} is connected, but warmup and its placement test need its owner's second sign-in. Call ${tool("sending-accounts", "warmup_start")} with connection_ref ${mailbox.id} right away, whatever the mailbox's use, and show the returned setup link in the same reply. If it reports an SPF, DMARC or MX record not valid, say which one to publish first. The link asks the owner to authorize that same mailbox, Google or Microsoft, for Mailivery and covers both warmup and the placement test, so ask for no other consent.`,
+        `A dedicated sending mailbox (outreach) needs 21 active warmup days, then Lifty runs one placement test by itself; give the date from recommended_go_live.`,
+        `A mailbox they already use (personal) needs no initial period, but warmup protects inbox placement and reply rates, and Lifty tests where its email lands as soon as setup is done. If the founder declines, do not push it; say Lifty cannot warm up or test the mailbox without that setup.`,
         notice,
         ...alerts,
         weekly,
