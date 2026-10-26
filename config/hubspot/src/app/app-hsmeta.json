@@ -1,0 +1,45 @@
+{
+  "uid": "lifty_hubspot_app",
+  "type": "app",
+  "config": {
+    "description": "Sync LIFTY CRM records, manage mapped fields, and coordinate deals in HubSpot.",
+    "name": "LIFTY",
+    "distribution": "marketplace",
+    "auth": {
+      "type": "oauth",
+      "redirectUrls": [
+        "http://localhost:8787/callback",
+        "https://api.liftygtm.com/hubspot/callback",
+        "https://lifty-api-staging-ox2h9.ondigitalocean.app/hubspot/callback"
+      ],
+      "requiredScopes": [
+        "oauth",
+        "crm.objects.contacts.read",
+        "crm.objects.contacts.write",
+        "crm.objects.companies.read",
+        "crm.objects.companies.write",
+        "crm.schemas.contacts.read",
+        "crm.schemas.companies.read"
+      ],
+      "optionalScopes": [],
+      "conditionallyRequiredScopes": [
+        "crm.objects.deals.read",
+        "crm.objects.deals.write",
+        "crm.schemas.contacts.write",
+        "crm.schemas.companies.write"
+      ]
+    },
+    "permittedUrls": {
+      "fetch": [
+        "https://api.hubapi.com"
+      ],
+      "iframe": [],
+      "img": []
+    },
+    "support": {
+      "supportEmail": "juan@liftleadershipgroup.com",
+      "documentationUrl": "https://liftleadershipgroup.com/",
+      "supportUrl": "https://liftleadershipgroup.com/"
+    }
+  }
+}

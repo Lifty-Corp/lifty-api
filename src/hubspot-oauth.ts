@@ -1,7 +1,7 @@
 import { connectionFetch } from "./connection-confirmation.js";
-// HubSpot OAuth mechanics for the hosted connect flow. Mirrors the canary
-// module proven in LIF-603 (scripts/lif-603/hubspot-oauth.mjs) on the
-// versioned 2026-03 endpoints; the LIFTY app (id 50910951) is the only client.
+// HubSpot OAuth mechanics for the hosted connect flow on the versioned
+// 2026-03 endpoints. App configuration belongs to config/hubspot/;
+// the LIFTY app (id 50910951) is the only client.
 
 const AUTHORIZATION_ENDPOINT = "https://app.hubspot.com/oauth/authorize";
 const TOKEN_ENDPOINT = "https://api.hubapi.com/oauth/2026-03/token";
