@@ -16,10 +16,13 @@
     "do:smoke": "bash scripts/digitalocean.sh smoke",
     "do:status": "bash scripts/digitalocean.sh status",
     "start": "node dist/server.js",
+    "policy:sync": "node scripts/sync-hubspot-grant-policy.mjs",
+    "policy:check": "node scripts/sync-hubspot-grant-policy.mjs --check",
+    "test:policy": "node --import tsx --test contracts/hubspot-grant-policy.node-test.mjs scripts/sync-hubspot-grant-policy.node-test.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run typecheck && npm test && npm run build"
+    "verify": "npm run policy:check && npm run test:policy && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
     "@hono/node-server": "2.1.1",

@@ -1,6 +1,6 @@
 {
-  "source": "lift-polariz-compass/contracts/hubspot-grant-policy.ts",
-  "generator": "scripts/sync-hubspot-grant-policy.mjs",
+  "source": "lifty-api/contracts/hubspot-grant-policy.ts",
+  "generator": "lifty-api/scripts/sync-hubspot-grant-policy.mjs",
   "files": {
     "hubspot-grant-policy.ts": "78ca5b6feb7663df3cbde8ed528e43a56f47dcdc4009bd68942df584d48ca293",
     "hubspot-grant-policy-cases.ts": "1aa2cd7066adcbea9fa1ebd61b14332c330652278d61fcdd1ca49a63e4e4d40d"
