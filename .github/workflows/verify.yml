@@ -7,9 +7,9 @@ name: Verify
 
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, staging]
   push:
-    branches: [develop]
+    branches: [develop, staging]
   workflow_dispatch:
     inputs:
       self_hosted_staging:
@@ -22,11 +22,11 @@ permissions:
 
 concurrency:
   group: verify-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/staging' }}
 
 jobs:
   verify:
-    if: "!(github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/develop' && inputs.self_hosted_staging)"
+    if: "!(github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/staging' && inputs.self_hosted_staging)"
     name: Verify (typecheck + tests + build)
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -64,7 +64,7 @@ jobs:
           overwrite: true
 
   deploy-pilot:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop' && vars.CONNECTION_PROFILE_ENABLED == 'true'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/staging' && vars.CONNECTION_PROFILE_ENABLED == 'true'
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -90,11 +90,11 @@ jobs:
       - uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-      - name: Deploy isolated develop API after database/replay readiness
+      - name: Deploy isolated staging API after database/replay readiness
         run: python3 scripts/deploy-pilot.py
 
   deploy-pilot-local:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/develop' && inputs.self_hosted_staging && vars.CONNECTION_PROFILE_ENABLED == 'true'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/staging' && inputs.self_hosted_staging && vars.CONNECTION_PROFILE_ENABLED == 'true'
     runs-on: ${{ vars.STAGING_RUNNER_LABEL || 'lifty-staging-unconfigured' }}
     timeout-minutes: 30
     concurrency:
@@ -112,7 +112,7 @@ jobs:
         run: |
           npm run verify
           python3 -m unittest discover -s scripts -p test_deploy_pilot.py
-      - name: Deploy isolated develop API after database/replay readiness
+      - name: Deploy isolated staging API after database/replay readiness
         env:
           DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_PUBLISHABLE_KEY }}

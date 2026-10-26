@@ -230,9 +230,9 @@ Staging Google administrator Trusted approval and Google brand verification are
 separate acceptance checks. External/Testing and invited test users establish
 only testing behavior. Keep campaigns and warmup disabled in this profile.
 
-### Develop delivery and readiness
+### Staging delivery and readiness
 
-The Verify workflow deploys `develop` only when repository variable
+The Verify workflow deploys `staging` only when repository variable
 `CONNECTION_PROFILE_ENABLED=true`. It verifies the source first, then
 `scripts/deploy-pilot.py` requires the Functions-owned staging contract and a
 replay heartbeat newer than two minutes before creating/updating the separate
@@ -252,14 +252,14 @@ connection catalog, including its permissions and the replay heartbeat.
 The custom domain must resolve to the created app before testing browser
 callbacks. A healthy default ingress proves the deployment; it does not prove
 custom-domain DNS or a real mailbox consent. Record those live checks in
-LIF-1594 before enabling the dashboard's develop deployment.
+LIF-1594 before enabling the dashboard's staging deployment.
 
 
 ### Temporary own runner for staging
 
 If hosted Actions minutes are unavailable, register an ephemeral repository
 runner with a unique label (no default labels) in `STAGING_RUNNER_LABEL` and
-dispatch Verify on develop with `self_hosted_staging=true`. This single job
+dispatch Verify on staging with `self_hosted_staging=true`. This single job
 runs the complete API verification and existing release-contract tests before
 using the same guarded pilot deployment script. The machine needs Python,
 doctl and Node installation support; no local database is started. The runner
