@@ -46,10 +46,11 @@ workflow also runs `python3 -m unittest discover -s scripts -p test_deploy_pilot
 
 ## Release
 
-Feature PRs target `develop`, which only verifies. Move a selected batch to
-`staging`, then promote its tested candidate to `main`. The staging workflow
-can migrate the existing pilot app source from `develop` to `staging` in its
-single deployment, preserving the app identity and encrypted settings.
+Feature PRs target `develop`, which only verifies. A batched release promotes
+`develop` to `main` (Compass `CLAUDE.md`). `staging` receives `develop` by merge
+and deploys the isolated pilot described below; its workflow can migrate the
+existing pilot app source from `develop` to `staging` in its single deployment,
+preserving the app identity and encrypted settings.
 
 Merging to `main` starts the `Deploy` workflow. It runs `npm run verify` (or
 reuses a passing pull request Verify run on the identical tree), deploys that
