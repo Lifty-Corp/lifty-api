@@ -3,6 +3,7 @@ import { executeOutreachOperation, type OutreachInput } from "./outreach-operati
 import { executeLinkedinOperation, type LinkedinInput } from "./linkedin-operations.js";
 import { executeCrmPreferencesOperation } from "./crm-preferences.js";
 import { executeCrmRulesOperation } from "./crm-rules.js";
+import { executeCrmSyncControlsOperation } from "./crm-sync-controls.js";
 import { executeCustomerExclusionsOperation } from "./customer-exclusions.js";
 import { AcquisitionRecoveryBody, AcquisitionRecoveryStatus, AcquisitionRestartResult, type AcquisitionRecoveryInput, type AcquisitionRecoveryOutput } from "./acquisition-recovery.js";
 import { RepairIssueSchema } from "./business-contracts.js";
@@ -71,6 +72,7 @@ const rateLimitedPaths = new Set([
   "/v1/workspace/customer-exclusions/import",
   "/v1/workspace/crm", "/v1/workspace/notifications", "/v1/workspace/senders", "/v1/workspace/sending-accounts/connect",
   "/v1/workspace/crm/mapping/apply", "/v1/workspace/crm/mapping/property_create", "/v1/workspace/crm/mapping/sync", "/v1/integrations/hubspot/sync", "/v1/integrations/attio/sync", "/v1/workspace/crm/sync",
+  "/v1/workspace/crm/test-sync",
 ]);
 const rateLimitedPatterns = [/^\/v1\/workspace\/sending-accounts\/[^/]+\/(?:reconnect|disconnect)$/, /^\/v1\/workspace\/senders\/[^/]+\/delete$/,
   /^\/v1\/notifications\/destinations\/[^/]+\/test$/];
@@ -117,6 +119,8 @@ export interface AppDependencies {
   crmPreferencesOperation(session: AuthSession, key: string, input: IdentityInput): Promise<unknown>;
   /** CRM counting rules for Pipeline and Performance (LIF-1477). */
   crmRulesOperation(session: AuthSession, key: string, input: IdentityInput): Promise<unknown>;
+  /** CRM automatic sync and the bounded test sync (LIF-1622). */
+  crmSyncControlsOperation(session: AuthSession, key: string, input: IdentityInput): Promise<unknown>;
   /** Founder CSV customer protections (LIF-1082), with no provider effects. */
   customerExclusionsOperation(session: AuthSession, key: string, input: IdentityInput): Promise<unknown>;
   /** Browser connect page and confirmation shell for sending accounts. */
@@ -731,6 +735,7 @@ const defaultDependencies: AppDependencies = {
   linkedinOperation: executeLinkedinOperation,
   crmPreferencesOperation: executeCrmPreferencesOperation,
   crmRulesOperation: executeCrmRulesOperation,
+  crmSyncControlsOperation: executeCrmSyncControlsOperation,
   customerExclusionsOperation: executeCustomerExclusionsOperation,
   researchOperation: (session, key, input) => executeResearchOperation(session, key, input, DEFAULT_DASHBOARD_ORIGIN),
   getWorkspace: async () => {

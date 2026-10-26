@@ -349,6 +349,9 @@ describe("crm sync RPC operations", () => {
     ["PT409", "lifty_sync_nothing_to_sync", 409, "NOTHING_TO_SYNC"],
     ["PT409", "lifty_sync_run_in_progress", 409, "RUN_IN_PROGRESS"],
     ["PT409", "lifty_sync_workspace_suspended", 409, "WORKSPACE_SUSPENDED"],
+    // LIF-1622: paused automatic sync and a running test sync start nothing.
+    ["PT409", "lifty_sync_automatic_paused", 409, "CRM_AUTOMATIC_SYNC_PAUSED"],
+    ["PT409", "lifty_sync_test_in_progress", 409, "RUN_IN_PROGRESS"],
     ["XX000", "private internal failure", 502, "SUPABASE_REQUEST_FAILED"],
   ])(
     "maps sync-start %s %s failures to a safe response",

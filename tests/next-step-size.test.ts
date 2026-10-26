@@ -5,6 +5,9 @@ import { operationToolNames } from "../src/operation-names.js";
 import { stageOperations } from "../src/stage-contracts.js";
 import { campaignSummary } from "./outreach-fixtures.js";
 import { criteriaFixture, draftGetFixture, laneFixture, profileFixture, workspaceRef } from "./business-fixtures.js";
+// Captured from the real local SQL suite (lift-supabase-functions
+// scripts/test-lif1622-crm-automatic-sync.py).
+import crmSyncControls from "./crm-sync-controls-sql-fixture.json" with { type: "json" };
 
 // Every next_step response is inlined into the founder's agent on each call;
 // large ones stall chat connectors (LIF-1149). Limits per reason, in JSON
@@ -63,7 +66,10 @@ const base = {
   warmup: warmup("not_started") as unknown,
   placement: { passing_until: null, test: null } as unknown,
   plan: "free",
+  hubspot: { provider: "hubspot", status: "not_connected" } as unknown,
 };
+const connectedHubspot = { provider: "hubspot", status: "connected", portal_id: "1622001", hub_domain: null,
+  granted_scopes: [], connected_at: at, reconnect_required: false };
 const generated = { text: criteriaFixture.text, research_fields: criteriaFixture.research_fields,
   source_versions: { profile_version: 1, draft_version: 1, base_version: "base-v1" } };
 const states: Partial<typeof base>[] = [
@@ -80,6 +86,8 @@ const states: Partial<typeof base>[] = [
   { run: { ...run, state: "failed", error_code: "search_exhausted" } },
   { run },
   { run, campaigns: [campaignSummary] },
+  // LIF-1622: a new CRM connection waits with automatic sync paused.
+  { run, hubspot: connectedHubspot },
   { run, senders: [founder("connected")] },
   { run, campaigns: [activeLinkedin] },
   { run, senders: [founder("needs_reconnect")] },
@@ -98,7 +106,7 @@ async function nextStep(state: Partial<typeof base>) {
     businessOperation: async (_session, key) => reads[key],
     getRunStatus: async () => current.run,
     outreachOperation: async () => ({ workspace: identity, campaigns: current.campaigns, next_cursor: null }),
-    getHubspotConnection: async () => ({ provider: "hubspot", status: "not_connected" }),
+    getHubspotConnection: async () => current.hubspot,
     getAttioConnection: async () => ({ provider: "attio", status: "not_connected" }),
     getCrmSyncStatus: async () => ({ state: "none" }),
     customerExclusionsOperation: async () => ({ workspace_ref: workspaceRef, mode: "unselected", provider: null, sources: [], version: 0, updated_at: null, refresh_pending: false }),
@@ -110,6 +118,7 @@ async function nextStep(state: Partial<typeof base>) {
       return { status: 200, body: { workspace: identity, senders: current.senders } };
     },
     readContextDrafts: async () => [],
+    crmSyncControlsOperation: async () => crmSyncControls.status_paused,
   } as Parameters<typeof getNextStep>[0], { userId: "founder", client: {} } as Parameters<typeof getNextStep>[1]);
 }
 
@@ -152,5 +161,14 @@ describe("next_step context links", () => {
       for (const name of result.recommended_tools)
         expect(stages.has(toolStage.get(name) ?? ""), `${result.reason} recommends ${name}`).toBe(true);
     }
+  });
+});
+
+describe("next_step with a paused CRM (LIF-1622)", () => {
+  it("offers the test sync instead of the bulk sync the database would refuse", async () => {
+    const result = await nextStep({ run, hubspot: connectedHubspot });
+    expect(result.recommended_tools).toEqual(expect.arrayContaining(["crm_test_sync_start", "crm_test_sync_status"]));
+    expect(result.recommended_tools).not.toContain("crm_sync_start");
+    expect(JSON.stringify(result)).toMatch(/automatic sync paused/);
   });
 });

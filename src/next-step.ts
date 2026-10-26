@@ -15,6 +15,7 @@ import {
 } from "./contracts.js";
 import { readComponent } from "./workspace-summary.js";
 import { readCrmConnection } from "./crm-connection.js";
+import { CrmAutomaticSyncSchema } from "./crm-sync-controls.js";
 import { CampaignsSchema } from "./outreach-contracts.js";
 import { SendersGetSchema } from "./identity-contracts.js";
 import { ResearchScheduleSchema } from "./research-operations.js";
@@ -221,6 +222,7 @@ type Reads = Pick<
   | "getEmailPlacement"
   | "researchOperation"
   | "customerExclusionsOperation"
+  | "crmSyncControlsOperation"
 >;
 // The session forwards the caller's workspace selection; every read below
 // resolves the same workspace through the shared database rule.
@@ -435,6 +437,7 @@ export async function getNextStep(
   // while nothing is connected or saved (a leads-only founder rests here).
   const sampleReview = async () => {
     const crm = await readComponent(() => readCrmConnection(deps, session));
+    let crmPaused = false;
     let crmAction =
       "Read crm_get before offering CRM sync; its saved connection is currently unavailable. A leads-only workspace can remain here.";
     if (crm.status === "available") {
@@ -458,10 +461,22 @@ export async function getNextStep(
             });
           return value;
         });
+        // LIF-1622: a new connection starts with automatic sync paused, so the
+        // bulk sync waits; a test sync shows what Lifty writes first.
+        const automatic = sync.status === "available" && sync.value.state === "none"
+          ? await readComponent(async () => CrmAutomaticSyncSchema.parse(
+            await deps.crmSyncControlsOperation(session, "crm.automatic_sync_get", { path: {}, query: {}, body: undefined })))
+          : null;
         if (sync.status === "unavailable")
           crmAction =
             "The CRM connection is saved; read crm_sync_status before offering a sync because its previous receipt is unavailable.";
-        else if (sync.value.state === "none")
+        else if (automatic?.status === "unavailable")
+          crmAction =
+            "The CRM connection is saved; read crm_automatic_sync_get before offering a sync because whether automatic sync is on is unavailable.";
+        else if (automatic?.status === "available" && automatic.value.automatic_sync === "paused") {
+          crmPaused = true;
+          crmAction = `${crm.value.provider === "attio" ? "Attio" : "HubSpot"} is connected with automatic sync paused, so Lifty writes nothing on its own (${automatic.value.waiting_leads} qualified leads wait). Offer a test sync only after a separate explicit request: ${crm.value.provider === "attio" ? "" : "crm_mapping_context (company setup with crm_patch if not ready), "}crm_preferences_get and the founder's research-note and conversation choices (crm_preferences_patch only for what they change), crm_test_sync_start, then crm_test_sync_status with its run_ref to show what was written, kept or skipped per field. Turn automatic sync on with crm_automatic_sync_patch only when the founder decides; it writes the waiting leads first.`;
+        } else if (sync.value.state === "none")
           crmAction =
             crm.value.provider === "attio"
               ? "Attio is connected and nothing is synced yet. Offer to sync these leads only after a separate explicit request: crm_preferences_get and the founder's research-note and conversation choices (crm_preferences_patch only for what they change), crm_sync_start, then crm_sync_status."
@@ -506,8 +521,9 @@ export async function getNextStep(
         tool("crm", "post"),
         tool("crm", "mapping_context"),
         tool("crm", "patch"),
-        tool("crm", "sync_start"),
-        tool("crm", "sync_status"),
+        ...(crmPaused
+          ? [tool("crm", "test_sync_start"), tool("crm", "test_sync_status")]
+          : [tool("crm", "sync_start"), tool("crm", "sync_status")]),
         tool("customer-exclusions", "source_choice_get"),
         tool("senders", "get"),
         tool("sending-accounts", "connect"),

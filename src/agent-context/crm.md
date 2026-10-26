@@ -103,6 +103,28 @@ does not start a CRM sync, research or outreach. On `VERSION_CONFLICT`, read
 the preferences again, tell the founder what changed and reapply their choice
 to the new version. `CRM_NOT_SELECTED` means no CRM is connected yet.
 
+## Automatic sync and test sync
+
+Automatic sync decides whether Lifty writes to the CRM on its own: `on` writes
+new qualified leads, research, notes and conversations as they happen;
+`paused` writes nothing on its own while research continues and leads wait. A
+new connection starts paused; CRMs connected before this setting existed are
+on. Read `automatic_sync_get` for the state, `waiting_leads` and `next_step`.
+
+While it is paused, `sync_start` answers `CRM_AUTOMATIC_SYNC_PAUSED`. Offer a
+test sync instead, only after the founder asks: `test_sync_start` writes up to
+five leads with the current settings (omit `lead_refs` to let Lifty pick them).
+Poll `test_sync_status` with its `run_ref` and report each lead's records and
+every field as written, kept (with the rule that kept the CRM value) or
+skipped (with the reason). When `settings_changed` is true, offer to rerun the
+same `lead_refs`. A test never turns automatic sync on.
+
+Turn automatic sync on or pause it with `automatic_sync_patch` and the read's
+`version`, only when the founder decides. Turning it on writes the waiting
+leads first (`catch_up` is that sync's `run_ref`; read `sync_status`); `busy`
+means another run must finish first. Pausing keeps the connection, fields and
+records; writes already running finish.
+
 ## Later edits
 
 For reconnection, use a fresh POST with the connected provider and verify that

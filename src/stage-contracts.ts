@@ -5,6 +5,7 @@ import { identityOperationDefinitions, type IdentityDefinition } from "./identit
 import { linkedinOperationDefinitions } from "./linkedin-operations.js";
 import { crmPreferencesOperationDefinitions } from "./crm-preferences.js";
 import { crmRulesOperationDefinitions } from "./crm-rules.js";
+import { crmSyncControlsOperationDefinitions } from "./crm-sync-controls.js";
 import { customerExclusionsOperationDefinitions } from "./customer-exclusions.js";
 import { RunProgressQuerySchema, RunProgressSchema } from "./run-progress.js";
 import { NextStepSchema } from "./next-step-contracts.js";
@@ -105,6 +106,7 @@ const identityCatalog = definitionCatalog(identityOperationDefinitions);
 const linkedinCatalog = definitionCatalog(linkedinOperationDefinitions);
 const crmPreferencesCatalog = definitionCatalog(crmPreferencesOperationDefinitions);
 const crmRulesCatalog = definitionCatalog(crmRulesOperationDefinitions);
+const crmSyncControlsCatalog = definitionCatalog(crmSyncControlsOperationDefinitions);
 const customerExclusionsCatalog = definitionCatalog(customerExclusionsOperationDefinitions);
 const outreachCatalog = Object.fromEntries(Object.entries(outreachOperationDefinitions).map(([resource, entries]) => [resource,
   Object.fromEntries(Object.entries(entries).map(([key, definition]) => {
@@ -154,7 +156,7 @@ export const stageOperations: Record<string, Record<string, StageOperation>> = {
   },
   "commercial-voice": { ...businessCatalog["commercial-voice"]!, post: unsupported("commercial-voice", "POST", "Empty voice exists at version 0 from workspace creation."), delete: unsupported("commercial-voice", "DELETE", "Use PATCH to clear values; pinned history is retained.") },
   crm: {
-    sync_start: operation("POST", "/v1/workspace/crm/sync", "Queue delivery of up to 2,000 eligible saved leads to the current workspace's connected HubSpot or Attio account. Reattaches an active sync or retries its failed cohort before selecting unsynced qualified leads. Creates or updates CRM contacts and companies and mirrors research according to saved CRM preferences. Returns an asynchronous run_ref; does not discover leads or send outreach.", StartCrmSyncResultSchema, Empty),
+    sync_start: operation("POST", "/v1/workspace/crm/sync", "Queue delivery of up to 2,000 eligible saved leads to the current workspace's connected HubSpot or Attio account. Reattaches an active sync or retries its failed cohort before selecting unsynced qualified leads. Creates or updates CRM contacts and companies and mirrors research according to saved CRM preferences. Returns an asynchronous run_ref; does not discover leads or send outreach. While automatic sync is paused it returns CRM_AUTOMATIC_SYNC_PAUSED.", StartCrmSyncResultSchema, Empty),
     sync_status: operation("GET", "/v1/workspace/crm/sync", "Read the latest CRM sync receipt, identified by its run_ref. A different run cannot prove an earlier sync completed. This read never starts or repeats a sync.", CrmSyncStatusSchema),
     capabilities: { ...operation("GET", "/v1/workspace/crm/capabilities", "Read whether the CRM is connected, needs a reconnect or is not connected and, when connected, whether its credential can map fields and create fields per object, from the scopes the provider reports. Reconnecting with POST adds a missing permission." + CrmMaintenance, CrmCapabilitiesReadSchema), readOnly: false },
     mapping_catalog: { ...operation("GET", "/v1/workspace/crm/mapping/catalog", "Read the current workspace's full saved mapping, supported sources/transforms/write rules, the connection's capabilities and the live CRM schema: HubSpot contact/company properties or Attio People/Companies attributes, including internal enum values and select options. Covers the complete mapping rather than only bounded company setup." + CrmMaintenance, CrmMappingCatalogSchema), readOnly: false },
@@ -166,6 +168,7 @@ export const stageOperations: Record<string, Record<string, StageOperation>> = {
     mapping_status: operation("GET", "/v1/workspace/crm/mapping/status", "Read the exact mapping replay receipt, including per-field live readback and skipped or stale values. Partial or failed runs are not full success.", CrmMappingStatusSchema, null, CrmMappingStatusQuerySchema),
     ...crmPreferencesCatalog.crm!,
     ...crmRulesCatalog.crm!,
+    ...crmSyncControlsCatalog.crm!,
     records: { ...operation("GET", "/v1/workspace/crm/records", "Read verified HubSpot or Attio contact and company links for the existing sync cohort. Supply the known run_ref or omit for the latest CRM sync. This never starts a sync." + CrmMaintenance, CrmRecordsSchema, null, CrmRecordsQuerySchema), readOnly: false },
     get: operation("GET", stageRoute("crm"), "Without attempt_ref read the connected CRM (HubSpot or Attio; provider null when none). With it verify only that exact authorization attempt, including reconnection.", z.union([CrmConnectionStatusSchema, ConnectionAttemptStatusSchema]), null, ConnectionAttemptQuerySchema),
     post: operation("POST", stageRoute("crm"), "Start a new connection/reconnection of the CRM the founder uses and return the real consent link immediately. Send provider hubspot or attio; omitted means HubSpot. One CRM at a time: disconnect the other first.", AuthorizationRequiredSchema, CrmConnectRequestSchema),

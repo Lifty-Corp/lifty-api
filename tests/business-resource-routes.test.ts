@@ -1,5 +1,6 @@
 import { campaignSummary as canonicalCampaign } from "./outreach-fixtures.js";
 import { describe, it, expect, vi } from "vitest";
+import crmSyncControls from "./crm-sync-controls-sql-fixture.json" with { type: "json" };
 import { PublicError } from "../src/errors.js";
 import { createApp, type AppDependencies } from "../src/app.js";
 import {
@@ -1302,6 +1303,8 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
         getHubspotConnection: async () => connection as never,
         getCrmSyncStatus: async () => sync as never,
         customerExclusionsOperation: async () => ({ workspace_ref: workspaceRef, mode: "unselected", provider: null, sources: [], version: 0, updated_at: null, refresh_pending: false }),
+        // LIF-1622: a CRM that writes today keeps automatic sync on.
+        crmSyncControlsOperation: async () => ({ ...crmSyncControls.status_paused, automatic_sync: "on", next_step: "none" }),
         startCrmSyncRun: write,
         // No outreach account yet: the founder is still closing Part 1.
         identityOperation: async () => ({ status: 200, body: { ...sendersFixture, senders: [] } }),
