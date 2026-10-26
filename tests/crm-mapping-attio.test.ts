@@ -110,6 +110,21 @@ describe("Attio CRM mapping", () => {
     expect(rejected.issues).toEqual(expect.arrayContaining([expect.objectContaining({ object: "company", reason: "invalid_enum" })]));
   });
 
+  // LIF-1584: operator workspaces also map to Attio LIFT objects, with research descriptions as labels.
+  it("keeps saved LIFT-object mappings readable without previewing or enabling them here", async () => {
+    const f = attioFixture();
+    f.state.mappings.push({ ...f.state.mappings[0]!, id: "12380000-0000-4000-a000-000000000022", destination_object: "lift_company",
+      destination_field: "gifting_insights", source_stage: "research", source_field: "gifting_insights",
+      source_path: ["custom_fields", "gifting_insights"], label: "Gifting insights: ".padEnd(600, "x"), required_from_agent: true });
+    const catalog = await f.run("catalog") as { schema_version: string; mappings: Array<{ destination_object: string }> };
+    expect(catalog.mappings.map(m => m.destination_object)).toEqual(["company", "lift_company"]);
+    const preview = await f.run("preview", { ...f.scope, lead_refs: [f.lead.lead_ref] }) as { plan: { records: Array<{ proposed: unknown }> } };
+    expect(preview.plan.records).toEqual([expect.objectContaining({ proposed: { industry: "Software" } })]);
+    const { created_at: _c, updated_at: updated, ...values } = f.state.mappings[1]!;
+    await expect(f.run("apply", { ...f.scope, schema_version: catalog.schema_version,
+      edits: [{ ...values, destination_field: "other", expected_updated_at: updated }] })).rejects.toMatchObject({ code: "MAPPING_PROPERTY_UNAVAILABLE" });
+  });
+
   it("returns Attio's own verified record URLs and checks every identity value", async () => {
     const f = attioFixture();
     const records = await f.run("records", {}) as { provider: string; leads: Array<Record<string, unknown>> };

@@ -126,9 +126,10 @@ async function validateDestinations(
   properties: Properties,
 ) {
   for (const edit of edits.filter((e) => e.enabled)) {
-    const property = properties[
-      edit.destination_object === "contact" ? "contact" : "company"
-    ].find((p) => p.name === edit.destination_field);
+    // The catalog has no properties for Attio LIFT objects: never enable one here.
+    const property = (edit.destination_object === "contact" || edit.destination_object === "company"
+      ? properties[edit.destination_object] : []
+    ).find((p) => p.name === edit.destination_field);
     if (
       !property ||
       property.archived ||
@@ -221,6 +222,7 @@ export async function runCrmMapping(
       const readable = {
         ...next,
         mappings: next.mappings.filter((m) =>
+          (m.destination_object === "contact" || m.destination_object === "company") &&
           properties[m.destination_object].some(
             (p) => p.name === m.destination_field,
           ),

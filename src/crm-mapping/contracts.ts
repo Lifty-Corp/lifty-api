@@ -14,6 +14,10 @@ export const CrmIdSchema = z.string().regex(new RegExp(`^([0-9]{1,30}|${UUID})$`
 export const CrmProviderSchema = z.enum(["hubspot", "attio"]);
 export type CrmProviderName = z.infer<typeof CrmProviderSchema>;
 export const ObjectSchema = z.enum(["contact", "company"]);
+/** Saved mappings may also target the LIFT objects an operator configured in
+ * Attio (lift_object_config). The catalog covers only contacts/people and
+ * companies, so this API never adds or enables a mapping to them. */
+export const MappingObjectSchema = z.enum(["contact", "company", "lift_person", "lift_company"]);
 export const MappingValuesSchema = z
   .object({
     workspace_id: Ref,
@@ -21,9 +25,10 @@ export const MappingValuesSchema = z
     source_stage: z.enum(["discovery", "research", "outreach", "verification"]),
     source_entity: z.enum(["lead", "company"]),
     source_field: z.string().min(1).max(200),
-    label: z.string().max(300).nullable(),
+    // Research mappings carry the research description as their label.
+    label: z.string().max(4000).nullable(),
     source_path: z.array(z.string().min(1).max(200)).min(1).max(20),
-    destination_object: ObjectSchema,
+    destination_object: MappingObjectSchema,
     destination_field: z.string().min(1).max(200),
     write_rule: z.enum([
       "create_only",
