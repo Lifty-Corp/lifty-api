@@ -258,14 +258,17 @@ describe("Identity member routes", () => {
   });
 
   // An agent reports success from this read, so a connected mailbox names its
-  // second consent here: warmup and placement never start without it.
-  it("points a connected mailbox at its warmup setup, never LinkedIn or the connection profile", async () => {
+  // second consent here: warmup and placement never start without it. Then
+  // next_step leads to Campaign approval in the same conversation (LIF-1670).
+  it("points a connected mailbox at its warmup setup and LinkedIn at next_step, never the connection profile", async () => {
     const read = async (h: ReturnType<typeof harness>) => (await h.request("GET", `/v1/workspace/sending-accounts/attempts/${attemptId}`)).json();
     const mailbox = await read(harness(() => attempt("connected", { account_id: accountId })));
     expect(mailbox.next_step).toMatchObject({ operation: operationToolNames("sending-accounts", "warmup_start")[0],
       body: { workspace: workspace.workspace_ref, connection_ref: accountId } });
     expect(mailbox.next_step.message).toContain("in the same reply");
-    expect(await read(harness(() => attempt("connected", { channel: "linkedin", account_id: accountId })))).not.toHaveProperty("next_step");
+    expect(mailbox.next_step.message).toMatch(/then call next_step\.$/);
+    expect(await read(harness(() => attempt("connected", { channel: "linkedin", account_id: accountId })))).toMatchObject({
+      action_owner: "agent", next_step: { operation: operationToolNames("summary", "next_step")[0] } });
     expect(await read(harness(() => attempt("connected", { account_id: accountId }), {}, "connections"))).not.toHaveProperty("next_step");
   });
 

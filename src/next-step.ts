@@ -98,14 +98,16 @@ export const NEXT_STEP_CATALOG: Record<string, NextStepEntry> = {
   // passing placement test until LIF-1223 replaces that check (LIF-1260).
   email_connected: { step: "email", state: "action_required", section: "email",
     when: ["The founder confirmed the first sample", "No connected LinkedIn account is waiting for its first active campaign",
-      "An email account is connected", "Its warmup and placement test have not started"],
+      "An email account is connected", "Its warmup and placement test have not started",
+      "With no active campaign, it also asks to draft, preview and approve one now"],
     guide: { task: "sending-accounts", references: ["common"] }, context: "sending-accounts",
-    related: ["notifications", "research-schedule", "senders", "campaigns"] },
+    related: ["notifications", "research-schedule", "senders", "campaigns", "journeys"] },
   email_preparing: { step: "email", state: "pending", section: "email",
     when: ["The founder confirmed the first sample", "No connected LinkedIn account is waiting for its first active campaign",
-      "A mailbox's warmup or placement test is running"],
+      "A mailbox's warmup or placement test is running",
+      "With no active campaign, it also asks to draft, preview and approve one now"],
     guide: { task: "sending-accounts", references: ["common"] }, context: "sending-accounts",
-    related: ["notifications", "research-schedule", "campaigns"] },
+    related: ["notifications", "research-schedule", "campaigns", "journeys"] },
   email_held: { step: "email", state: "blocked", section: "email",
     when: ["The founder confirmed the first sample", "No connected LinkedIn account is waiting for its first active campaign",
       "A mailbox needs reconnecting, its warmup has a problem or lands in spam, or its placement test failed"],
@@ -575,7 +577,7 @@ export async function getNextStep(
       [
         `${connectedAll.length === 1 ? `${connected.sender}'s LinkedIn is connected` : `LinkedIn is connected for ${names(connectedAll)}`}. Read ${tool("notifications", "get")}; unless Slack is already connected, ask once where alerts should go: Slack or email. Email needs no setup. Slack: ${tool("notifications", "post")}, show its link, verify that attempt, then choose a channel. Declining never blocks.`,
         `Read ${tool("commercial-voice", "get")}. If tone and rules are empty, ask how the founder writes before the first draft and save it with ${tool("commercial-voice", "patch")}; voice is shared by every channel and campaign.`,
-        `Build the LinkedIn templates: read ${tool("journeys", "get")}, create the Journey for qualified (Tier A and B) leads with ${tool("journeys", "post")} and its LinkedIn Campaign with ${tool("campaigns", "post")}, permitting ${connectedAll.length === 1 ? connected.sender : `the senders the founder chooses: read ${tool("senders", "get")} for each sender's accounts and ask which of them this campaign sends from`}. Preview real leads with ${tool("campaigns", "tests_post")} before asking for approval.`,
+        `Build the LinkedIn templates: read ${tool("journeys", "get")}, create the Journey for qualified (Tier A and B) leads with ${tool("journeys", "post")} and its LinkedIn Campaign with ${tool("campaigns", "post")}. Every person with a connected account takes part, so ask no sender question. Preview real leads with ${tool("campaigns", "tests_post")} before asking for approval.`,
         previewSteps,
         "Saving, publishing or a connected account never activates outreach. When a campaign is saved, call next_step.",
       ],
@@ -626,7 +628,7 @@ export async function getNextStep(
         [
           `${name} is ready to send: warmup is ready and its placement test passed. Tell the founder.`,
           ...(email.plan === null ? [`The plan could not be read; read ${tool("research-schedule", "get")} before discussing plans.`] : []),
-          `Finish the email campaign: read ${tool("campaigns", "get")} and ${tool("journeys", "get")}, add or update the Journey's Email Campaign with ${tool("campaigns", "post")} or ${tool("campaigns", "draft_patch")}, permitting ${new Set(mailboxes.map(item => item.sender_id)).size === 1 ? mailbox.sender : `the senders the founder chooses: read ${tool("senders", "get")} for each sender's mailboxes and ask which of them this campaign sends from`}, and preview real leads with ${tool("campaigns", "tests_post")}. Voice and the sender's signature come first (summary_context task commercial-voice, then senders).`,
+          `Finish the email campaign: read ${tool("campaigns", "get")} and ${tool("journeys", "get")}, add or update the Journey's Email Campaign with ${tool("campaigns", "post")} or ${tool("campaigns", "draft_patch")}, and preview real leads with ${tool("campaigns", "tests_post")}. Every person with a mailbox and a signature takes part, so ask no sender question. Voice and the sender's signature come first (summary_context task commercial-voice, then senders).`,
           "Publish only the exact revision the founder approves, and activate it only on their explicit yes. A ready mailbox never activates outreach.",
         ],
         [tool("campaigns", "get"), tool("journeys", "get"), tool("campaigns", "post"), tool("campaigns", "draft_patch"),
@@ -639,6 +641,13 @@ export async function getNextStep(
     const notice = "Tell the founder Lifty will notify them with the placement test result when it finishes. Do not request a placement test yourself for this first one.";
     const weekly = `Ask roughly how many leads they want to reach each week, unless already answered, and save it as the weekly target with ${tool("research-schedule", "patch")} (up to the plan's limit; ${tool("research-schedule", "get")} shows it).`;
     const close = "Close Part 3: tell the founder when Lifty will follow up, using recommended_go_live from warmup_status. Never compute dates yourself. Connecting or warming a mailbox never starts email outreach.";
+    // LIF-1670: a mailbox that is still preparing already takes part, so with
+    // no active campaign the founder approves one now instead of waiting.
+    const anyActive = campaigns.campaigns.some(value => value.state === "active");
+    const draftNow = anyActive ? [] : [
+      `No campaign is active yet, so do not wait for the mailbox: draft the Journey's Email Campaign now with ${tool("journeys", "post")} and ${tool("campaigns", "post")} (summary_context task campaigns), preview real leads with ${tool("campaigns", "tests_post")} and ask the founder to approve it in this conversation. Every person with a mailbox and a signature takes part, so ask no sender question; save the signature first if it is missing (summary_context task senders). Email waits until the mailbox is ready; activation stays the founder's explicit yes.`,
+    ];
+    const draftTools = anyActive ? [] : [tool("journeys", "post"), tool("campaigns", "post"), tool("campaigns", "tests_post")];
     if (email.kind === "preparing")
       return response(
         "email_preparing",
@@ -647,11 +656,11 @@ export async function getNextStep(
           notice,
           ...alerts,
           weekly,
-          "Meanwhile, offer to prepare the email campaign copy (summary_context task campaigns); it stays unapproved and inactive.",
+          ...(anyActive ? ["Meanwhile, offer to prepare the email campaign copy (summary_context task campaigns); it stays unapproved and inactive."] : draftNow),
           close,
         ],
         [tool("sending-accounts", "warmup_status"), tool("sending-accounts", "placement_status"), tool("notifications", "get"), tool("notifications", "post"),
-          tool("research-schedule", "get"), tool("research-schedule", "patch"), tool("summary", "context")],
+          tool("research-schedule", "get"), tool("research-schedule", "patch"), ...draftTools, tool("summary", "context")],
         email.receipt,
       );
     return response(
@@ -659,16 +668,16 @@ export async function getNextStep(
       [
         ...(email.unknown ? [`${name}'s warmup or placement status could not be read: read both before offering anything, because preparation may already be running.`] : []),
         `${name} is connected, but warmup and its placement test need its owner's second sign-in. Call ${tool("sending-accounts", "warmup_start")} with connection_ref ${mailbox.id} right away, whatever the mailbox's use, and show the returned setup link in the same reply. If it reports an SPF, DMARC or MX record not valid, say which one to publish first. The link asks the owner to authorize that same mailbox, Google or Microsoft, for Mailivery and covers both warmup and the placement test, so ask for no other consent.`,
-        `A dedicated sending mailbox (outreach) needs 21 active warmup days, then Lifty runs one placement test by itself; give the date from recommended_go_live.`,
-        `A mailbox they already use (personal) needs no initial period, but warmup protects inbox placement and reply rates, and Lifty tests where its email lands as soon as setup is done. If the founder declines, do not push it; say Lifty cannot warm up or test the mailbox without that setup.`,
+        `A dedicated sending mailbox (outreach) needs 21 active warmup days, then Lifty runs one placement test by itself; give the date from recommended_go_live. A mailbox they already use (personal) needs no initial period, but warmup protects inbox placement and reply rates, and Lifty tests where its email lands as soon as setup is done. If the founder declines, do not push it; say Lifty cannot warm up or test the mailbox without that setup.`,
         notice,
         ...alerts,
         weekly,
+        ...draftNow,
         close,
       ],
       [tool("sending-accounts", "warmup_status"), tool("sending-accounts", "warmup_start"), tool("sending-accounts", "placement_status"),
         tool("notifications", "get"), tool("notifications", "post"),
-        tool("research-schedule", "get"), tool("research-schedule", "patch"), tool("summary", "context")],
+        tool("research-schedule", "get"), tool("research-schedule", "patch"), ...draftTools, tool("summary", "context")],
       email.receipt,
     );
   }

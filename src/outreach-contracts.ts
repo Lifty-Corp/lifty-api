@@ -67,7 +67,7 @@ const CampaignPolicyFields = z.object({
   start: StartSchema,
   steps: z.array(Step).min(1).max(5).describe("The saved sequence owns its count. Executable adapter: LinkedIn invitation then 1–3 messages, the first waiting its delay after acceptance; email 1–5 steps with delays up to 30 days or business days."),
   compose_mode: z.enum(["generate", "templates"]), instructions: z.string().max(30000), lanes: LanesSchema.optional(),
-  schedule: Schedule, profile_version: Version, voice_version: z.number().int().nonnegative(), sender_ids: uniqueRefs,
+  schedule: Schedule, profile_version: Version, voice_version: z.number().int().nonnegative(),
 }).strict();
 function laneNames(lanes: z.infer<typeof LanesSchema> | undefined): Array<string | undefined> {
   return lanes ? [...new Set([...lanes.rules.map(rule => rule.lane), lanes.default])] : [undefined];
@@ -257,7 +257,11 @@ export const JourneyRevisionSchema = revision(JourneyPolicySchema);
 // Stored history remains readable when a newer authoring/readiness rule rejects
 // it. Writes and exact publication are validated authoritatively in Functions;
 // response parsing checks source shape without reinterpreting saved policy.
-export const CampaignRevisionSchema = revision(CampaignPolicyFields);
+// LIF-1670: persons follow the workspace's Journeys, so new revisions name no
+// senders. Historical revisions may still carry the persons they permitted.
+export const CampaignRevisionSchema = revision(CampaignPolicyFields.extend({
+  sender_ids: uniqueRefs.optional().describe("Historical revisions only: the persons the Campaign permitted before persons followed Journeys."),
+}).strict());
 export const RevisionSummarySchema = ExactRevisionSchema.extend({ approval: Approval.nullable() }).strict();
 // One executable Journey version: the exact sources selected for new Journey
 // starts and whether its automatically derived graph is installed.

@@ -135,16 +135,20 @@ const WarmupStep = z.object({
   body: z.object({ workspace: Id, connection_ref: Id }).strict(),
   message: z.string(),
 }).strict();
+// LIF-1670: a connected account leads the agent back to next_step, which
+// drafts and asks for Campaign approval in the same conversation.
+const NextStepCall = z.object({ operation: z.literal("next_step"), message: z.string() }).strict();
 /**
  * The attempt with who acts next and what is permitted, the same for the
  * agent and the dashboard. `connection_url` is present while the account
- * owner still has to open it; a connected mailbox's next step is its warmup.
+ * owner still has to open it; a connected mailbox's next step is its warmup,
+ * a connected LinkedIn account's is next_step.
  */
 export const AttemptReadSchema = AttemptSchema.extend({
   connection_url: z.url().optional(),
   action_owner: AttemptActionOwner,
   actions: z.array(AttemptAction),
-  next_step: z.union([WarmupStep, AttemptStep]).optional(),
+  next_step: z.union([WarmupStep, AttemptStep, NextStepCall]).optional(),
 }).strict();
 export type AttemptRead = z.infer<typeof AttemptReadSchema>;
 export const AttemptQuerySchema = z.object({
