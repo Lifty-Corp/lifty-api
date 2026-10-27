@@ -1072,7 +1072,7 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
       if (reason === "linkedin_reconnect_needed") expect(result.actions.join(" ")).toContain(`path.id ${account.id}`);
     }
   });
-  // Parts 3 and 4 resume from the founder's mailbox, warmup, placement and plan (LIF-1260).
+  // Parts 3 and 4 resume from the founder's mailbox, warmup and placement (LIF-1260).
   const mailbox = { ...sendersFixture.senders[0]!.accounts[0]! };
   const linkedinAccount = { ...mailbox, id: laneFixture.personas[0]!.id.replace(/.$/, "f"), channel: "linkedin" as const,
     identity: "https://www.linkedin.com/in/ana", declaration: null };
@@ -1083,7 +1083,7 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
   const scheduleRead = (source: string) => ({ version: 1, state: "paused", weekly_target: 25,
     limit: { weekly_research_limit: 25, source, effective_from: profileFixture.updated_at }, effective_target: 25,
     updated_at: profileFixture.updated_at, updated_by: null });
-  const emailHarness = (state: { accounts?: unknown[]; warmup?: unknown; placement?: unknown; plan?: string; campaigns?: string[]; run?: unknown }) => harness(undefined, null, {
+  const emailHarness = (state: { accounts?: unknown[]; warmup?: unknown; placement?: unknown; campaigns?: string[]; run?: unknown }) => harness(undefined, null, {
     getRunStatus: async () => (state.run ?? runFixture) as never,
     outreachOperation: async (_session, key) => ({ ...emptyOutreach(key), campaigns: (state.campaigns ?? []).map(value => ({ ...canonicalCampaign, state: value })) }),
     identityOperation: async () => ({ status: 200, body: roster(state.accounts ?? [mailbox]) }),
@@ -1092,7 +1092,8 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
       return (state.warmup ?? warmupRead("not_started")) as never;
     },
     getEmailPlacement: async () => (state.placement ?? { passing_until: null, test: null }) as never,
-    researchOperation: async () => scheduleRead(state.plan ?? "free"),
+    // Every workspace here is on the free Seed plan, which never gates email (LIF-1258).
+    researchOperation: async () => scheduleRead("free"),
   });
   it.each([
     [{}, "email_connected", "email"],
@@ -1101,12 +1102,11 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
     [{ warmup: warmupRead("warming", { spam: { holds_sending: true } }) }, "email_held", "email"],
     [{ warmup: warmupRead("warming"), placement: { passing_until: null, test: { state: "failed" } } }, "email_held", "email"],
     [{ accounts: [{ ...mailbox, status: "needs_reconnect" }] }, "email_held", "email"],
-    [{ warmup: warmupRead("warming", { warmup_ready: true }), placement: passing }, "paid_plan_needed", "kickoff"],
-    [{ warmup: warmupRead("warming", { warmup_ready: true }), placement: passing, plan: "paid" }, "email_ready", "kickoff"],
+    [{ warmup: warmupRead("warming", { warmup_ready: true }), placement: passing }, "email_ready", "kickoff"],
     // A founder workspace has no passing_until (placement is advisory there):
     // its latest completed test decides (LIF-1223).
     [{ warmup: warmupRead("warming", { warmup_ready: true }), placement: { gates_sending: false, last_passed_at: "2026-10-07T12:00:00Z",
-      passing_until: null, test: { state: "passed" } } }, "paid_plan_needed", "kickoff"],
+      passing_until: null, test: { state: "passed" } } }, "email_ready", "kickoff"],
     [{ warmup: warmupRead("warming", { warmup_ready: true }), placement: { gates_sending: false, last_passed_at: "2026-10-07T12:00:00Z",
       passing_until: null, test: { state: "failed" } } }, "email_held", "email"],
     // Ready needs a passing placement test, not warmup alone.
@@ -1148,11 +1148,12 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
     expect(result.actions.join(" ").includes("ask the founder to approve it in this conversation")).toBe(draft);
     expect(result.recommended_tools.includes("campaigns_post")).toBe(draft);
   });
-  it("hands a free workspace with a ready mailbox to David without activating anything", async () => {
+  it("continues a free workspace with a ready mailbox to its email campaign without asking for a plan or activating anything", async () => {
     const result = await (await emailHarness({ warmup: warmupRead("warming", { warmup_ready: true }), placement: passing }).request("/v1/workspace/next-step")).json();
-    expect(result).toMatchObject({ reason: "paid_plan_needed", step: "plan", receipt: { plan: "free", mailbox: { id: mailbox.id } } });
-    expect(result.actions.join(" ")).toContain("David from LIFT");
+    expect(result).toMatchObject({ reason: "email_ready", step: "email", receipt: { mailbox: { id: mailbox.id } } });
+    expect(result.actions.join(" ")).not.toMatch(/paid plan|David/);
     expect(result.actions.join(" ")).toContain("never activates outreach");
+    expect(result.recommended_tools).toContain("campaigns_post");
     expect(result.recommended_tools).not.toContain("campaigns_activate");
   });
   // Several senders: the agent asks which account to reconnect instead of
@@ -1168,8 +1169,7 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
       outreachOperation: async (_session, key) => emptyOutreach(key),
       identityOperation: async () => ({ status: 200, body: { ...sendersFixture, senders: [ana, luis] } }),
       getEmailWarmup: async () => warmupRead("warming", { warmup_ready: true }) as never,
-      getEmailPlacement: async () => passing as never,
-      researchOperation: async () => scheduleRead("paid") });
+      getEmailPlacement: async () => passing as never });
     const result = await (await h.request("/v1/workspace/next-step")).json();
     const actions = result.actions.join(" ");
     expect(result.reason).toBe(position === "connected" ? "linkedin_connected" : position === "needs_reconnect" ? "linkedin_reconnect_needed" : "email_ready");
