@@ -32,7 +32,6 @@ const limits: Record<string, number> = {
   email_connected: 27_000,
   email_preparing: 27_000,
   email_held: 25_000,
-  paid_plan_needed: 80_000,
   email_ready: 80_000,
 };
 
@@ -53,8 +52,6 @@ const mailboxOwner = (status: string) => ({ ...founder(status), accounts: [{ ...
 const warmup = (state: string, extra: Record<string, unknown> = {}) => ({ state, warmup_ready: false, spam: null,
   recommended_go_live: { kind: "projected", date: "2026-10-27", remaining_active_days: 21, message: "About three weeks of warmup." }, ...extra });
 const passed = { passing_until: "2099-01-01T00:00:00Z", test: { state: "passed" } };
-const schedule = (source: string) => ({ version: 1, state: "paused", weekly_target: 25,
-  limit: { weekly_research_limit: 25, source, effective_from: at }, effective_target: 25, updated_at: at, updated_by: null });
 const unset = { targeting: { workspace_ref: workspaceRef, targeting: null }, criteria: { workspace_ref: workspaceRef, criteria: null } };
 const base = {
   business: { workspace: identity, profile: profileFixture } as unknown,
@@ -67,7 +64,6 @@ const base = {
   senders: [] as unknown[] | "unavailable",
   warmup: warmup("not_started") as unknown,
   placement: { passing_until: null, test: null } as unknown,
-  plan: "free",
   hubspot: { provider: "hubspot", status: "not_connected" } as unknown,
 };
 const connectedHubspot = { provider: "hubspot", status: "connected", portal_id: "1622001", hub_domain: null,
@@ -97,7 +93,6 @@ const states: Partial<typeof base>[] = [
   { run, senders: [mailboxOwner("connected")], warmup: warmup("warming") },
   { run, senders: [mailboxOwner("connected")], warmup: warmup("warming", { spam: { holds_sending: true } }) },
   { run, senders: [mailboxOwner("connected")], warmup: warmup("warming", { warmup_ready: true }), placement: passed },
-  { run, senders: [mailboxOwner("connected")], warmup: warmup("warming", { warmup_ready: true }), placement: passed, plan: "paid" },
 ];
 
 async function nextStep(state: Partial<typeof base>) {
@@ -114,7 +109,6 @@ async function nextStep(state: Partial<typeof base>) {
     customerExclusionsOperation: async () => ({ workspace_ref: workspaceRef, mode: "unselected", provider: null, sources: [], version: 0, updated_at: null, refresh_pending: false }),
     getEmailWarmup: async () => current.warmup,
     getEmailPlacement: async () => current.placement,
-    researchOperation: async () => schedule(current.plan),
     identityOperation: async () => {
       if (current.senders === "unavailable") throw new Error("roster unavailable");
       return { status: 200, body: { workspace: identity, senders: current.senders } };

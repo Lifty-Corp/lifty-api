@@ -18,7 +18,6 @@ import { readCrmConnection } from "./crm-connection.js";
 import { CrmAutomaticSyncSchema } from "./crm-sync-controls.js";
 import { CampaignsSchema } from "./outreach-contracts.js";
 import { SendersGetSchema } from "./identity-contracts.js";
-import { ResearchScheduleSchema } from "./research-operations.js";
 import { PublicError } from "./errors.js";
 import { CustomerSourceChoice } from "./customer-exclusions.js";
 import { z } from "zod";
@@ -112,14 +111,10 @@ export const NEXT_STEP_CATALOG: Record<string, NextStepEntry> = {
     when: ["The founder confirmed the first sample", "No connected LinkedIn account is waiting for its first active campaign",
       "A mailbox needs reconnecting, its warmup has a problem or lands in spam, or its placement test failed"],
     guide: { task: "sending-accounts", references: ["common"] }, context: "sending-accounts", related: ["senders"] },
-  // Part 4: a ready mailbox; a free workspace is handed to David for a paid
-  // plan until checkout exists (LIF-1262). The plan never gates activation here.
-  paid_plan_needed: { step: "plan", state: "action_required", section: "kickoff",
-    when: ["The founder confirmed the first sample", "A mailbox's warmup is ready and its placement test passed", "The workspace is on the free plan"],
-    guide: { task: "campaigns", references: ["common", "writing", "anti_slop"] }, context: "campaigns",
-    related: ["research-schedule", "sending-accounts", "journeys"] },
+  // Part 4: a ready mailbox continues to the email campaign on every plan,
+  // the free Seed plan included (LIF-1258).
   email_ready: { step: "email", state: "action_required", section: "kickoff",
-    when: ["The founder confirmed the first sample", "A mailbox's warmup is ready and its placement test passed", "The workspace plan allows outreach"],
+    when: ["The founder confirmed the first sample", "A mailbox's warmup is ready and its placement test passed"],
     guide: { task: "campaigns", references: ["common", "writing", "anti_slop"] }, context: "campaigns",
     related: ["journeys", "commercial-voice", "senders", "sending-accounts", "research-schedule"] },
 };
@@ -171,19 +166,15 @@ type Mailbox = { id: string; sender_id: string; sender: string; email: string | 
 type EmailKind = "held" | "ready" | "preparing" | "connected";
 async function emailPosition(deps: Reads, session: AuthSession, workspace: string, mailboxes: Mailbox[]) {
   const now = Date.now();
-  const [checked, schedule] = await Promise.all([
-    Promise.all(mailboxes.slice(0, 5).map(async mailbox => {
-      if (mailbox.status !== "connected") return { mailbox, warmup: null, placement: null };
-      const [warmup, placement] = await Promise.all([
-        readComponent(() => deps.getEmailWarmup(session, workspace, mailbox.id)),
-        readComponent(() => deps.getEmailPlacement(session, { workspace, connection_ref: mailbox.id })),
-      ]);
-      return { mailbox, warmup: warmup.status === "available" ? warmup.value : null,
-        placement: placement.status === "available" ? placement.value : null };
-    })),
-    readComponent(async () => ResearchScheduleSchema.parse(
-      await deps.researchOperation(session, "research-schedule.get", { query: {}, body: undefined }))),
-  ]);
+  const checked = await Promise.all(mailboxes.slice(0, 5).map(async mailbox => {
+    if (mailbox.status !== "connected") return { mailbox, warmup: null, placement: null };
+    const [warmup, placement] = await Promise.all([
+      readComponent(() => deps.getEmailWarmup(session, workspace, mailbox.id)),
+      readComponent(() => deps.getEmailPlacement(session, { workspace, connection_ref: mailbox.id })),
+    ]);
+    return { mailbox, warmup: warmup.status === "available" ? warmup.value : null,
+      placement: placement.status === "available" ? placement.value : null };
+  }));
   const positions = checked.map(({ mailbox, warmup, placement }) => {
     const test = placement?.test?.state ?? null;
     // A client mailbox needs a pass inside its validity window. A founder
@@ -205,10 +196,8 @@ async function emailPosition(deps: Reads, session: AuthSession, workspace: strin
         placement: placement ? { test, passing_until: placement.passing_until } : null } };
   });
   // An actionable problem first, then the furthest-along mailbox.
-  const chosen = (["held", "ready", "preparing", "connected"] as const)
+  return (["held", "ready", "preparing", "connected"] as const)
     .map(kind => positions.find(item => item.kind === kind)).find(item => item !== undefined)!;
-  const plan = schedule.status === "available" ? schedule.value.limit.source : null;
-  return { ...chosen, plan, receipt: { ...chosen.receipt, plan } };
 }
 type Reads = Pick<
   AppDependencies,
@@ -222,7 +211,6 @@ type Reads = Pick<
   | "readContextDrafts"
   | "getEmailWarmup"
   | "getEmailPlacement"
-  | "researchOperation"
   | "customerExclusionsOperation"
   | "crmSyncControlsOperation"
 >;
@@ -610,25 +598,11 @@ export async function getNextStep(
           tool("sending-accounts", "placement_start"), tool("sending-accounts", "reconnect"), tool("sending-accounts", "attempt"), tool("summary", "context")],
         email.receipt,
       );
-    if (email.kind === "ready" && email.plan === "free")
-      return response(
-        "paid_plan_needed",
-        [
-          `${name} is ready to send: warmup is ready and its placement test passed. Tell the founder; ${tool("sending-accounts", "warmup_status")} has the detail if they ask.`,
-          `Show the email campaign before the plan question: read ${tool("campaigns", "get")} and ${tool("journeys", "get")}, and preview real leads with ${tool("campaigns", "tests_post")}. Draft the Email Campaign first if none exists (summary_context task campaigns).`,
-          "Then ask the founder to choose a paid plan: it starts email campaigns and recurring weekly leads (100 researched people a week instead of 25). Paid plans are set up with David from LIFT for now: tell the founder David will contact them to choose one. Do not quote prices or promise a checkout link.",
-          "A paid plan, a ready mailbox or an approved campaign never activates outreach; activation stays the founder's explicit yes.",
-        ],
-        [tool("sending-accounts", "warmup_status"), tool("campaigns", "get"), tool("journeys", "get"), tool("campaigns", "tests_post"),
-          tool("research-schedule", "get"), tool("summary", "context")],
-        email.receipt,
-      );
     if (email.kind === "ready")
       return response(
         "email_ready",
         [
           `${name} is ready to send: warmup is ready and its placement test passed. Tell the founder.`,
-          ...(email.plan === null ? [`The plan could not be read; read ${tool("research-schedule", "get")} before discussing plans.`] : []),
           `Finish the email campaign: read ${tool("campaigns", "get")} and ${tool("journeys", "get")}, add or update the Journey's Email Campaign with ${tool("campaigns", "post")} or ${tool("campaigns", "draft_patch")}, and preview real leads with ${tool("campaigns", "tests_post")}. Every person with a mailbox and a signature takes part, so ask no sender question. Voice and the sender's signature come first (summary_context task commercial-voice, then senders).`,
           "Publish only the exact revision the founder approves, and activate it only on their explicit yes. A ready mailbox never activates outreach.",
         ],
