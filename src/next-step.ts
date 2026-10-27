@@ -421,7 +421,8 @@ export async function getNextStep(
       .map(account => ({ id: account.id, sender_id: sender.id, sender: sender.name, status: account.status })))
     : [];
   // With one sender the agent assumes it; with several it reads the roster and
-  // asks which person a connection or campaign belongs to (Juan, 2026-10-06).
+  // asks which person a connection belongs to (Juan, 2026-10-06). Campaigns
+  // name no senders (LIF-1670).
   const names = (accounts: Array<{ sender: string }>) => accounts.map(account => account.sender).join(", ");
   // The founder's mailboxes, for Parts 3 and 4 (LIF-1260).
   const mailboxes = roster.status === "available"
