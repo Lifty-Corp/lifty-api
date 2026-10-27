@@ -108,7 +108,9 @@ describe("supported Outreach policy boundary", () => {
     expect(create("email", saved).success).toBe(false);
   });
   it("Campaigns own their start rules, generated instructions or one template per step", () => {
-    expect(create("linkedin", { ...policy, sender_ids: [senderId, campaignRef] }).success).toBe(true);
+    // LIF-1670: persons follow the workspace's Journeys; a Campaign names no senders.
+    expect(create("linkedin", { ...policy, sender_ids: [senderId] }).success).toBe(false);
+    expect(CampaignDraftSchema.safeParse({ expected_version: 1, revision_ref: revisionRef, changes: { sender_ids: [senderId] } }).success).toBe(false);
     expect(create("linkedin", { ...policy, compose_mode: "templates", steps: [{ position: 1, delay: { business_days: 0 }, template: { text: "Hello {first_name}" } }] }).success).toBe(true);
     expect(create("linkedin", { ...policy, compose_mode: "templates" }).success).toBe(false);
     expect(create("linkedin", { ...policy, start: [] }).success).toBe(false);

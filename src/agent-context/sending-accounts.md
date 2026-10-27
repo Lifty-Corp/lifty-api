@@ -24,6 +24,14 @@ behind Lifty’s connection pages.
   waits for a fresh check.
 - `declaration`: what the person confirmed on Lifty's connect page.
 - `sends`: sends today and over the last seven days.
+- `participation` (absent until Lifty reports it): whether the account takes
+  part in new Journeys now, as `status` and its `cause`: `sending`;
+  `waiting_for_first_lead` (no lead has reached its channel yet);
+  `no_active_campaign` (it sends once a campaign on its channel is active);
+  `paused`, where `waiting_journeys` started Journeys wait for it;
+  `not_connected`; or `email_not_ready` (such as `signature_missing`: the
+  person needs a signature). Report the status with its cause; never call an
+  account "not in a campaign".
 
 Reads never check or change a provider. A failed read is unknown: retry it;
 never report an account as disconnected or missing from a failed read.
@@ -55,8 +63,8 @@ never report an account as disconnected or missing from a failed read.
    says what to do; `account_in_use` means another workspace owns the account
    and no new link fixes it. If the page says it removed an old Lifty
    connection, sign in again with the same account.
-6. A connected mailbox's attempt carries `next_step`, its warmup setup: follow
-   it in the same reply.
+6. A connected account's attempt carries `next_step`: for a mailbox its warmup
+   setup and then next_step, for LinkedIn next_step. Follow it in the same reply.
 
 Connecting never activates a campaign or sends anything.
 
@@ -252,10 +260,12 @@ changes sending; propose those only as separate, explicitly requested actions.
 
 ## Campaigns and accounts
 
-Campaigns refer to senders. Which of a sender's mailboxes sends is a campaign
-decision; a reconnected or replaced mailbox never changes an approved
-campaign. A connected account does not authorize any email, message or
-invitation: use campaign previews and explicit approval/activation.
+Campaigns name no senders: persons take part in new Journeys through their
+accounts (`lifty context campaigns`). An account counts unless someone
+disconnected it; a paused, held or lost one still counts and its work waits.
+A lead keeps its person and that person's channels from its admission. A
+connected account does not authorize any email, message or invitation: use
+campaign previews and explicit approval/activation.
 Connection can proceed while the sample or new research waits for the weekly
 reset.
 

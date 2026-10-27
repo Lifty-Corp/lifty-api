@@ -28,8 +28,9 @@ const limits: Record<string, number> = {
   campaigns_saved: 80_000,
   linkedin_outreach_active: 25_000,
   linkedin_reconnect_needed: 25_000,
-  email_connected: 25_000,
-  email_preparing: 25_000,
+  // LIF-1670: Part 3 also asks to draft and approve a campaign while none is active.
+  email_connected: 27_000,
+  email_preparing: 27_000,
   email_held: 25_000,
   paid_plan_needed: 80_000,
   email_ready: 80_000,
