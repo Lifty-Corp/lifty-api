@@ -86,12 +86,7 @@ Markdown shipped under `src/agent-context/` still triggers deployment.
 Configure the publishable Supabase and encrypted HubSpot values above when
 setting up the host; founders do not set them locally. Keep the service private
 from browser integrations (no CORS allowlist). Release prerequisite migrations
-through their owning CI before merging the dependent API. For LIF-1173, deploy the Business resource migration and compatible Jobs
-consumers before this API. Publish the v6 CLI before or alongside the API;
-v5 calls intentionally return 409. Retire queued legacy Business jobs only
-after they drain. For LIF-897, deploy
-its database capability and replay ledger first, then the Jobs task
-`lifty-crm-mapping-sync`, then this API. The public smoke checks both
+through their owning CI before merging the dependent API. The public smoke checks both
 `/readyz/crm` (`lifty-crm-company.v1`) and `/readyz/crm-mapping`
 (`lifty-crm-mapping.v1`); these verify static database capabilities without
 reading a tenant or contacting HubSpot. Worker deployment is a separate
@@ -123,12 +118,8 @@ the runtime environment of the App Platform app (`SUPABASE_URL`,
 `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_JWKS_URL`). HubSpot app credentials and
 `PUBLIC_BASE_URL` are also owned by that DigitalOcean runtime.
 
-The LIF-1174 API revision (client contract v7) requires the Functions migration
-that adds the research schedule, weekly ledger and the `p_workspace_id` forms of
-`start_lifty_run`, `get_lifty_run_status` and `get_lifty_run_progress`. Deploy
-that migration first; an older database makes these operations return 502
-"unavailable", never a guessed state. Weekly research links use
-`LIFTY_DASHBOARD_ORIGIN`, the same owner as sample research links.
+Weekly research links use `LIFTY_DASHBOARD_ORIGIN`, the same owner as sample
+research links.
 
 ## DigitalOcean staging
 

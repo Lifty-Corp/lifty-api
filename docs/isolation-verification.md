@@ -23,9 +23,8 @@ verification (LIF-1636). The API side is covered by `npm run verify`, whose
 route tests exercise protected operations with missing, malformed and expired
 JWTs before any upstream work.
 
-The LIF-628 local evidence receipt remains in git history. The Functions replay
-script its fixture needed was removed with LIF-1636, so that fixture is no
-longer a verification path.
+The LIF-628 local evidence receipt and its fixture remain in git history; they
+are not a verification path.
 
 ## Rollback boundary
 

@@ -15,7 +15,8 @@ const attemptId = "66666666-6666-4666-8666-666666666666";
 const now = "2026-10-02T12:00:00Z";
 const account = (id = accountId, overrides: Record<string, unknown> = {}) => ({
   id, sender_id: senderId, channel: "email", identity: "ana@example.test", status: "connected", state: "active",
-  checked_at: now, observation: { state: "verified" }, connected_at: now, disconnected_at: null, access_revoked_at: null,
+  sending: { allowed: true, reason: null, scope: null }, limits: { emails_per_day: 10 },
+  checked_at: now, observation: { state: "verified" }, connected_at: now, disconnected_at: null, access_revoked_at: null, access_removal: null,
   declaration: { mailbox_use: "habitual", declared_by: null, declared_at: now }, sends: { today: 0, last_7_days: 2 }, ...overrides });
 const blocked = (id = accountId) => account(id, { status: "disconnected", state: "paused", disconnected_at: now });
 const sender = { id: senderId, version: 2, name: "Ana Pérez", signature: null, booking_url: null, accounts: [account()] };
@@ -135,19 +136,19 @@ describe("Identity member routes", () => {
     expect(h.effects.revoke).not.toHaveBeenCalled();
   });
 
-  it("publishes sending state, limits and access removal, and still accepts reads without them", async () => {
+  it("publishes sending state, limits and access removal", async () => {
     const held = account(accountId, { sending: { allowed: false, reason: "paused_by_lift", scope: "account" }, limits: { emails_per_day: 10 }, access_removal: null });
     const linkedin = account(otherAccount, { channel: "linkedin", identity: "https://www.linkedin.com/in/ana", declaration: null,
       sending: { allowed: true, reason: null, scope: null }, limits: { invitations_per_day: 30, messages_per_day: 30, invitations_per_7_days: 25 } });
-    for (const accounts of [[held, linkedin], [account()]]) {
-      const h = harness(() => ({ workspace, accounts }));
-      const response = await h.request("GET", "/v1/workspace/sending-accounts");
-      expect(response.status).toBe(200);
-      expect((await response.json()).accounts).toEqual(accounts);
-    }
-    // An unknown reason or a mixed limit shape is not the published contract.
-    for (const invalid of [{ sending: { allowed: false, reason: "lift_hold", scope: null } }, { limits: { emails_per_day: 10, messages_per_day: 5 } }]) {
-      const h = harness(() => ({ workspace, accounts: [account(accountId, invalid)] }));
+    const h = harness(() => ({ workspace, accounts: [held, linkedin] }));
+    const response = await h.request("GET", "/v1/workspace/sending-accounts");
+    expect(response.status).toBe(200);
+    expect((await response.json()).accounts).toEqual([held, linkedin]);
+    // A missing sending state, an unknown reason or a mixed limit shape is not the published contract.
+    const { sending: _sending, ...unpublished } = account();
+    for (const invalid of [unpublished, account(accountId, { sending: { allowed: false, reason: "lift_hold", scope: null } }),
+      account(accountId, { limits: { emails_per_day: 10, messages_per_day: 5 } })]) {
+      const h = harness(() => ({ workspace, accounts: [invalid] }));
       expect((await h.request("GET", "/v1/workspace/sending-accounts")).status).toBe(502);
     }
   });
