@@ -314,6 +314,18 @@ describe("member verdict and next step (LIF-1603)", () => {
       status: { code: "ready_idle", label: "Connected", description: "Sends once a campaign is active." }, next_step: { code: "none" } });
     expect(by("waiting_for_first_lead", "no_lead_yet")).toMatchObject({ status: { code: "ready_idle", label: "Ready" }, next_step: { code: "none" } });
     expect(by("paused", "campaign_paused")).toMatchObject({ status: { code: "ready_idle" }, next_step: { code: "resume_campaign", owner: "member" } });
+    // No send gate checks the signature, so participation alone names it.
+    expect(by("email_not_ready", "signature_missing", active)).toEqual(expect.objectContaining({
+      status: { code: "not_ready", label: "Needs a signature", tone: "warn", description: "Add a signature to this person in Senders to send email.", reasons: [] },
+      next_step: { code: "add_signature", owner: "member", label: "Add a signature", description: "Add it in Senders. New Journeys use it from then on." } }));
+  });
+
+  it("explains a not-ready mailbox that a LIFT pause masks by its own state, never as Connected", () => {
+    for (const [cause, status, next] of [["declaration_required", "setup_needed", "declare_use"], ["warming", "warming", "wait"],
+      ["placement_required", "placement_due", "wait"], ["mailbox_not_ready", "not_ready", "wait"]] as const) {
+      const masked = verdict("send_paused:workspace", noCampaigns, { participation: { status: "email_not_ready", cause } });
+      expect(masked, cause).toMatchObject({ status: { code: status, reasons: [] }, next_step: { code: next } });
+    }
   });
 
   it("names the action for each sender-gate reason", () => {

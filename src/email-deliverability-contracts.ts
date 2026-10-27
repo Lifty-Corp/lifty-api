@@ -219,7 +219,7 @@ export const MailboxStatusCode = ["retired", "paused", "placement_failed", "bloc
   "placement_due", "in_campaign", "ready_idle", "warming", "no_known_blocker", "not_ready", "no_evidence",
   "disconnected", "needs_reconnect", "on_hold", "setup_needed"] as const;
 /** What resolves an inbox's status, and who acts (LIF-1603). Clients choose where each code leads. */
-export const NextStepCode = ["none", "resume_campaign", "turn_on", "reconnect", "declare_use", "connect_warmup",
+export const NextStepCode = ["none", "resume_campaign", "add_signature", "turn_on", "reconnect", "declare_use", "connect_warmup",
   "finish_warmup_setup", "fix_dns", "wait", "lifty_review"] as const;
 export const ReadinessCode = ["ready", "partially_ready", "blocked", "no_known_blocker", "unknown"] as const;
 export const PathCode = ["allowed", "blocked", "no_known_blocker", "unknown"] as const;
