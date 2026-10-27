@@ -24,6 +24,14 @@ behind Lifty’s connection pages.
   waits for a fresh check.
 - `declaration`: what the person confirmed on Lifty's connect page.
 - `sends`: sends today and over the last seven days.
+- `participation` (absent until Lifty reports it): whether the account takes
+  part in new Journeys now, as `status` and its `cause`: `sending`;
+  `waiting_for_first_lead` (no lead has reached its channel yet);
+  `no_active_campaign` (it sends once a campaign on its channel is active);
+  `paused`, where `waiting_journeys` started Journeys wait for it;
+  `not_connected`; or `email_not_ready` (such as `signature_missing`: the
+  person needs a signature). Report the status with its cause; never call an
+  account "not in a campaign".
 
 Reads never check or change a provider. A failed read is unknown: retry it;
 never report an account as disconnected or missing from a failed read.

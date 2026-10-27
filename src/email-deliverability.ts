@@ -450,7 +450,7 @@ function presentStatus(parts: {
   }
   if ((!account || account.outreach.code === "unknown") && (ready || campaigns.status.code === "in_campaign_enabled")) return make("not_ready", "Unverified", "warn", "A current connection check is needed to confirm whether outreach can send.");
   if (campaigns.status.code === "in_campaign_enabled") return make("in_campaign", "In campaign", "ok", campaigns.status.description, campaigns.status.reasons);
-  if (ready) return make("ready_idle", "Ready · no active campaign", "watch", `${readiness.description} It isn't on an active campaign.`, readiness.reasons);
+  if (ready) return make("ready_idle", "Connected", "watch", `${readiness.description} It sends once a campaign is active.`, readiness.reasons);
   const warming = warmup.sources.find(source => (source.state.code === "active" || source.state.code === "pending") && source.period_complete === false);
   if (warming) return make("warming", warmup.status.label, "muted", warmup.status.description, warmup.status.reasons);
   if (readiness.code === "no_known_blocker") return make("no_known_blocker", readiness.label, "watch", readiness.description, readiness.reasons);
@@ -509,8 +509,7 @@ function placementStep(warmup: DeliverabilityMailbox["warmup"], failed: boolean)
 /** The pre-LIF-1603 status when the inbox's current account isn't known; its step follows the status. */
 function fallbackStep(status: DeliverabilityMailbox["status"]): NextStep {
   switch (status.code) {
-    case "in_campaign": return NOTHING;
-    case "ready_idle": return step("add_to_campaign", "member", "Add to a campaign", "This inbox can send. Activate a campaign that uses it when you're ready.");
+    case "in_campaign": case "ready_idle": return NOTHING;
     case "warming": return step("wait", "lifty", "Wait for warmup", "Lifty keeps warming this inbox up. Nothing to do on your side.");
     default: return step("wait", "lifty", "Wait for the next check", "Lifty can't confirm this inbox's state from the stored data yet. Refresh later.");
   }
@@ -606,15 +605,19 @@ function presentVerdict(parts: {
     placementStep(warmup, true), placement.status.reasons);
   if (warmup.status.code === "problem") return verdict("warmup_problem", warmup.status.label, "warn", warmup.status.description,
     dnsStep(warmup) ?? LIFTY_REVIEW, warmup.status.reasons);
-  if (active) return verdict("in_campaign", "In campaign", "ok",
-    `Ready and used by ${plural(active, "active campaign")}. It sends on the campaign's schedule, up to its daily limit.`, NOTHING);
-  if (mine.some(item => item.status.code === "paused")) return verdict("ready_idle", "Ready · campaign paused", "watch",
-    "This inbox passed its checks, but every campaign using it is paused.",
-    step("resume_campaign", "member", "Resume the campaign", "Resume it in Campaigns when you want this inbox to send."));
-  const drafts = mine.some(item => item.status.code === "draft");
-  return verdict("ready_idle", "Ready · not in a campaign", "watch", "This inbox passed its checks and can send. No active campaign uses it yet.",
-    step("add_to_campaign", "member", drafts ? "Activate the campaign" : "Add to a campaign",
-      `${drafts ? "Activate the campaign that uses this inbox" : "Start a campaign that sends from this inbox"} when you're ready. Warmup keeps running either way.`));
+  // LIF-1672: persons follow the workspace's Journeys, so the account's
+  // participation decides once nothing above blocks it. Without it (older
+  // database), the campaigns this connection reports decide.
+  const participation = account.participation?.status;
+  if (participation === "sending" || (!participation && active)) return verdict("in_campaign", "In campaign", "ok",
+    active ? `Ready and used by ${plural(active, "active campaign")}. It sends on the campaign's schedule, up to its daily limit.`
+      : "Ready and sending in active Journeys, on their campaigns' schedule and up to its daily limit.", NOTHING);
+  if (account.participation?.cause === "campaign_paused" || (!participation && mine.some(item => item.status.code === "paused")))
+    return verdict("ready_idle", "Ready · campaign paused", "watch", "This inbox passed its checks, but every campaign using it is paused.",
+      step("resume_campaign", "member", "Resume the campaign", "Resume it in Campaigns when you want this inbox to send."));
+  if (participation === "waiting_for_first_lead") return verdict("ready_idle", "Ready", "watch",
+    "It takes part and sends once a lead reaches this channel.", NOTHING);
+  return verdict("ready_idle", "Connected", "watch", "Sends once a campaign is active.", NOTHING);
 }
 
 /**
@@ -668,7 +671,7 @@ function presentAccount(account: Account | undefined, connections: Connection[],
   else {
     const active = campaigns.items.filter(item => item.status.code === "active" &&
       item.connection_ref === account.id);
-    if (!active.length) outreach = make("idle", "No active campaign", "muted", "This account is enabled, but no active campaign uses this connection.");
+    if (!active.length) outreach = make("idle", "No active campaign", "muted", "This account is enabled and sends once a campaign is active.");
     else if (active.some(item => item.sending.code === "enabled")) outreach = make("enabled", "Enabled", "ok", "An active campaign can use this account when its schedule and send checks allow.");
     else if (active.some(item => item.sending.code === "unverified")) outreach = make("unknown", "Unverified", "warn", "The active campaign's sending state could not be confirmed.");
     else outreach = make("blocked", "Blocked", "warn", "An active campaign cannot currently send from this account.", active.flatMap(item => item.sending.reasons));

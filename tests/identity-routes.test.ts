@@ -136,18 +136,23 @@ describe("Identity member routes", () => {
     expect(h.effects.revoke).not.toHaveBeenCalled();
   });
 
-  it("publishes sending state, limits and access removal", async () => {
-    const held = account(accountId, { sending: { allowed: false, reason: "paused_by_lift", scope: "account" }, limits: { emails_per_day: 10 }, access_removal: null });
+  it("publishes sending state, limits, participation and access removal", async () => {
+    const held = account(accountId, { sending: { allowed: false, reason: "paused_by_lift", scope: "account" }, limits: { emails_per_day: 10 }, access_removal: null,
+      participation: { status: "paused", cause: "campaign_paused", waiting_journeys: 3 } });
     const linkedin = account(otherAccount, { channel: "linkedin", identity: "https://www.linkedin.com/in/ana", declaration: null,
-      sending: { allowed: true, reason: null, scope: null }, limits: { invitations_per_day: 30, messages_per_day: 30, invitations_per_7_days: 25 } });
+      sending: { allowed: true, reason: null, scope: null }, limits: { invitations_per_day: 30, messages_per_day: 30, invitations_per_7_days: 25 },
+      participation: { status: "waiting_for_first_lead", cause: "no_lead_yet" } });
     const h = harness(() => ({ workspace, accounts: [held, linkedin] }));
     const response = await h.request("GET", "/v1/workspace/sending-accounts");
     expect(response.status).toBe(200);
     expect((await response.json()).accounts).toEqual([held, linkedin]);
-    // A missing sending state, an unknown reason or a mixed limit shape is not the published contract.
+    // A missing sending state, an unknown reason, a mixed limit shape or a participation cause
+    // of another status is not the published contract (LIF-1672: participation stays optional).
     const { sending: _sending, ...unpublished } = account();
     for (const invalid of [unpublished, account(accountId, { sending: { allowed: false, reason: "lift_hold", scope: null } }),
-      account(accountId, { limits: { emails_per_day: 10, messages_per_day: 5 } })]) {
+      account(accountId, { limits: { emails_per_day: 10, messages_per_day: 5 } }),
+      account(accountId, { participation: { status: "sending", cause: "no_lead_yet" } }),
+      account(accountId, { participation: { status: "sending", cause: "active_journeys", waiting_journeys: 1 } })]) {
       const h = harness(() => ({ workspace, accounts: [invalid] }));
       expect((await h.request("GET", "/v1/workspace/sending-accounts")).status).toBe(502);
     }
