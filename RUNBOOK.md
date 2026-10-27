@@ -66,6 +66,8 @@ The request-scoped Supabase client aborts each database request after 10 seconds
 | `TRIGGER_API_URL` | Optional; defaults to `https://api.trigger.dev` |
 | `NOTIFICATIONS_TRIGGER_SECRET_KEY` | Secret key of the notifications service's own Trigger.dev project, used only for `notifications-test` (notification test sends). Startup refuses a missing key or one equal to `TRIGGER_SECRET_KEY` |
 | `NOTIFICATIONS_TRIGGER_API_URL` | Optional; defaults to `https://api.trigger.dev` |
+| `POSTHOG_API_KEY` | Optional (LIF-1663): the public PostHog project key the dashboards use (`phc_…`). Absent means the API captures no product analytics |
+| `POSTHOG_HOST` | Optional; HTTPS ingest origin, default `https://us.i.posthog.com` |
 | `HOST` | Bind host, default `0.0.0.0` |
 | `PORT` | Bind port, default `3000` |
 

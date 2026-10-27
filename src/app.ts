@@ -34,6 +34,7 @@ import { DeleteLoginRequest, DeleteLoginResult, type DeleteLoginInput, type Dele
 import { MemberWorkspacesResult, type MemberWorkspacesOutput } from "./member-workspaces.js";
 
 import { OpenAPIHono, z } from "@hono/zod-openapi";
+import { analyticsSurface, isInternalRequest, noopAnalytics, type Analytics, type AnalyticsSurface } from "./analytics.js";
 import { CLIENT_UPGRADE_MESSAGE, STAGE_CLIENT_CONTRACT, SUPPORTED_CLIENT_CONTRACTS, AgentContextSchema, getAgentContext, isSupportedClientContract, type ContextDraft } from "./agent-context.js";
 import { readContextDrafts } from "./context-drafts.js";
 import type { Context } from "hono";
@@ -201,6 +202,8 @@ export interface AppDependencies {
   checkCompanyReadiness(): Promise<boolean>;
   checkCrmMappingReadiness(): Promise<boolean>;
   connectionCallbacks?: ConfirmationAdapters;
+  /** LIF-1663: operation events for PostHog; the default captures nothing. */
+  analytics: Analytics;
   log(event: LogEvent): void;
 }
 
@@ -229,6 +232,9 @@ export type AppEnvironment = {
     requestStartedAt: number;
     operationStage?: string;
     authSession: AuthSession;
+    surface: AnalyticsSurface;
+    /** Non-secret facts a handler learned for analytics (the CRM provider of an attempt). */
+    analyticsFacts?: { provider?: string };
   };
 };
 
@@ -831,6 +837,7 @@ const defaultDependencies: AppDependencies = {
   checkReadiness: async () => true,
   checkCompanyReadiness: async () => false,
   checkCrmMappingReadiness: async () => false,
+  analytics: noopAnalytics,
   log: (event) => process.stderr.write(`${JSON.stringify(event)}\n`),
 };
 
@@ -1204,10 +1211,23 @@ export function createApp(
       );
     }
     context.set("authSession", authentication.session);
+    context.set("surface", analyticsSurface(Boolean(trusted), context.req.header("user-agent")));
     if (!isSupportedClientContract(context.req.header("x-lifty-client-contract"))) {
       return errorJson(context, 409, "CONTEXT_CLIENT_UNSUPPORTED", CLIENT_UPGRADE_MESSAGE);
     }
     await next();
+    // LIF-1663: the operation is decided; record it without touching the response.
+    if (dependencies.analytics.enabled && !isInternalRequest(context.req.raw)) {
+      const error = context.error;
+      dependencies.analytics.observe({
+        session: authentication.session, method: context.req.method, path: context.req.path,
+        query: { attempt_ref: context.req.query("attempt_ref") }, surface: context.get("surface"),
+        requestId: context.get("requestId"), selection: context.req.header("x-lifty-workspace")?.trim() || null,
+        status: context.res.status, durationMs: Date.now() - context.get("requestStartedAt"),
+        errorCode: error instanceof PublicError ? error.code : error ? "INTERNAL_ERROR" : null,
+        facts: context.get("analyticsFacts"), response: context.res,
+      });
+    }
   });
 
   // Expired entries are removed on access, without a process-owning timer.
