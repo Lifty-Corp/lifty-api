@@ -1,4 +1,4 @@
-import { AccountsGetSchema, type Account } from "./identity-contracts.js";
+import { AccountsGetSchema, type Account, type Participation } from "./identity-contracts.js";
 import { z } from "zod";
 import type { AuthSession } from "./app.js";
 import { PublicError } from "./errors.js";
@@ -450,7 +450,7 @@ function presentStatus(parts: {
   }
   if ((!account || account.outreach.code === "unknown") && (ready || campaigns.status.code === "in_campaign_enabled")) return make("not_ready", "Unverified", "warn", "A current connection check is needed to confirm whether outreach can send.");
   if (campaigns.status.code === "in_campaign_enabled") return make("in_campaign", "In campaign", "ok", campaigns.status.description, campaigns.status.reasons);
-  if (ready) return make("ready_idle", "Ready · no active campaign", "watch", `${readiness.description} It isn't on an active campaign.`, readiness.reasons);
+  if (ready) return make("ready_idle", "Connected", "watch", `${readiness.description} It sends once a campaign is active.`, readiness.reasons);
   const warming = warmup.sources.find(source => (source.state.code === "active" || source.state.code === "pending") && source.period_complete === false);
   if (warming) return make("warming", warmup.status.label, "muted", warmup.status.description, warmup.status.reasons);
   if (readiness.code === "no_known_blocker") return make("no_known_blocker", readiness.label, "watch", readiness.description, readiness.reasons);
@@ -509,8 +509,7 @@ function placementStep(warmup: DeliverabilityMailbox["warmup"], failed: boolean)
 /** The pre-LIF-1603 status when the inbox's current account isn't known; its step follows the status. */
 function fallbackStep(status: DeliverabilityMailbox["status"]): NextStep {
   switch (status.code) {
-    case "in_campaign": return NOTHING;
-    case "ready_idle": return step("add_to_campaign", "member", "Add to a campaign", "This inbox can send. Activate a campaign that uses it when you're ready.");
+    case "in_campaign": case "ready_idle": return NOTHING;
     case "warming": return step("wait", "lifty", "Wait for warmup", "Lifty keeps warming this inbox up. Nothing to do on your side.");
     default: return step("wait", "lifty", "Wait for the next check", "Lifty can't confirm this inbox's state from the stored data yet. Refresh later.");
   }
@@ -552,10 +551,13 @@ function presentVerdict(parts: {
     `A safety hold stops sends from this inbox.${waiting}`, LIFTY_REVIEW, connection.send_gate.reasons);
 
   const gate = source.send_block_reason ?? null;
-  const blocked = (code: DeliverabilityMailbox["status"]["code"], label: string, tone: Tone, description: string, next: NextStep) =>
-    verdict(code, label, tone, `${description}${waiting}`, next, connection.send_gate.reasons);
-  if (gate && gate !== SEND_TIME_CHECK && !gate.startsWith("send_paused:")) {
-    switch (gate) {
+  // One verdict per blocking state: from the shared send gate, or from the
+  // account's participation when a LIFT pause or the send-time check masks the
+  // gate (LIF-1672). A LIFT pause's own reasons are never shown to members.
+  const blocking = (code: string, reasons: Reason[]): Verdict => {
+    const blocked = (status: DeliverabilityMailbox["status"]["code"], label: string, tone: Tone, description: string, next: NextStep) =>
+      verdict(status, label, tone, `${description}${waiting}`, next, reasons);
+    switch (code) {
       case "account_paused":
         return blocked("paused", "Sending off", "warn", "Sending is switched off for this inbox. Warmup keeps running.",
           step("turn_on", "member", "Turn sending on", "Switch sending on in Senders when you want campaigns to use this inbox."));
@@ -598,24 +600,41 @@ function presentVerdict(parts: {
       }
       default:
         return blocked(active ? "blocked_in_campaign" : "not_ready", "Not ready to send", "warn",
-          connection.send_gate.reasons[0]?.message ?? "A send check stops this inbox from sending.", LIFTY_REVIEW);
+          reasons[0]?.message ?? "A send check stops this inbox from sending.", LIFTY_REVIEW);
     }
-  }
+  };
+  if (gate && gate !== SEND_TIME_CHECK && !gate.startsWith("send_paused:")) return blocking(gate, connection.send_gate.reasons);
 
   if (placement.status.code === "failed") return verdict("placement_failed", "Placement test failed", "bad", placement.status.description,
     placementStep(warmup, true), placement.status.reasons);
   if (warmup.status.code === "problem") return verdict("warmup_problem", warmup.status.label, "warn", warmup.status.description,
     dnsStep(warmup) ?? LIFTY_REVIEW, warmup.status.reasons);
-  if (active) return verdict("in_campaign", "In campaign", "ok",
-    `Ready and used by ${plural(active, "active campaign")}. It sends on the campaign's schedule, up to its daily limit.`, NOTHING);
-  if (mine.some(item => item.status.code === "paused")) return verdict("ready_idle", "Ready · campaign paused", "watch",
-    "This inbox passed its checks, but every campaign using it is paused.",
-    step("resume_campaign", "member", "Resume the campaign", "Resume it in Campaigns when you want this inbox to send."));
-  const drafts = mine.some(item => item.status.code === "draft");
-  return verdict("ready_idle", "Ready · not in a campaign", "watch", "This inbox passed its checks and can send. No active campaign uses it yet.",
-    step("add_to_campaign", "member", drafts ? "Activate the campaign" : "Add to a campaign",
-      `${drafts ? "Activate the campaign that uses this inbox" : "Start a campaign that sends from this inbox"} when you're ready. Warmup keeps running either way.`));
+  // LIF-1672: persons follow the workspace's Journeys, so the account's
+  // participation decides once nothing above blocks it. Without it (older
+  // database), the campaigns this connection reports decide.
+  const participation = account.participation;
+  if (participation?.cause === "signature_missing") return verdict("not_ready", "Needs a signature", "warn",
+    "Add a signature to this person in Senders to send email.",
+    step("add_signature", "member", "Add a signature", "Add it in Senders. New Journeys use it from then on."));
+  if (participation?.status === "sending" || (!participation && active)) return verdict("in_campaign", "In campaign", "ok",
+    active ? `Ready and used by ${plural(active, "active campaign")}. It sends on the campaign's schedule, up to its daily limit.`
+      : "Ready and sending in active Journeys, on their campaigns' schedule and up to its daily limit.", NOTHING);
+  if (participation?.cause === "campaign_paused" || (!participation && mine.some(item => item.status.code === "paused")))
+    return verdict("ready_idle", "Ready · campaign paused", "watch", "This inbox passed its checks, but every campaign using it is paused.",
+      step("resume_campaign", "member", "Resume the campaign", "Resume it in Campaigns when you want this inbox to send."));
+  if (participation?.status === "waiting_for_first_lead") return verdict("ready_idle", "Ready", "watch",
+    "It takes part and sends once a lead reaches this channel.", NOTHING);
+  if (participation && participation.status !== "no_active_campaign")
+    return blocking(PARTICIPATION_GATE[participation.cause] ?? participation.cause, []);
+  return verdict("ready_idle", "Connected", "watch", "Sends once a campaign is active.", NOTHING);
 }
+
+/** The send-gate state each remaining participation cause matches; others get the gate's default verdict. */
+const PARTICIPATION_GATE: Partial<Record<Participation["cause"], string>> = {
+  disconnected: "account_disconnected", needs_reconnect: "account_needs_reconnect", unverified: "account_unverified",
+  paused_by_member: "account_paused", declaration_required: "email_declaration_required", warming: "email_warmup_required",
+  placement_required: "email_placement_required", mailbox_not_ready: "sender_mailbox_ineligible",
+};
 
 /**
  * LIF-1341: today's sends against the inbox's daily limit, as the send budget
@@ -668,7 +687,7 @@ function presentAccount(account: Account | undefined, connections: Connection[],
   else {
     const active = campaigns.items.filter(item => item.status.code === "active" &&
       item.connection_ref === account.id);
-    if (!active.length) outreach = make("idle", "No active campaign", "muted", "This account is enabled, but no active campaign uses this connection.");
+    if (!active.length) outreach = make("idle", "No active campaign", "muted", "This account is enabled and sends once a campaign is active.");
     else if (active.some(item => item.sending.code === "enabled")) outreach = make("enabled", "Enabled", "ok", "An active campaign can use this account when its schedule and send checks allow.");
     else if (active.some(item => item.sending.code === "unverified")) outreach = make("unknown", "Unverified", "warn", "The active campaign's sending state could not be confirmed.");
     else outreach = make("blocked", "Blocked", "warn", "An active campaign cannot currently send from this account.", active.flatMap(item => item.sending.reasons));

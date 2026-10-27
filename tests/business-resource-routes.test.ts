@@ -1065,11 +1065,11 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
       identityOperation: async () => ({ status: 200, body: linkedinRoster(status) }) });
     const result = await (await h.request("/v1/workspace/next-step")).json();
     expect(result.reason).toBe(reason);
-    // The agent acts on the exact account: templates permit its sender, a reconnect needs its id.
+    // The agent acts on the exact account: a reconnect needs its id.
     if (reason === "linkedin_connected" || reason === "linkedin_reconnect_needed") {
       const account = sendersFixture.senders[0]!.accounts[0]!;
       expect(result.receipt).toEqual({ account: { id: account.id, sender_id: account.sender_id, sender: "Ana Pérez", status } });
-      expect(result.actions.join(" ")).toContain(reason === "linkedin_connected" ? "permitting Ana Pérez" : `path.id ${account.id}`);
+      if (reason === "linkedin_reconnect_needed") expect(result.actions.join(" ")).toContain(`path.id ${account.id}`);
     }
   });
   // Parts 3 and 4 resume from the founder's mailbox, warmup, placement and plan (LIF-1260).
@@ -1135,6 +1135,19 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
       expect(result.recommended_tools).not.toContain("sending_accounts_placement_start");
     }
   });
+  // LIF-1670: a mailbox still preparing already takes part, so with no active
+  // campaign Part 3 asks for one now instead of waiting for the mailbox.
+  it.each([
+    [{}, "email_connected", true],
+    [{ warmup: warmupRead("warming") }, "email_preparing", true],
+    [{ accounts: [linkedinAccount, mailbox], campaigns: ["active"] }, "email_connected", false],
+    [{ accounts: [linkedinAccount, mailbox], campaigns: ["active"], warmup: warmupRead("warming") }, "email_preparing", false],
+  ] as const)("asks to draft and approve a campaign in Part 3 from %j only while none is active", async (state, reason, draft) => {
+    const result = await (await emailHarness(state as never).request("/v1/workspace/next-step")).json();
+    expect(result.reason).toBe(reason);
+    expect(result.actions.join(" ").includes("ask the founder to approve it in this conversation")).toBe(draft);
+    expect(result.recommended_tools.includes("campaigns_post")).toBe(draft);
+  });
   it("hands a free workspace with a ready mailbox to David without activating anything", async () => {
     const result = await (await emailHarness({ warmup: warmupRead("warming", { warmup_ready: true }), placement: passing }).request("/v1/workspace/next-step")).json();
     expect(result).toMatchObject({ reason: "paid_plan_needed", step: "plan", receipt: { plan: "free", mailbox: { id: mailbox.id } } });
@@ -1142,9 +1155,10 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
     expect(result.actions.join(" ")).toContain("never activates outreach");
     expect(result.recommended_tools).not.toContain("campaigns_activate");
   });
-  // Several senders: the agent asks whose account or campaign it is instead of
-  // acting on the first one; one sender is assumed.
-  it.each(["connected", "needs_reconnect", "email_ready"] as const)("names every sender for a %s step and asks which one", async position => {
+  // Several senders: the agent asks which account to reconnect instead of
+  // acting on the first one. Campaigns name no senders, so drafting one never
+  // asks which person sends (LIF-1670).
+  it.each(["connected", "needs_reconnect", "email_ready"] as const)("names every sender for a %s step and asks only which to reconnect", async position => {
     const ana = { ...sendersFixture.senders[0]!, accounts: [position === "email_ready" ? mailbox
       : { ...linkedinAccount, status: position === "needs_reconnect" ? "needs_reconnect" as const : "connected" as const }] };
     const luisId = "44444444-4444-4444-8444-444444444444";
@@ -1164,8 +1178,8 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
       expect(actions).toContain(`${ana.accounts[0]!.id} (Ana Pérez), ${luis.accounts[0]!.id} (Luis Gómez)`);
     } else {
       if (position === "connected") expect(actions).toContain("LinkedIn is connected for Ana Pérez, Luis Gómez");
-      expect(actions).toContain("ask which of them this campaign sends from");
-      expect(actions).not.toContain("permitting Ana Pérez");
+      expect(actions).toContain("ask no sender question");
+      expect(actions).not.toMatch(/permitting|which of them this campaign sends from/);
     }
   });
   // Accounts or campaigns set up while the sample ran never skip its review:

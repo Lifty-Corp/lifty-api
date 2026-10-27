@@ -75,9 +75,12 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   OUTREACH_REQUEST_CONFLICT: "This request reference already records another payload. Recover its saved test or use a new reference for a new request.",
   OUTREACH_BASELINE_UNAVAILABLE: "Choose a completed saved test from this campaign as the baseline.",
   OUTREACH_SAMPLE_UNAVAILABLE: "This sample lacks saved research. Choose researched leads before testing.",
-  OUTREACH_SAMPLE_SENDER_CONFLICT: "The saved sample person is not permitted by this revision. Preserve that person and repair the permitted senders.",
+  // LIF-1670: a preview needs a person who takes part on the Campaign's channel.
+  OUTREACH_SAMPLE_SENDER_CONFLICT: "No person can sign this preview yet. Add a person in Senders, with a signature for email, then preview again.",
   OUTREACH_COPY_INVALID: "Repair the saved message content using the campaign schema.",
-  OUTREACH_SENDER_CONFLICT: "The lead's assigned person is not permitted for this campaign. Preserve its assignment and resolve the conflict.",
+  // LIF-1670: raised only at admission, when the lead's person was deleted,
+  // changed or no longer takes part on any channel of the Journey.
+  OUTREACH_SENDER_CONFLICT: "The lead's person no longer takes part in this Journey. Keep the lead with that person and reconnect their account, or reassign the lead while its outreach has not started.",
   // CRM preferences (LIF-1239).
   CRM_NOT_SELECTED: "This workspace has no CRM connected. Connect one before choosing what Lifty writes to it.",
   CRM_PREFERENCES_INVALID: "Repair the CRM preferences using the current operation schema.",

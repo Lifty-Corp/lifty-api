@@ -6,7 +6,7 @@ export const workspace = { workspace_ref: "55555555-5555-4555-8555-555555555555"
 export const digest = "a".repeat(64);
 export const policy = { start: [{ type: "journey_start" }], steps: [{ position: 1, delay: { business_days: 0 } }], compose_mode: "generate",
   instructions: "Use saved research.", schedule: { timezone: "America/Argentina/Buenos_Aires", weekdays: [1,2,3,4,5], start: "09:00", end: "17:00" },
-  profile_version: 1, voice_version: 0, sender_ids: [senderId] };
+  profile_version: 1, voice_version: 0 };
 export const journeyPolicy = { audience: { kind: "qualified" }, stops: ["reply", "meeting_booked", "suppression", "manual_stop"] };
 export const revision = (content: unknown, approved = false) => ({ revision_ref: revisionRef, digest, content, created_at: "2026-10-02T12:00:00Z",
   approval: approved ? { actor_ref: senderId, approved_at: "2026-10-02T13:00:00Z" } : null });

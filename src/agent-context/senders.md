@@ -8,6 +8,10 @@ before any account is connected; connecting never creates a person.
 Every workspace uses the same senders and operations.
 Send the chosen workspace as `references.common` describes.
 
+Senders follow the workspace's Journeys: no campaign chooses them. Every person
+with a counted account on a Journey's channel takes part in its new Journeys
+(`lifty context campaigns`).
+
 ## Find the person first, then use their id
 
 1. Read `senders_get` (`lifty get senders`) in the selected workspace.
@@ -35,9 +39,11 @@ assume a same-name row proves your request was saved.
 - `signature` (email only): the founder's own words, plain text of at most 500
   characters, no HTML, links only with `https://`. Never write, suggest,
   complete or polish it, and add nothing they did not write. If they want only
-  their first name, that is the whole signature. Lifty signs each email when
-  the campaign version is prepared; emails already approved keep exactly the
-  text they were approved with.
+  their first name, that is the whole signature. A person's mailbox takes part
+  in email only while they have a signature. Each lead keeps the signature its
+  person had when its Journey started, so an edit signs only Journeys that
+  start afterwards and needs no campaign re-approval; emails already approved
+  keep exactly the text they were approved with.
 - `booking_url`: optional `https://` link writers may use.
 
 Sending schedules and timezones belong to campaigns, not to senders.
@@ -47,8 +53,9 @@ Sending schedules and timezones belong to campaigns, not to senders.
 `senders_patch` with `path.id` and body `expected_version` plus the fields to
 change. Omitted fields stay; `null` clears `signature` or `booking_url`.
 `VERSION_CONFLICT` writes nothing: read the roster again and reapply the
-intended edit. A changed signature recomposes still-unapproved previews
-(`recomposing` counts them); show the new previews before approval.
+intended edit. A changed signature redoes previews of leads whose Journey has
+not started (`recomposing` counts them); show the new previews before
+approving them. Started Journeys keep their signature.
 
 ## Delete
 
@@ -61,6 +68,8 @@ are already blocked and Lifty keeps removing access at the provider on its own
 (`access_revoked_at: null`): do not repeat the request; tell the founder removal
 is pending. Never claim access was removed without `access_revoked_at`.
 
-A deleted sender cannot receive connections or be chosen for campaigns.
-Removing or replacing a person's account never moves their leads to someone
-else.
+A deleted sender cannot receive connections or take part in new Journeys.
+Removing or replacing a person's account never moves their leads on its own.
+When leads wait on a person's lost account and their outreach has not started,
+move them with `lead_reassign_post` (`lifty context campaigns`); it never moves
+contacted leads.

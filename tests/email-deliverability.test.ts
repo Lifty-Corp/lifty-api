@@ -297,11 +297,35 @@ describe("member verdict and next step (LIF-1603)", () => {
     const idle = verdict("email_safety_check_required", noCampaigns);
     expect(idle.readiness.code).toBe("ready");
     expect(idle.account?.outreach.code).toBe("idle");
-    expect(idle.status).toMatchObject({ code: "ready_idle", label: "Ready · not in a campaign" });
-    expect(idle.next_step).toMatchObject({ code: "add_to_campaign", owner: "member" });
+    expect(idle.status).toMatchObject({ code: "ready_idle", label: "Connected", description: "Sends once a campaign is active." });
+    expect(idle.next_step.code).toBe("none");
     const sending = verdict("email_safety_check_required", item => { item.campaigns[0]!.states = { active: 1 }; });
     expect(sending.status).toMatchObject({ code: "in_campaign", label: "In campaign" });
     expect(sending.next_step.code).toBe("none");
+  });
+
+  // LIF-1672: persons follow the Journeys, so the account's participation, not
+  // the campaigns a connection reports, decides an unblocked inbox's verdict.
+  it("follows the account's participation once nothing blocks the inbox and never asks to add it to a campaign", () => {
+    const active: Edit = item => { item.campaigns[0]!.states = { active: 1 }; };
+    const by = (status: string, cause: string, edit: Edit = noCampaigns) => verdict(null, edit, { participation: { status, cause } as Account["participation"] });
+    expect(by("sending", "active_journeys")).toMatchObject({ status: { code: "in_campaign", label: "In campaign" }, next_step: { code: "none" } });
+    expect(by("no_active_campaign", "no_active_campaign_on_channel", active)).toMatchObject({
+      status: { code: "ready_idle", label: "Connected", description: "Sends once a campaign is active." }, next_step: { code: "none" } });
+    expect(by("waiting_for_first_lead", "no_lead_yet")).toMatchObject({ status: { code: "ready_idle", label: "Ready" }, next_step: { code: "none" } });
+    expect(by("paused", "campaign_paused")).toMatchObject({ status: { code: "ready_idle" }, next_step: { code: "resume_campaign", owner: "member" } });
+    // No send gate checks the signature, so participation alone names it.
+    expect(by("email_not_ready", "signature_missing", active)).toEqual(expect.objectContaining({
+      status: { code: "not_ready", label: "Needs a signature", tone: "warn", description: "Add a signature to this person in Senders to send email.", reasons: [] },
+      next_step: { code: "add_signature", owner: "member", label: "Add a signature", description: "Add it in Senders. New Journeys use it from then on." } }));
+  });
+
+  it("explains a not-ready mailbox that a LIFT pause masks by its own state, never as Connected", () => {
+    for (const [cause, status, next] of [["declaration_required", "setup_needed", "declare_use"], ["warming", "warming", "wait"],
+      ["placement_required", "placement_due", "wait"], ["mailbox_not_ready", "not_ready", "wait"]] as const) {
+      const masked = verdict("send_paused:workspace", noCampaigns, { participation: { status: "email_not_ready", cause } });
+      expect(masked, cause).toMatchObject({ status: { code: status, reasons: [] }, next_step: { code: next } });
+    }
   });
 
   it("names the action for each sender-gate reason", () => {

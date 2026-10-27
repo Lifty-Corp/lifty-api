@@ -346,8 +346,8 @@ draft is proven to perform. Preserve the founder's chosen wording while
 flagging unsupported claims or contract conflicts.
 
 After saving, preview real leads with `lifty post campaigns tests_post` and
-read them with `lifty get campaigns test_detail` (senders, audience, timing,
-blockers). Get approval of that exact revision before
+read them with `lifty get campaigns test_detail` (each lead's person,
+audience, timing, blockers). Get approval of that exact revision before
 `lifty post campaigns publish`, and authorization before
 `lifty post campaigns activate`. Saving, connecting an account or liking
 an angle never authorizes sending. Lifty handles scheduling and execution after

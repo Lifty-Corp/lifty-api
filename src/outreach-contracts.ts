@@ -67,7 +67,7 @@ const CampaignPolicyFields = z.object({
   start: StartSchema,
   steps: z.array(Step).min(1).max(5).describe("The saved sequence owns its count. Executable adapter: LinkedIn invitation then 1–3 messages, the first waiting its delay after acceptance; email 1–5 steps with delays up to 30 days or business days."),
   compose_mode: z.enum(["generate", "templates"]), instructions: z.string().max(30000), lanes: LanesSchema.optional(),
-  schedule: Schedule, profile_version: Version, voice_version: z.number().int().nonnegative(), sender_ids: uniqueRefs,
+  schedule: Schedule, profile_version: Version, voice_version: z.number().int().nonnegative(),
 }).strict();
 function laneNames(lanes: z.infer<typeof LanesSchema> | undefined): Array<string | undefined> {
   return lanes ? [...new Set([...lanes.rules.map(rule => rule.lane), lanes.default])] : [undefined];
@@ -257,7 +257,11 @@ export const JourneyRevisionSchema = revision(JourneyPolicySchema);
 // Stored history remains readable when a newer authoring/readiness rule rejects
 // it. Writes and exact publication are validated authoritatively in Functions;
 // response parsing checks source shape without reinterpreting saved policy.
-export const CampaignRevisionSchema = revision(CampaignPolicyFields);
+// LIF-1670: persons follow the workspace's Journeys, so new revisions name no
+// senders. Historical revisions may still carry the persons they permitted.
+export const CampaignRevisionSchema = revision(CampaignPolicyFields.extend({
+  sender_ids: uniqueRefs.optional().describe("Historical revisions only: the persons the Campaign permitted before persons followed Journeys."),
+}).strict());
 export const RevisionSummarySchema = ExactRevisionSchema.extend({ approval: Approval.nullable() }).strict();
 // One executable Journey version: the exact sources selected for new Journey
 // starts and whether its automatically derived graph is installed.
@@ -432,6 +436,26 @@ export const LeadOutreachPathSchema = z.object({ lead_ref: Ref }).strict();
 export const StopLeadOutreachSchema = z.object({ request_ref: Ref, confirm: z.literal(true) }).strict();
 export const StopLeadOutreachResultSchema = z.object({ ...Workspace, lead_ref: Ref, stopped_at: Timestamp,
   provider_stops_pending: z.boolean(),
+}).strict();
+// LIF-1671: move admitted leads whose outreach has not started to another
+// participating person. It contacts nobody; leads with any contact are refused.
+const ReassignTarget = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("sender"), sender_id: Ref }).strict(),
+  z.object({ kind: z.literal("round_robin") }).strict(),
+]);
+export const ReassignLeadsSchema = z.object({ request_ref: Ref, confirm: z.literal(true), reason: text(500),
+  leads: z.union([z.object({ lead_refs: uniqueRefs }).strict(), z.object({ from_sender_id: Ref }).strict()]),
+  to: ReassignTarget,
+}).strict();
+const ReassignRefusal = z.enum(["outreach_started", "lead_not_found", "not_admitted", "sender_not_participating",
+  "sender_channels_mismatch", "no_participating_sender"]);
+export const ReassignLeadsResultSchema = z.object({ ...Workspace, request_ref: Ref, actor_ref: Ref, reassigned_at: Timestamp,
+  reason: z.string(), to: ReassignTarget, remaining: z.number().int().nonnegative(),
+  results: z.array(z.object({ lead_ref: Ref, outcome: z.enum(["reassigned", "unchanged", "refused"]),
+    from_sender_id: Ref.nullable(), to_sender_id: Ref.nullable(), refusal: ReassignRefusal.nullable(),
+  }).strict().refine(result => result.outcome === "reassigned" ? result.to_sender_id !== null && result.refusal === null
+    : result.outcome === "refused" ? result.refusal !== null : result.from_sender_id === result.to_sender_id,
+  "A moved lead names its new person, a refused lead its refusal and an unchanged lead keeps its person.")).max(5000),
 }).strict();
 export const CampaignMessageReviewSchema = z.object({ action: z.enum(["approve", "skip", "retry"]), source_digest: Digest,
   expected_review_status: z.enum(["pending", "enroll_failed"]), reason: text(2000).optional(),

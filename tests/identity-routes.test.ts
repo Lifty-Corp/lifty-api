@@ -136,18 +136,23 @@ describe("Identity member routes", () => {
     expect(h.effects.revoke).not.toHaveBeenCalled();
   });
 
-  it("publishes sending state, limits and access removal", async () => {
-    const held = account(accountId, { sending: { allowed: false, reason: "paused_by_lift", scope: "account" }, limits: { emails_per_day: 10 }, access_removal: null });
+  it("publishes sending state, limits, participation and access removal", async () => {
+    const held = account(accountId, { sending: { allowed: false, reason: "paused_by_lift", scope: "account" }, limits: { emails_per_day: 10 }, access_removal: null,
+      participation: { status: "paused", cause: "campaign_paused", waiting_journeys: 3 } });
     const linkedin = account(otherAccount, { channel: "linkedin", identity: "https://www.linkedin.com/in/ana", declaration: null,
-      sending: { allowed: true, reason: null, scope: null }, limits: { invitations_per_day: 30, messages_per_day: 30, invitations_per_7_days: 25 } });
+      sending: { allowed: true, reason: null, scope: null }, limits: { invitations_per_day: 30, messages_per_day: 30, invitations_per_7_days: 25 },
+      participation: { status: "waiting_for_first_lead", cause: "no_lead_yet" } });
     const h = harness(() => ({ workspace, accounts: [held, linkedin] }));
     const response = await h.request("GET", "/v1/workspace/sending-accounts");
     expect(response.status).toBe(200);
     expect((await response.json()).accounts).toEqual([held, linkedin]);
-    // A missing sending state, an unknown reason or a mixed limit shape is not the published contract.
+    // A missing sending state, an unknown reason, a mixed limit shape or a participation cause
+    // of another status is not the published contract (LIF-1672: participation stays optional).
     const { sending: _sending, ...unpublished } = account();
     for (const invalid of [unpublished, account(accountId, { sending: { allowed: false, reason: "lift_hold", scope: null } }),
-      account(accountId, { limits: { emails_per_day: 10, messages_per_day: 5 } })]) {
+      account(accountId, { limits: { emails_per_day: 10, messages_per_day: 5 } }),
+      account(accountId, { participation: { status: "sending", cause: "no_lead_yet" } }),
+      account(accountId, { participation: { status: "sending", cause: "active_journeys", waiting_journeys: 1 } })]) {
       const h = harness(() => ({ workspace, accounts: [invalid] }));
       expect((await h.request("GET", "/v1/workspace/sending-accounts")).status).toBe(502);
     }
@@ -258,14 +263,17 @@ describe("Identity member routes", () => {
   });
 
   // An agent reports success from this read, so a connected mailbox names its
-  // second consent here: warmup and placement never start without it.
-  it("points a connected mailbox at its warmup setup, never LinkedIn or the connection profile", async () => {
+  // second consent here: warmup and placement never start without it. Then
+  // next_step leads to Campaign approval in the same conversation (LIF-1670).
+  it("points a connected mailbox at its warmup setup and LinkedIn at next_step, never the connection profile", async () => {
     const read = async (h: ReturnType<typeof harness>) => (await h.request("GET", `/v1/workspace/sending-accounts/attempts/${attemptId}`)).json();
     const mailbox = await read(harness(() => attempt("connected", { account_id: accountId })));
     expect(mailbox.next_step).toMatchObject({ operation: operationToolNames("sending-accounts", "warmup_start")[0],
       body: { workspace: workspace.workspace_ref, connection_ref: accountId } });
     expect(mailbox.next_step.message).toContain("in the same reply");
-    expect(await read(harness(() => attempt("connected", { channel: "linkedin", account_id: accountId })))).not.toHaveProperty("next_step");
+    expect(mailbox.next_step.message).toMatch(/then call next_step\.$/);
+    expect(await read(harness(() => attempt("connected", { channel: "linkedin", account_id: accountId })))).toMatchObject({
+      action_owner: "agent", next_step: { operation: operationToolNames("summary", "next_step")[0] } });
     expect(await read(harness(() => attempt("connected", { account_id: accountId }), {}, "connections"))).not.toHaveProperty("next_step");
   });
 
