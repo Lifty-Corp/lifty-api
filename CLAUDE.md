@@ -19,6 +19,8 @@ Headless workers (`claudex -p`, `codex exec`) implement their brief directly: no
   behavior. The hub lists it as the interim doc for that module.
 - [RUNBOOK.md](RUNBOOK.md): configuration, environments, deploy, rollback and
   the connection pilot.
+- [Slack app configuration](config/slack/README.md): the shared app manifest and
+  hosted customer authorization boundaries.
 - [docs/](docs/): MCP authorization and tool contracts, email providers and
   the session fence.
 - Module pages this API serves:
