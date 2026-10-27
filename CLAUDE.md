@@ -227,6 +227,16 @@ creates their runs; the routes (`src/crm-sync-controls.ts`) only enqueue
 stay unknown, a file containing only rejected rows cannot clear the saved list,
 and a CRM connection never implies customer-source consent.
 
+### Analytics
+
+`src/analytics.ts` records every catalog mutation and the next_step read at
+the `/v1/*` middleware (LIF-1663; events and milestones in README "Analytics
+events"). Event and group properties pass an allow-list by name and shape:
+codes, identifiers and enum values only, never free text, addresses, links or
+anything read from a request body. A new milestone is one `MILESTONES` entry
+plus the README table. Keep `observe` outside the request path: no await on
+the sink, no new per-request reads before the response.
+
 ### Notifications
 
 Module page: [Notifications & Slack](https://linear.app/lifty-corp/document/lead-gen-system-notifications-and-slack-a6e52a3fd81f).

@@ -123,6 +123,53 @@ read/write; and the base `oauth` scope. Expanding the app contract does not
 expand existing HubSpot refresh tokens, so older connections report
 `reconnect_required` until the founder reconnects.
 
+## Analytics events (LIF-1663)
+
+With `POSTHOG_API_KEY` set, the authenticated `/v1/*` middleware sends one
+PostHog event per founder mutation in the stage catalog (POST, PATCH, DELETE
+that are not read-only, such as `crm.mapping_sources`) and per `next_step`
+read, the session heartbeat. Polling and other reads send nothing.
+
+- `api_operation_completed` / `api_operation_failed` carry `operation`
+  (`resource.action`), `surface` (`mcp`, `cli`, `http`), `request_id`,
+  `duration_ms`, `http_status`, `outcome` and, on failure, the public
+  `error_code`. Never the message or a provider body.
+- `distinct_id` is the Supabase user id, as in the dashboard's `identify`.
+  Every event carries `$groups.workspace`, the workspace the database selects
+  for the request (`get_lifty_workspace_status`, read after the response and
+  cached ten minutes per user and `x-lifty-workspace` selection). A session
+  without a workspace sends the event without a group.
+- Milestones, on success only: `setup.post` → `setup_submitted`;
+  `sample-review.post` (a new run) → `sample_review_started`;
+  `sample-review.confirm` → `sample_review_confirmed`;
+  `research-schedule.activate|pause` → `research_schedule_activated|paused`;
+  `crm.sync_start` → `crm_sync_started`; `sending-accounts.warmup_start` →
+  `warmup_started`; `sending-accounts.placement_start` →
+  `placement_test_started`; `campaigns.publish|activate|pause` →
+  `campaign_published|activated|paused`. Connection milestones fire on the
+  read that reports the attempt verified, never on the consent link:
+  `crm.get?attempt_ref` → `crm_connected` (`provider`),
+  `sending-accounts.attempt` → `sending_account_connected` (`provider`,
+  `channel`), `notifications.get?attempt_ref` → `slack_connected`, once per
+  attempt per process. An attempt verified by the recovery pass that no agent
+  reads again records no milestone here.
+- The `workspace` group is identified the first time a workspace is seen in
+  the process and whenever its properties change (re-read every fifteen
+  minutes): `name` and `slug` from `lifty_member_workspaces`, `plan_key` and
+  `plan_kind` from `get_billing_state`. `analytics_class`,
+  `assignment_authority` and `created_at` have no member read yet and stay
+  absent until the database exposes one.
+- Properties are allow-listed by name and shape in `src/analytics.ts`: codes,
+  identifiers and enum values only. Free text, addresses, links, message
+  bodies and provider bodies cannot pass, and no property is read from a
+  request body.
+- Capture is fire-and-forget after the response is decided: a slow or failing
+  PostHog never changes a response. Events batch (10 events or 5 seconds) and
+  flush once on `SIGTERM`/`SIGINT`; failures log `analytics_failed` without
+  bodies. A stage adapter that forwards into its owning route counts once.
+- `surface: cli` needs the installed CLI to send a `lifty-cli/<version>`
+  user agent; until it does, CLI calls read as `http`.
+
 ## Local development
 
 Requirements: Node.js `>=22.11.0` and npm.
