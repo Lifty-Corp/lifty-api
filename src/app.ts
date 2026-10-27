@@ -1,4 +1,5 @@
 import { connectionProfileAllows } from "./runtime-profile.js";
+import { SetNotificationControlsRequestSchema, SetNotificationPreferencesRequestSchema, type SetNotificationControlsRequest, type SetNotificationPreferencesRequest } from "./contracts.js";
 import { historicalEmailResult, historicalOperation, HistoricalEmailResultSchema } from "./historical-outreach.js";
 import { executeOutreachOperation, type OutreachInput } from "./outreach-operations.js";
 import { executeLinkedinOperation, type LinkedinInput } from "./linkedin-operations.js";
@@ -149,6 +150,8 @@ export interface AppDependencies {
   enqueueIntegrationRevocation: EnqueueIntegrationRevocation;
   /** Notification configuration in the notifications schema (LIF-1464). */
   getNotificationConfig(session: AuthSession): Promise<NotificationConfig>;
+  setNotificationControls(session: AuthSession, input: SetNotificationControlsRequest): Promise<NotificationConfig>;
+  setNotificationPreferences(session: AuthSession, input: SetNotificationPreferencesRequest): Promise<NotificationConfig>;
   companyMapping: CompanyMappingOperation;
   listSlackNotificationChannels(session: AuthSession): Promise<SlackNotificationChannels>;
   upsertNotificationDestination(
@@ -769,6 +772,8 @@ const defaultDependencies: AppDependencies = {
   enqueueIntegrationRevocation: async () => {
     throw new Error("enqueueIntegrationRevocation is not configured");
   },
+  setNotificationControls: async () => { throw new Error("setNotificationControls is not configured"); },
+  setNotificationPreferences: async () => { throw new Error("setNotificationPreferences is not configured"); },
   getNotificationConfig: async () => {
     throw new Error("getNotificationConfig is not configured");
   },
@@ -1340,6 +1345,27 @@ export function createApp(
     );
     return context.json(NotificationDestinationSchema.parse(result));
   });
+
+  for (const [path, schema, operation] of [
+    ["controls", SetNotificationControlsRequestSchema, (session: AuthSession, input: unknown) => dependencies.setNotificationControls(session, SetNotificationControlsRequestSchema.parse(input))],
+    ["preferences", SetNotificationPreferencesRequestSchema, (session: AuthSession, input: unknown) => dependencies.setNotificationPreferences(session, SetNotificationPreferencesRequestSchema.parse(input))],
+  ] as const) {
+    app.openAPIRegistry.registerPath({ method: "put", path: `/v1/notifications/${path}`,
+      operationId: path === "controls" ? "setNotificationControls" : "setNotificationPreferences", security: [{ bearerAuth: [] }],
+      request: { body: { required: true, content: { "application/json": { schema } } } },
+      responses: { 200: JsonResponse(NotificationConfigSchema), 400: JsonResponse(ErrorResponseSchema),
+        401: JsonResponse(ErrorResponseSchema), 403: JsonResponse(ErrorResponseSchema), 409: JsonResponse(ErrorResponseSchema) },
+    });
+    app.put(`/v1/notifications/${path}`, async context => {
+      const body = await readRequestTextWithinLimit(context.req.raw, MAX_CREATE_WORKSPACE_BYTES);
+      if (!body.ok) return errorJson(context, 413, "PAYLOAD_TOO_LARGE", "Notification settings exceed 16 KiB.");
+      let value: unknown;
+      try { value = JSON.parse(body.text); } catch { value = null; }
+      const parsed = schema.safeParse(value);
+      if (!parsed.success) return errorJson(context, 400, "INVALID_REQUEST", "Notification settings are invalid.");
+      return context.json(NotificationConfigSchema.parse(await operation(context.get("authSession"), parsed.data)));
+    });
+  }
 
   app.post(
     "/v1/notifications/destinations/:destination_ref/test",

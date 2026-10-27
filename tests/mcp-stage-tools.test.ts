@@ -26,7 +26,7 @@ describe("generated MCP stage operations", () => {
       const name = stage === "summary" && action === "next_step" ? "next_step" : `${listedStage.replace(/-/g, "_")}_${action}`;
       const supported = Object.keys(operation.responses).some(status => status.startsWith("2"));
       const notificationWrite = stage === "notifications" && action === "patch";
-      const names = notificationWrite ? ["notifications_destination_upsert", "notifications_route_set"]
+      const names = notificationWrite ? ["notifications_destination_upsert", "notifications_route_set", "notifications_controls_set", "notifications_preferences_set"]
         : stage === "notifications" && action === "post" ? ["notifications_connect"] : [name];
       const matches = tools.filter(tool => names.includes(tool.name));
       expect(matches.length, name).toBe(supported ? names.length : 0);

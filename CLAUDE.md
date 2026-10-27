@@ -229,8 +229,8 @@ and a CRM connection never implies customer-source consent.
 
 ### Notifications
 
-No module page yet; the interim doc is the services notifications README.
-Configuration goes through the `notifications` schema's customer-edge
+Module page: [Notifications & Slack](https://linear.app/lifty-corp/document/lead-gen-system-notifications-and-slack-a6e52a3fd81f).
+Configuration and delivery controls go through the `notifications` schema's customer-edge
 functions with the caller's session; the legacy `*_lifty_notification_*` RPCs
 are not called. Type codes are checked by shape, so a new catalog type needs no
 API release. Test sends trigger `notifications-test` in the notifications

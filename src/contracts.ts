@@ -230,6 +230,21 @@ export const IntegrationConnectionStatusSchema = z.union([
 export const NotificationTypeCodeSchema = z.string().max(100).regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/);
 export const NotificationChannelSchema = z.enum(["slack", "email"]);
 
+const notificationSources = z.array(z.enum(["email", "linkedin"])).min(1).max(2).refine(v => new Set(v).size === v.length);
+const notificationChannels = z.array(NotificationChannelSchema).min(1).max(2).refine(v => new Set(v).size === v.length);
+export const NotificationSettingsSchema = z.object({
+  enabled: z.boolean(), sources: notificationSources, channels: notificationChannels, version: z.number().int().nonnegative(),
+}).strict();
+export const NotificationControlsSchema = z.object({ global: NotificationSettingsSchema, workspace: NotificationSettingsSchema }).strict();
+export const SetNotificationControlsRequestSchema = NotificationSettingsSchema.omit({ version: true }).extend({ expected_version: z.number().int().nonnegative() });
+export const SetNotificationPreferencesRequestSchema = z.object({
+  notification_type: NotificationTypeCodeSchema,
+  channels: z.array(NotificationChannelSchema).max(2).refine(v => new Set(v).size === v.length),
+  slack_destination_ref: z.uuid().nullable(),
+}).strict().refine(v => v.channels.includes("slack") === (v.slack_destination_ref !== null), "A Slack choice requires its destination");
+export type SetNotificationControlsRequest = z.infer<typeof SetNotificationControlsRequestSchema>;
+export type SetNotificationPreferencesRequest = z.infer<typeof SetNotificationPreferencesRequestSchema>;
+
 export const SlackNotificationChannelSchema = z
   .object({
     id: z.string().regex(/^[CG][A-Z0-9]{2,31}$/),
@@ -252,6 +267,7 @@ export const NotificationCatalogTypeSchema = z
     paused: z.boolean(),
     // Reaches the owner email only while no active Slack destination is subscribed.
     email_fallback: z.boolean(),
+    email_explicit: z.boolean().optional(),
   })
   .strict();
 
@@ -286,6 +302,7 @@ export const NotificationConfigSchema = z
     slack: NotificationSlackStatusSchema,
     types: z.array(NotificationCatalogTypeSchema),
     destinations: z.array(NotificationDestinationSchema),
+    controls: NotificationControlsSchema.optional(),
   })
   .strict();
 
