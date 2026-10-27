@@ -41,8 +41,9 @@ const run = { state: "succeeded", run_ref: "run-1", requested_leads: 5, leads_di
   error_code: null, started_at: at, completed_at: at, reviewed_at: at, workspace: { workspace_ref: workspaceRef, name: "Example" }, leads: [] };
 const senderId = "22222222-2222-4222-8222-222222222222";
 const linkedinAccount = (status: string) => ({ id: "11111111-1111-4111-8111-111111111111", sender_id: senderId, channel: "linkedin",
-  identity: "https://www.linkedin.com/in/ada", status, state: "active", checked_at: at, observation: { state: "verified" },
-  connected_at: at, disconnected_at: null, access_revoked_at: null, declaration: null, sends: { today: 0, last_7_days: 0 } });
+  identity: "https://www.linkedin.com/in/ada", status, state: "active", sending: { allowed: true, reason: null, scope: null }, limits: null,
+  checked_at: at, observation: { state: "verified" }, connected_at: at, disconnected_at: null, access_revoked_at: null, access_removal: null,
+  declaration: null, sends: { today: 0, last_7_days: 0 } });
 const founder = (status: string) => ({ id: senderId, version: 1, name: "Ada Founder", signature: null, booking_url: null,
   accounts: [linkedinAccount(status)] });
 const activeLinkedin = { ...campaignSummary, state: "active" };

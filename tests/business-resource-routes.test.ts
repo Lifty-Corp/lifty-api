@@ -956,8 +956,9 @@ const sendersFixture = {
   workspace: { workspace_ref: workspaceRef, name: "Example", state: "ready_for_connections" },
   senders: [{ id: laneFixture.id, version: 1, name: "Ana Pérez", signature: null, booking_url: null, accounts: [{
     id: laneFixture.personas[0]!.id, sender_id: laneFixture.id, channel: "email" as const, identity: "ana@example.test",
-    status: "connected" as const, state: "active" as const, checked_at: profileFixture.updated_at, observation: { state: "verified" as const },
-    connected_at: profileFixture.updated_at, disconnected_at: null, access_revoked_at: null,
+    status: "connected" as const, state: "active" as const, sending: { allowed: true, reason: null, scope: null }, limits: { emails_per_day: 10 },
+    checked_at: profileFixture.updated_at, observation: { state: "verified" as const },
+    connected_at: profileFixture.updated_at, disconnected_at: null, access_revoked_at: null, access_removal: null,
     declaration: { mailbox_use: "habitual" as const, declared_by: null, declared_at: profileFixture.updated_at },
     sends: { today: 1, last_7_days: 3 } }] }],
 };

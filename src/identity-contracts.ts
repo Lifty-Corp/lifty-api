@@ -48,9 +48,8 @@ export const AccountSchema = z.object({
   identity: z.string().min(1).max(2048).nullable(),
   status: z.enum(["connected", "needs_reconnect", "disconnected"]),
   state: z.enum(["active", "paused"]),
-  // Optional until the Functions migration 20261013160000 is live everywhere.
-  sending: Sending.optional(),
-  limits: Limits.nullable().optional(),
+  sending: Sending,
+  limits: Limits.nullable(),
   disconnect_pause: z.object({ count: Count, can_resume: z.boolean() }).strict().optional(),
   checked_at: Timestamp.nullable(),
   observation: z.object({ state: z.enum(["verified", "unverified"]) }).strict(),
@@ -59,7 +58,7 @@ export const AccountSchema = z.object({
   access_revoked_at: Timestamp.nullable(),
   // pending: Lifty still holds provider access to remove; not_applicable: a
   // previous tool's account Lifty never authorized, so nothing to remove.
-  access_removal: z.enum(["pending", "confirmed", "not_applicable"]).nullable().optional(),
+  access_removal: z.enum(["pending", "confirmed", "not_applicable"]).nullable(),
   declaration: Declaration.nullable(),
   // Connection-only deployments have no receipt metrics; null is unavailable.
   sends: z.object({ today: Count, last_7_days: Count }).strict().nullable(),
