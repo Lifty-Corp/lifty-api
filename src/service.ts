@@ -22,7 +22,9 @@ import { createWarmupSetup } from "./warmup-setup.js";
 
 import { randomBytes } from "node:crypto";
 
+import { createAnalytics, createPostHogSink, noopAnalytics, type Analytics } from "./analytics.js";
 import { createApp } from "./app.js";
+import { createWorkspaceAnalyticsReads } from "./workspace-analytics.js";
 import { renderCliAuthPage } from "./cli-auth-page.js";
 import { renderPasswordRecoveryPage } from "./password-recovery-page.js";
 import { DEFAULT_DASHBOARD_ORIGIN, loadConfig, type ServiceConfig } from "./config.js";
@@ -46,7 +48,15 @@ import {
 import { createAcquisitionVerificationTrigger, createCrmSyncTrigger, createCrmMappingTrigger, createFirstRunTrigger, createIntegrationRevocationTrigger, createNotificationTestTrigger, createWarmupVerifyTrigger } from "./trigger-client.js";
 import { confirmRunReview, disconnectIntegration, getCrmSyncStatus, getRunStatus, getWorkspaceStatus, getNotificationConfig, setNotificationControls, setNotificationPreferences, listSlackNotificationChannels, upsertNotificationDestination, setNotificationRoute, sendNotificationTest, startCrmSyncRun, startRun } from "./workspace-operations.js";
 
+// Module-cached so the process can flush the queue once on shutdown.
+let analytics: Analytics = noopAnalytics;
+export const shutdownAnalytics = (): Promise<void> => analytics.shutdown();
+
 export function createProductionApp(config: ServiceConfig) {
+  const logAnalytics = (event: object) => process.stderr.write(`${JSON.stringify(event)}\n`);
+  analytics = config.posthog
+    ? createAnalytics({ sink: createPostHogSink(config.posthog, logAnalytics), reads: createWorkspaceAnalyticsReads(), log: logAnalytics })
+    : noopAnalytics;
   const emailKey = config.serverKeys?.email ?? null;
   const accounts = config.accounts ? createAccountConnection(config.accounts) : null;
   const identifyWarmupMailbox=config.accounts?createWarmupMailboxIdentifier(config.accounts.provider):null;
@@ -78,6 +88,7 @@ export function createProductionApp(config: ServiceConfig) {
   };
   return createApp({
     runtimeProfile: config.runtimeProfile ?? "full",
+    analytics,
     connectionCallbacks:{
       ...(hubspot && hubspotSettings ? {hubspot:createOAuthConfirmation({provider:"hubspot",origin:new URL(hubspotSettings.publicBaseUrl).origin,...config.supabase,
         open:state=>openHubspotConnectIntent(state,hubspotSettings.clientSecret),complete:hubspot.completeCallback})} : {}),

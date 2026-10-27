@@ -28,6 +28,7 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppDependencies, AppEnvironment } from "./app.js";
 import type { ConnectionProvider } from "./connection-attempt.js";
 import { PublicError } from "./errors.js";
+import { markInternalRequest } from "./analytics.js";
 import { CompanyPlanSchema } from "./company-mapping/contract.js";
 import { ConfirmRunReviewRequestSchema, CrmConnectionStatusSchema, CrmSyncStatusSchema, NotificationConfigSchema, RunStatusSchema, StartCrmSyncResultSchema, StartRunResultSchema, WorkspaceStatusSchema } from "./contracts.js";
 import { readCrmConnection } from "./crm-connection.js";
@@ -299,8 +300,9 @@ export function registerStageRoutes(app: OpenAPIHono<AppEnvironment>, dependenci
     }
     headers.set("accept", "application/json");
     if (body !== undefined) headers.set("content-type", "application/json");
-    return app.request(route, { method, headers, signal: context.req.raw.signal,
-      ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+    // The outer stage operation is the founder action analytics records.
+    return app.request(markInternalRequest(new Request(new URL(route, context.req.url), { method, headers, signal: context.req.raw.signal,
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }) })));
   }
   async function workspace(context: Context<AppEnvironment>) {
     const state = WorkspaceStatusSchema.parse(await dependencies.getWorkspace(context.get("authSession")));
@@ -313,12 +315,15 @@ export function registerStageRoutes(app: OpenAPIHono<AppEnvironment>, dependenci
     const session = context.get("authSession");
     // A CRM attempt UUID belongs to exactly one provider ledger; an unknown one
     // still reads as not found for both.
+    let resolved: ConnectionProvider = provider === "crm" ? "hubspot" : provider;
     const result = provider !== "crm" ? await dependencies.getConnectionAttempt(session, provider, ref, workspaceRef)
       : await dependencies.getConnectionAttempt(session, "hubspot", ref, workspaceRef).catch(error => {
-        if (error instanceof PublicError && error.status === 404) return dependencies.getConnectionAttempt(session, "attio", ref, workspaceRef);
+        if (error instanceof PublicError && error.status === 404) { resolved = "attio"; return dependencies.getConnectionAttempt(session, "attio", ref, workspaceRef); }
         throw error;
       });
     if (result.attempt_ref !== ref) throw new PublicError({ status: 502, code: "CONNECTION_ATTEMPT_UNAVAILABLE", message: "The authorization could not be verified. Retry the same attempt." });
+    // The attempt status names no provider; the milestone needs it (LIF-1663).
+    context.set("analyticsFacts", { provider: resolved });
     return context.json(ConnectionAttemptStatusSchema.parse(result));
   }
   const authorization = (value: { attempt_ref?: string | undefined; intent_ref?: string | undefined; connect_url: string; expires_at?: string | undefined }) => {

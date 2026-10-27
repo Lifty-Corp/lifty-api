@@ -47,6 +47,8 @@ export interface ServiceConfig {
     apiUrl: string;
     secretKey: string;
   } | null;
+  /** PostHog product analytics (LIF-1663). Null captures nothing. */
+  posthog?: { apiKey: string; host: string } | null;
 }
 
 const FORBIDDEN_SECRET_NAMES = [
@@ -234,6 +236,13 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
   const triggerKey = runtimeProfile === "full" ? required(environment, "TRIGGER_SECRET_KEY") : null;
   const notificationsTriggerKey = runtimeProfile === "full" ? required(environment, "NOTIFICATIONS_TRIGGER_SECRET_KEY") : null;
   if (triggerKey && notificationsTriggerKey === triggerKey) throw new Error("NOTIFICATIONS_TRIGGER_SECRET_KEY must be distinct from TRIGGER_SECRET_KEY.");
+  // The public project key the dashboards already use; absent means no capture.
+  const posthogKey = environment.POSTHOG_API_KEY?.trim();
+  if (posthogKey && !/^[A-Za-z0-9_]{16,200}$/.test(posthogKey)) throw new Error("POSTHOG_API_KEY must be a single project API key.");
+  const posthogHost = secureUrl(environment.POSTHOG_HOST?.trim() || "https://us.i.posthog.com", "POSTHOG_HOST");
+  if (posthogHost.protocol !== "https:" || posthogHost.username || posthogHost.password || posthogHost.pathname !== "/" || posthogHost.search || posthogHost.hash) {
+    throw new Error("POSTHOG_HOST must be an HTTPS origin.");
+  }
   return {
     runtimeProfile,
     publicBaseUrl: publicBaseUrl.toString().replace(/\/$/, ""),
@@ -306,5 +315,6 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
         .replace(/\/$/, ""),
       secretKey: notificationsTriggerKey,
     } : null,
+    posthog: posthogKey ? { apiKey: posthogKey, host: posthogHost.origin } : null,
   };
 }
