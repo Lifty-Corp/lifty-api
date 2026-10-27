@@ -76,7 +76,7 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   OUTREACH_BASELINE_UNAVAILABLE: "Choose a completed saved test from this campaign as the baseline.",
   OUTREACH_SAMPLE_UNAVAILABLE: "This sample lacks saved research. Choose researched leads before testing.",
   // LIF-1670: a preview needs a person who takes part on the Campaign's channel.
-  OUTREACH_SAMPLE_SENDER_CONFLICT: "No person can sign this preview yet: the lead's person, or anyone when the lead has none, needs a connected account on this channel and, for email, a signature. Add it in Senders, then preview again.",
+  OUTREACH_SAMPLE_SENDER_CONFLICT: "No person can sign this preview yet. Add a person in Senders, with a signature for email, then preview again.",
   OUTREACH_COPY_INVALID: "Repair the saved message content using the campaign schema.",
   // LIF-1670: raised only at admission, when the lead's person was deleted,
   // changed or no longer takes part on any channel of the Journey.
