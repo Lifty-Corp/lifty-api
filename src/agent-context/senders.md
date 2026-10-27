@@ -70,3 +70,6 @@ is pending. Never claim access was removed without `access_revoked_at`.
 
 A deleted sender cannot receive connections or take part in new Journeys.
 Removing or replacing a person's account never moves their leads on its own.
+When leads wait on a person's lost account and their outreach has not started,
+move them with `lead_reassign_post` (`lifty context campaigns`); it never moves
+contacted leads.

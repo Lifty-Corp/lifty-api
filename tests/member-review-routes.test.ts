@@ -34,6 +34,9 @@ const rewriteBody = { request_ref: message.message_ref, source_digest: message.s
 const rewrite = { ...captures.approve, message: { ...message, review_status: "pending" }, rewrite_work: {
   work_ref: message.message_ref, message_ref: message.message_ref, source_digest: message.source_digest, state: "queued",
   replacement_message_ref: null, error_code: null } };
+// LIF-1671: hand-written until the Functions suite captures reassign_lifty_leads (pending_capture).
+const reassignBody = sql.requests.reassign.body;
+const reassign = sql.reassign;
 type Case = { action: keyof typeof memberReviewOperationDefinitions; receipt: unknown; body?: unknown; ref?: string };
 const cases: Case[] = [
   { action: "review_settings_get", receipt: { workspace, settings } },
@@ -48,6 +51,7 @@ const cases: Case[] = [
   { action: "message_rewrite_post", ref: message.message_ref, receipt: rewrite, body: rewriteBody },
   { action: "lead_stop_post", ref: message.lead_ref, body: { request_ref: message.message_ref, confirm: true },
     receipt: { workspace, lead_ref: message.lead_ref, stopped_at: time, provider_stops_pending: true } },
+  { action: "lead_reassign_post", body: reassignBody, receipt: reassign },
 ];
 function harness(receipt: unknown) {
   const rpc = vi.fn(async () => ({ data: receipt, error: null }));
@@ -72,11 +76,14 @@ describe("member Review transport", () => {
       expect(contracts.ReplyTurnResultSchema.safeParse(receipt).success).toBe(false);
     for (const receipt of [sql.email_approve, sql.email_uncertain, sql.rewrite, sql.rewrite_done]) contracts.CampaignMessageResultSchema.parse(receipt);
     contracts.StopLeadOutreachResultSchema.parse(sql.stop);
+    expect(sql.pending_capture.entries).toEqual(expect.arrayContaining(["reassign", "reassign_round_robin"]));
     for (const [action, request, receipt] of [
       ["review_settings_patch", sql.requests.settings_update, sql.settings_changed],
       ["message_rating_post", sql.requests.rating, sql.rating],
       ["message_rewrite_post", sql.requests.rewrite, sql.rewrite],
       ["lead_stop_post", sql.requests.stop, sql.stop],
+      ["lead_reassign_post", sql.requests.reassign, sql.reassign],
+      ["lead_reassign_post", sql.requests.reassign_round_robin, sql.reassign_round_robin],
     ] as const) {
       const path = request.path as { message_id?: string; turn_id?: string; lead_id?: string };
       expect(memberReviewReceiptMatches(action, { path: {
@@ -133,6 +140,14 @@ describe("member Review transport", () => {
       ["message_rewrite_post", { ...rewrite, revisions: [{ ...sample, account_id: message.lead_ref }] }],
       ["message_rewrite_post", { ...rewrite, rewrite_work: { ...rewrite.rewrite_work, state: "done", replacement_message_ref: null } }],
       ["lead_stop_post", { workspace, lead_ref: message.message_ref, stopped_at: time, provider_stops_pending: false }],
+      // Another request's receipt, another set of leads, another person or an incoherent result.
+      ["lead_reassign_post", { ...reassign, request_ref: message.message_ref }],
+      ["lead_reassign_post", { ...reassign, results: reassign.results.slice(1) }],
+      ["lead_reassign_post", { ...reassign, results: [...reassign.results, { ...reassign.results[0]!, lead_ref: message.message_ref }] }],
+      ["lead_reassign_post", { ...reassign, results: [{ ...reassign.results[0]!, to_sender_id: message.sender_id }, ...reassign.results.slice(1)] }],
+      ["lead_reassign_post", { ...reassign, results: [{ ...reassign.results[0]!, to_sender_id: null }, ...reassign.results.slice(1)] }],
+      ["lead_reassign_post", { ...reassign, results: [reassign.results[0], { ...reassign.results[1]!, refusal: null }, reassign.results[2]] }],
+      ["lead_reassign_post", { ...reassign, results: [...reassign.results.slice(0, 2), { ...reassign.results[2]!, to_sender_id: message.sender_id }] }],
     ];
     for (const [action, receipt] of changed) {
       const value = cases.find(value => value.action === action)!;
@@ -165,6 +180,14 @@ describe("member Review transport", () => {
   it("rejects invalid consent and revision selectors before any RPC", async () => {
     for (const [action, body] of [
       ["lead_stop_post", { request_ref: message.message_ref, confirm: false }],
+      ["lead_reassign_post", { ...reassignBody, confirm: false }],
+      ["lead_reassign_post", { ...reassignBody, reason: " " }],
+      ["lead_reassign_post", { ...reassignBody, reason: "x".repeat(501) }],
+      ["lead_reassign_post", { ...reassignBody, leads: { lead_refs: [] } }],
+      ["lead_reassign_post", { ...reassignBody, leads: { lead_refs: [message.lead_ref, message.lead_ref] } }],
+      ["lead_reassign_post", { ...reassignBody, leads: { lead_refs: [message.lead_ref], from_sender_id: message.sender_id } }],
+      ["lead_reassign_post", { ...reassignBody, to: { kind: "sender" } }],
+      ["lead_reassign_post", { ...reassignBody, sender_ids: [message.sender_id] }],
       ["message_rewrite_post", { ...rewriteBody, expected_review_status: "approved" }],
       ["reply_review_post", { ...replyBody, expected_version: -1 }],
       ["reply_review_post", { ...replyBody, action: "skip" }],
@@ -232,5 +255,7 @@ describe("member Review transport", () => {
     }
     for (const name of ["campaigns_message_review_post", "campaigns_reply_review_post", "campaigns_lead_stop_post"])
       expect(tools.find(tool => tool.name === name)!.annotations.openWorldHint, name).toBe(true);
+    // Reassignment contacts nobody.
+    expect(tools.find(tool => tool.name === "campaigns_lead_reassign_post")!.annotations.openWorldHint).toBe(false);
   });
 });

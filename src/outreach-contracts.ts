@@ -437,6 +437,26 @@ export const StopLeadOutreachSchema = z.object({ request_ref: Ref, confirm: z.li
 export const StopLeadOutreachResultSchema = z.object({ ...Workspace, lead_ref: Ref, stopped_at: Timestamp,
   provider_stops_pending: z.boolean(),
 }).strict();
+// LIF-1671: move admitted leads whose outreach has not started to another
+// participating person. It contacts nobody; leads with any contact are refused.
+const ReassignTarget = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("sender"), sender_id: Ref }).strict(),
+  z.object({ kind: z.literal("round_robin") }).strict(),
+]);
+export const ReassignLeadsSchema = z.object({ request_ref: Ref, confirm: z.literal(true), reason: text(500),
+  leads: z.union([z.object({ lead_refs: uniqueRefs }).strict(), z.object({ from_sender_id: Ref }).strict()]),
+  to: ReassignTarget,
+}).strict();
+const ReassignRefusal = z.enum(["outreach_started", "lead_not_found", "not_admitted", "sender_not_participating",
+  "sender_channels_mismatch", "no_participating_sender"]);
+export const ReassignLeadsResultSchema = z.object({ ...Workspace, request_ref: Ref, actor_ref: Ref, reassigned_at: Timestamp,
+  reason: z.string(), to: ReassignTarget, remaining: z.number().int().nonnegative(),
+  results: z.array(z.object({ lead_ref: Ref, outcome: z.enum(["reassigned", "unchanged", "refused"]),
+    from_sender_id: Ref.nullable(), to_sender_id: Ref.nullable(), refusal: ReassignRefusal.nullable(),
+  }).strict().refine(result => result.outcome === "reassigned" ? result.to_sender_id !== null && result.refusal === null
+    : result.outcome === "refused" ? result.refusal !== null : result.from_sender_id === result.to_sender_id,
+  "A moved lead names its new person, a refused lead its refusal and an unchanged lead keeps its person.")).max(5000),
+}).strict();
 export const CampaignMessageReviewSchema = z.object({ action: z.enum(["approve", "skip", "retry"]), source_digest: Digest,
   expected_review_status: z.enum(["pending", "enroll_failed"]), reason: text(2000).optional(),
   feedback: z.object({ rating: z.enum(["up", "down"]), note: text(2000) }).strict().optional(),
