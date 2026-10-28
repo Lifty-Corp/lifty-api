@@ -1007,6 +1007,7 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
   it.each([
     ["research_limit_reached", "research_schedule_status", "resets_at"],
     ["search_exhausted", "targeting_patch", "wider targeting"],
+    ["targeting_matched_nobody", "targeting_patch", "not a wider market"],
     ["research_failed", "sample_review_post", "Retry once"],
     ["calibration_sample_incomplete", "sample_review_post", "Retry once"],
     ["calibration_review_required", "sample_review_post", "same saved people"],
@@ -1205,6 +1206,27 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
     expect(result.recommended_tools).not.toContain("sample_review_confirm");
     expect(result.actions.join(" ")).toContain("already confirmed this sample");
     expect(result.actions.join(" ")).toContain("set up LinkedIn outreach");
+  });
+  // LIF-1696: a lane that matched nobody is named whatever the sample's outcome.
+  it("names a lane that matched nobody on a failed and on a successful sample", async () => {
+    const live = { lane_ref: "11111111-1111-4111-8111-111111111111", matching_people: 449,
+      personas: [{ persona_ref: "p-1", name: "Quote desk - commercial lighting", matching_people: 449 }] };
+    const dead = { lane_ref: "22222222-2222-4222-8222-222222222222", matching_people: 0,
+      personas: [{ persona_ref: "p-2", name: "Quote desk - commercial plumbing", matching_people: 0 }] };
+    const named = "22222222-2222-4222-8222-222222222222 (Quote desk - commercial plumbing) matched nobody";
+    const failed = await (await harness(undefined, null, { getRunStatus: async () => ({
+      ...runFixture, state: "failed" as const, error_code: "targeting_matched_nobody", lanes: [dead] }) })
+      .request("/v1/workspace/next-step")).json();
+    expect(failed).toMatchObject({ reason: "sample_failed", receipt: { lanes: [dead] } });
+    expect(failed.actions.join(" ")).toContain(named);
+    // The reason's own action carries the repair; it is not repeated.
+    expect(failed.actions.join(" ")).not.toContain("Repair that lane first");
+    expect(failed.recommended_tools).toEqual(expect.arrayContaining(["targeting_get", "targeting_patch"]));
+    const review = await (await emailHarness({ accounts: [], run: { ...runFixture, reviewed_at: null, lanes: [live, dead] } } as never)
+      .request("/v1/workspace/next-step")).json();
+    expect(review.reason).toBe("sample_ready_for_founder_review");
+    expect(review.actions.join(" ")).toContain(`${named} in this sample (receipt.lanes, matching_people 0), so its share never fills. Repair that lane first`);
+    expect(review.actions.join(" ")).not.toContain(live.lane_ref);
   });
   it("confirms the exact run and reports a sample that cannot be confirmed yet", async () => {
     const h = harness(undefined, null, runAdapters);
