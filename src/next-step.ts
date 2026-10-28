@@ -146,6 +146,11 @@ const sampleFailures: Record<z.infer<typeof RunErrorCodeSchema>, { action: strin
     action: `The search ran out of new matching people. Propose one specific wider targeting change; after the founder agrees, save it with ${tool("targeting", "patch")} and its expected_version, then start a new sample with ${tool("sample-review", "post")}.`,
     tools: [tool("targeting", "get"), tool("targeting", "patch"), tool("sample-review", "post")],
   },
+  // LIF-1696: a filter matched nobody; repair the named lane, never widen.
+  targeting_matched_nobody: {
+    action: `A Targeting lane matched nobody, so the sample could not fill. The repair is that lane's filter, not a wider market: read ${tool("targeting", "get")}, inspect the named lane's keywords, industries, industry codes, titles, seniorities, locations and employee ranges, and change the one most likely to match no one while keeping the founder's market. Confirm a material change with the founder, save it with ${tool("targeting", "patch")} and its expected_version, then start a new sample with ${tool("sample-review", "post")}.`,
+    tools: [tool("targeting", "get"), tool("targeting", "patch"), tool("sample-review", "post")],
+  },
   research_failed: {
     action: `Research failed for a technical reason. Retry once with ${tool("sample-review", "post")}; it reuses the saved people and completed research. If it fails again, tell the founder LIFT is looking into it.`,
     tools: [tool("sample-review", "post")],
@@ -159,6 +164,19 @@ const sampleFailures: Record<z.infer<typeof RunErrorCodeSchema>, { action: strin
     tools: [tool("sample-review", "post")],
   },
 };
+// A lane that matched nobody is named whatever the sample's outcome (LIF-1696),
+// so a dead lane is never silent when other lanes fill the sample.
+type RunLanes = { lanes?: Array<{ lane_ref: string; matching_people: number; personas: Array<{ name: string }> }> | null | undefined };
+const hasDeadLane = (run: RunLanes) => (run.lanes ?? []).some(lane => lane.matching_people === 0);
+const laneTools = (run: RunLanes) => hasDeadLane(run) ? [tool("targeting", "get"), tool("targeting", "patch")] : [];
+function deadLanes(run: RunLanes, withRepair: boolean): string[] {
+  const dead = (run.lanes ?? []).filter(lane => lane.matching_people === 0);
+  if (dead.length === 0) return [];
+  const named = `Targeting lane ${dead.map(lane => `${lane.lane_ref} (${lane.personas.map(persona => persona.name).join(", ")})`).join("; ")} matched nobody in this sample (receipt.lanes, matching_people 0)`;
+  return [withRepair
+    ? `${named}, so its share never fills. Repair that lane first: inspect its filters with ${tool("targeting", "get")} and change the one most likely to match no one, keeping the founder's market; confirm a material change with the founder before ${tool("targeting", "patch")}.`
+    : `${named}.`];
+}
 // Parts 3 and 4 classify the founder's mailboxes from today's reads (LIF-1260):
 // "ready" is warmup ready and a passing placement test until LIF-1223 replaces
 // that check. An unreadable status is unknown, never ready or held.
@@ -383,10 +401,11 @@ export async function getNextStep(
       "sample_failed",
       [
         `The sample stopped with reason ${run.error_code ?? "research_failed"}. Read ${tool("sample-review", "get")} for the saved people and explain the reason plainly.`,
+        ...deadLanes(run, run.error_code !== "targeting_matched_nobody"),
         failure.action,
         "Saved leads stay usable; outreach setup does not have to wait for the sample.",
       ],
-      [tool("sample-review", "get"), ...failure.tools],
+      [...new Set([tool("sample-review", "get"), ...laneTools(run), ...failure.tools])],
       run,
     );
   }
@@ -496,6 +515,7 @@ export async function getNextStep(
       "sample_ready_for_founder_review",
       [
         "Show the researched leads from receipt.leads (sample_review_get only if you need more): your read first, then person, company, grade, LinkedIn URL, fit rationale and evidence gaps. Include lower-fit profiles and explain their mismatch.",
+        ...deadLanes(run, true),
         run.reviewed_at
           ? "The founder already confirmed this sample: do not ask for the review again. A targeting change still follows summary_context task targeting or research-criteria, its synchronous PATCH/readback, then a new sample."
           : `Ask one question: does this confirm the targeting, or what should change? A change follows summary_context task targeting or research-criteria, its synchronous PATCH/readback, then a new sample. When the founder confirms the sample or moves on without changes, record it once with ${tool("sample-review", "confirm")} and run_ref ${run.run_ref}; a new sample needs its own confirmation.`,

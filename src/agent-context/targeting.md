@@ -12,8 +12,12 @@ PATCH sends expected_version and lanes:
 
 Lanes you do not list stay unchanged. personas, when given, replaces that lane's list: keep each existing persona's id to preserve its identity; a persona without id is new.
 
+company.industries accepts only the published industry labels (the enum in the PATCH schema), written exactly as listed, and industry codes must exist in 2022 NAICS. Translate the founder's words into labels or codes yourself; never ask the founder for either. Another value returns 422 TARGETING_INVALID with the field path, the rejected value and close valid options; resend the option that keeps the founder's meaning. A read lists saved values search cannot use in filter_warnings: they find nobody, so replace them with a filter-only PATCH that keeps the confirmed meaning and tell the founder in one line.
+
 A persona change (added, removed, renamed, titles, type or email requirement changed) needs regenerated_criteria in the same PATCH, because the criteria describe the personas: both change together or neither does. regenerated_criteria carries the criteria expected_version and the regenerated text and/or research_fields; author it with references.configuration. Without it the server returns CRITERIA_REGENERATION_REQUIRED and writes nothing. Filter-only edits regenerate nothing.
 
 Changed filters affect the next discovery; people already found are not repeated. After calibration, when several people were disqualified for a reason a filter could cover, propose that filter and explain that it keeps research on people who can fit (references.calibration). On VERSION_CONFLICT read the latest targeting and reapply only the intended change. Initial creation belongs to setup; targeting is never deleted or activated here.
 
 `email_requirement` is `verified` (the default for new personas) or `optional`. Optional email admits email-unavailable prospects only while LinkedIn is active; it never permits email outreach to placeholder addresses. Preserve this field and each stable persona id when renaming or changing titles. Omitting it in PATCH preserves the saved persona policy; omitting it for a new persona defaults to verified.
+
+company.keywords restricts the employer, never the person: a company passes when it is tagged with any of the comma-separated terms. Keep each term to one or two words; a long phrase or a company name usually matches nobody, and named companies belong in company.domains (references.configuration).

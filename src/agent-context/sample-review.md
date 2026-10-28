@@ -6,9 +6,11 @@ Read `references.common` and `references.calibration` in full.
 ## Read current state
 
 GET returns the existing run, actual grades, evidence/links, its calibration
-policy and `reviewed_at`, set once the founder confirmed this sample. It does not
-invent a review result. Preserve historical policy and grades; old cohorts are
-not new research.
+policy and `reviewed_at`, set once the founder confirmed this sample. `lanes`
+lists what each Targeting lane's search matched (`lane_ref` is the lane's
+`id`, with each persona's count); `matching_people: 0` means that lane matched
+nobody, whatever the run's outcome. It does not invent a review result.
+Preserve historical policy and grades; old cohorts are not new research.
 
 ## Founder confirmation
 
@@ -57,7 +59,14 @@ A failed sample's `error_code` is one of these customer reasons:
 - `research_limit_reached`: this week's volume ran out. Give `resets_at`
   from `research-schedule status`; start again after it.
 - `search_exhausted`: the targeting ran out of new matching people. Propose
-  one specific wider targeting change and, once agreed, a new sample.
+  one specific wider targeting change and, once agreed, a new sample. Repair
+  any lane with `matching_people: 0` first.
+- `targeting_matched_nobody`: a lane's filters matched nobody, so its places
+  could not fill. This is not a small market: never widen it. In `lanes`,
+  inspect each lane with `matching_people: 0` (keywords, industries, industry
+  codes, titles, seniorities, locations, employee ranges), change the one
+  filter most likely to match no one within the founder's market, confirm a
+  material change with the founder, then start a new sample.
 - `research_failed`: a technical failure. Retry once with POST; it reuses the
   saved people and completed research.
 - `calibration_sample_incomplete`: some people lack current research, a valid

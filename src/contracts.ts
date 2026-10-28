@@ -41,6 +41,7 @@ export const RunErrorCodeSchema = z.enum([
   "calibration_review_required",
   "research_failed",
   "search_exhausted",
+  "targeting_matched_nobody",
   "research_limit_reached",
 ]);
 
@@ -75,6 +76,17 @@ const RunLeadSchema = z
   })
   .strict();
 
+// What one Targeting lane's search matched in the sample (LIF-1696): lane_ref
+// is the Targeting lane id; only personas that searched are listed. A lane with
+// matching_people 0 matched nobody. Optional until the database returns it;
+// null when the run recorded no lane evidence.
+const RunLanePersonaSchema = z
+  .object({ persona_ref: z.string().min(1), name: z.string(), matching_people: z.number().int().nonnegative() })
+  .strict();
+const RunLaneSchema = z
+  .object({ lane_ref: z.string().min(1), matching_people: z.number().int().nonnegative(), personas: z.array(RunLanePersonaSchema) })
+  .strict();
+
 export const RunStatusSchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("none") }).strict(),
   z
@@ -92,6 +104,7 @@ export const RunStatusSchema = z.discriminatedUnion("state", [
       reviewed_at: z.string().nullable(),
       workspace: WorkspaceReferenceSchema,
       leads: z.array(RunLeadSchema).nullable(),
+      lanes: z.array(RunLaneSchema).nullable().optional(),
     })
     .strict(),
 ]);

@@ -85,13 +85,20 @@ Preserve all existing lanes, persona identities, industry codes and domains.
 - personas, when given, replaces that lane's list. Keep an existing persona's
   id and email_requirement to preserve its identity and email policy; a persona without id is new. Persona names are
   labels; titles drive buyer search.
-- company.industries holds classification labels. A broad label such as real
-  estate does not by itself establish software fit or exclude brokerages.
-- company.industry_codes and excluded_industry_codes apply NAICS industry
-  filters. Filter first: put a known exclusion a filter can express in
-  Targeting so research does not repeatedly spend budget discovering the same
-  preventable mismatch. Only exclusions that need evidence become criteria
-  disqualifiers.
+- company.industries takes only labels from the published industry label enum
+  in the targeting and setup request schemas, written exactly as listed;
+  search finds nobody for any other value. Translate the founder's words into
+  labels or NAICS codes yourself and never ask the founder for either. When no
+  label fits, use industry_codes. A rejected label or code returns a 422
+  repair issue with close valid options: resend the one that keeps the
+  founder's meaning. A broad label such as real estate does not by itself
+  establish software fit or exclude brokerages.
+- company.industry_codes and excluded_industry_codes take 2022 NAICS codes at
+  any level from 2 to 6 digits, with the ranged sectors 31-33, 44-45 and 48-49
+  written as each two-digit part. Filter first: put a known exclusion a filter
+  can express in Targeting so research does not repeatedly spend budget
+  discovering the same preventable mismatch. Only exclusions that need
+  evidence become criteria disqualifiers.
 - company.employees is always a list of ordered, non-overlapping
   `{min, max}` ranges; max null means no ceiling. Use the confirmed headcount
   target, or only an explicitly approved proxy for another unit. ARR, revenue
@@ -99,9 +106,13 @@ Preserve all existing lanes, persona identities, industry codes and domains.
   maximum of 99.
 - person_locations is buyer location; company.locations is headquarters.
   Copy the independently confirmed decisions; do not substitute one for the other.
-- company.keywords is a confirmed company-description phrase, not Boolean
-  syntax, an exact industry filter or proof of fit. Domains can narrow search
-  to explicitly selected companies.
+- company.keywords restricts the employer: discovery keeps only people whose
+  company is tagged with at least one of its comma-separated terms. Use short
+  industry or product terms of one or two words, such as
+  `lighting, lighting controls`. Terms match whole words in the company's
+  tags, so a long phrase such as `commercial lighting products` usually matches
+  nobody. It is not Boolean syntax, a company name, a job title or proof of
+  fit. Domains can narrow search to explicitly selected companies.
 - seniorities uses the published neutral enum, only when it adds precision
   beyond titles. Never guess display labels or broaden unrelated title groups.
 - personas preserves every confirmed name and title. Role and the
@@ -242,7 +253,7 @@ provider credentials or operational tools.
 Confirmed inputs: founders who own sales at B2B SaaS companies headquartered in
 the United States or Canada with 1–99 employees; one persona, `Founder buyer`,
 titled Founder; dedicated sales leaders excluded; buyer location explicitly
-unrestricted; company phrase `software`; ARR not a requirement; the founder
+unrestricted; company keyword `software`; ARR not a requirement; the founder
 wants each lead's sales-leadership finding recorded. Headquarters and size are
 search filters; the sales-leader exclusion needs evidence, so it is a
 disqualifier. The saved draft:
@@ -285,7 +296,7 @@ disqualifier. The saved draft:
     ]
   },
   "evidence": [
-    { "kind": "founder_statement", "text": "Buyer location can stay open; search the phrase software." }
+    { "kind": "founder_statement", "text": "Buyer location can stay open; search companies tagged software." }
   ]
 }
 ```
@@ -294,7 +305,7 @@ The generated criteria (source_versions copied from the context are omitted here
 
 ```json
 {
-  "text": "## ICP gate\nTarget B2B SaaS companies headquartered in the United States or Canada whose founder owns sales. Search already filters headquarters, headcount and the software phrase; verify them because filter data can be wrong. Buyer residence is unrestricted. Inspect product/pricing pages and customer cases for an owned business software product; check company contact/about information and its LinkedIn profile for HQ. A local customer or office is not HQ. Check founder profiles and commercial activity for responsibility such as demos or buying decisions; a title alone is insufficient. Record supported, contradicted and unknown criteria with dated sources.\n## Hard disqualifiers\nExclude a confirmed current dedicated sales leader. Resolve the exact company/domain and LinkedIn identity, then search current people at that company for Head/VP/Director of Sales, CRO and equivalent responsibility. For a small team review available current profiles across functions, and corroborate with its team page. Check current employment and ownership of sales; former employees, AEs/SDRs, advisers and fractional consultants do not by title alone prove the exclusion. If LinkedIn people results are inaccessible, try company-scoped professional-profile web search and the team page. Record searches, profiles reviewed and coverage limits. A reviewed small team with a commercially active founder and no dedicated leader found supports founder-led sales as an explicit inference. Zero search results, partial coverage and tool errors do not prove absence.\n## Size gate\nRequire 1–99 employees. Check current company headcount evidence, including its LinkedIn profile and company disclosures; distinguish estimates and listed LinkedIn members from total employees. Seek another source when a range crosses 99. Confirmed 100 or more employees fails the boundary; missing or ambiguous size remains unknown. ARR is not required for this example.\n## Tier definitions\nA: strong positive company and buyer fit with no confirmed exclusion; the reviewed-team proxy can support A without public ARR or an explicit statement that no sales leader exists. B: meaningful fit with substantively weaker company or buyer evidence. C: a confirmed dedicated sales leader or clear target mismatch, including a consumer-only product or verified HQ or headcount outside the confirmed boundaries. Unknown evidence alone neither downgrades a lead nor proves A. Report retrieval failures and unfinished checks honestly; they are not negative company facts. Preserve the rationale and sources in the existing research output.",
+  "text": "## ICP gate\nTarget B2B SaaS companies headquartered in the United States or Canada whose founder owns sales. Search already filters headquarters, headcount and the software keyword; verify them because filter data can be wrong. Buyer residence is unrestricted. Inspect product/pricing pages and customer cases for an owned business software product; check company contact/about information and its LinkedIn profile for HQ. A local customer or office is not HQ. Check founder profiles and commercial activity for responsibility such as demos or buying decisions; a title alone is insufficient. Record supported, contradicted and unknown criteria with dated sources.\n## Hard disqualifiers\nExclude a confirmed current dedicated sales leader. Resolve the exact company/domain and LinkedIn identity, then search current people at that company for Head/VP/Director of Sales, CRO and equivalent responsibility. For a small team review available current profiles across functions, and corroborate with its team page. Check current employment and ownership of sales; former employees, AEs/SDRs, advisers and fractional consultants do not by title alone prove the exclusion. If LinkedIn people results are inaccessible, try company-scoped professional-profile web search and the team page. Record searches, profiles reviewed and coverage limits. A reviewed small team with a commercially active founder and no dedicated leader found supports founder-led sales as an explicit inference. Zero search results, partial coverage and tool errors do not prove absence.\n## Size gate\nRequire 1–99 employees. Check current company headcount evidence, including its LinkedIn profile and company disclosures; distinguish estimates and listed LinkedIn members from total employees. Seek another source when a range crosses 99. Confirmed 100 or more employees fails the boundary; missing or ambiguous size remains unknown. ARR is not required for this example.\n## Tier definitions\nA: strong positive company and buyer fit with no confirmed exclusion; the reviewed-team proxy can support A without public ARR or an explicit statement that no sales leader exists. B: meaningful fit with substantively weaker company or buyer evidence. C: a confirmed dedicated sales leader or clear target mismatch, including a consumer-only product or verified HQ or headcount outside the confirmed boundaries. Unknown evidence alone neither downgrades a lead nor proves A. Report retrieval failures and unfinished checks honestly; they are not negative company facts. Preserve the rationale and sources in the existing research output.",
   "research_fields": [
     {
       "key": "sales_leadership",
