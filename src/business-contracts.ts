@@ -188,6 +188,7 @@ export const CompanyTargetingSchema = z
       (value) => value,
     ).nullable(),
     employees: EmployeeRangesSchema.nullable(),
+    // Comma-separated employer keyword tags; discovery matches the company, not the person (LIF-1589).
     keywords: text(1000).nullable(),
   })
   .strict();

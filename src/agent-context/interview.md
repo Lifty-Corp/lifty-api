@@ -159,8 +159,10 @@ already given; a general "sounds good" cannot confirm an unmentioned boundary.
   (max null for no ceiling): an actual employee boundary, or an explicitly
   approved discovery proxy for another metric. A proxy must not silently become
   a hard exclusion; keep the real metric in criteria_inputs.size.
-- company.keywords is a founder-confirmed description phrase or null. It is
-  generic text search, not a Boolean expression or a guaranteed industry filter.
+- company.keywords is null or founder-confirmed employer terms, comma-separated:
+  short industry or product words the company itself is tagged with
+  ("lighting, lighting controls"). A company matching any term passes. Never a
+  description sentence, a company name, a buyer title or a Boolean expression.
 - company.industry_codes and excluded_industry_codes enforce known industry
   inclusions or exclusions before research. Use valid codes rather than guessing.
 - criteria_inputs.broad_search_confirmed is true only when the founder
