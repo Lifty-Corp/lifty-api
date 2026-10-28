@@ -21,5 +21,7 @@ A failed run is terminal; a read error is not. Retry a failed read with the
 same run and cursor. Use `sample_review_get` to read a failure and explain its
 `error_code` reason: `research_failed` may be retried once with
 `sample_review_post`; `research_limit_reached` reports its reset time;
-`search_exhausted` calls for one specific wider targeting change. Never buy
-new leads to chase better grades.
+`search_exhausted` calls for one specific wider targeting change;
+`targeting_matched_nobody` names lanes whose filters matched nobody, so repair
+that lane's filter within the founder's market instead of widening it. Never
+buy new leads to chase better grades.
