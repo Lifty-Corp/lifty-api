@@ -14,7 +14,7 @@ import { stageOperations } from "./stage-contracts.js";
  * through this module even by mistake.
  */
 
-export type AnalyticsSurface = "mcp" | "http" | "cli";
+export type AnalyticsSurface = "mcp" | "http" | "cli" | "dashboard";
 
 export interface AnalyticsCapture {
   distinctId: string;
@@ -216,10 +216,11 @@ export function markInternalRequest<T extends Request>(request: T): T {
 }
 export const isInternalRequest = (request: Request): boolean => internalRequests.has(request);
 
-/** mcp for trusted MCP dispatches; cli once the installed CLI names itself; http otherwise. */
+/** mcp for trusted MCP dispatches; cli and dashboard when the client names itself in its user agent; http otherwise. */
 export function analyticsSurface(trustedMcp: boolean, userAgent: string | undefined): AnalyticsSurface {
   if (trustedMcp) return "mcp";
-  return /^lifty-cli\b/i.test(userAgent ?? "") ? "cli" : "http";
+  if (/^lifty-cli\b/i.test(userAgent ?? "")) return "cli";
+  return /^lifty-dashboard\b/i.test(userAgent ?? "") ? "dashboard" : "http";
 }
 
 // ---------------------------------------------------------------- runtime
