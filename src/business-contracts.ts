@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { IndustryLabelInputSchema, NaicsCodeInputSchema } from "./targeting-vocabulary.js";
 
 export const RepairIssueSchema = z
   .object({
@@ -152,6 +153,14 @@ export const SenioritySchema = z.enum([
   "intern",
 ]);
 const naicsCodes = unique(z.string().regex(/^[0-9]{2,6}$/), 100, (value) => value).nullable();
+// Writes publish the industry label enum and 2022 NAICS codes; the operation
+// layer rejects values outside them with repair options (LIF-1694). Reads keep
+// the tolerant shapes so a value saved before that check still loads.
+const companyWrites = {
+  industries: unique(IndustryLabelInputSchema, 50, (value) => value).nullable(),
+  industry_codes: unique(NaicsCodeInputSchema, 100, (value) => value).nullable(),
+  excluded_industry_codes: unique(NaicsCodeInputSchema, 100, (value) => value).nullable(),
+};
 // One shape for every lane: an ordered list of non-overlapping ranges.
 export const EmployeeRangesSchema = z
   .array(
@@ -192,6 +201,7 @@ export const CompanyTargetingSchema = z
     keywords: text(1000).nullable(),
   })
   .strict();
+const CompanyTargetingWriteSchema = CompanyTargetingSchema.extend(companyWrites).strict();
 export const PersonaEmailRequirementSchema = z.enum(["verified", "optional"]);
 const PersonaValues = {
   name: text(120),
@@ -204,6 +214,7 @@ const LaneFilters = {
   person_locations: list(),
   company: CompanyTargetingSchema,
 };
+const LaneWriteFilters = { ...LaneFilters, company: CompanyTargetingWriteSchema };
 // Persona ids are opaque server ids. Migrated personas carry md5-derived ids
 // without RFC 4122 version/variant bits, so accept any GUID shape.
 export const PersonaSchema = z.object({ id: z.guid(), ...PersonaValues }).strict();
@@ -218,7 +229,13 @@ export const TargetingSchema = z
   })
   .strict();
 export const TargetingGetSchema = z
-  .object({ workspace_ref: z.uuid(), targeting: TargetingSchema.nullable() })
+  .object({
+    workspace_ref: z.uuid(),
+    targeting: TargetingSchema.nullable(),
+    // Saved industry labels or codes search cannot use, with repair options.
+    // Present only when some exist; the API computes it on every read.
+    filter_warnings: z.array(RepairIssueSchema).max(20).optional(),
+  })
   .strict();
 
 // Research fields: what Scout must find for every lead (custom_fields.<key>).
@@ -276,11 +293,11 @@ export const TargetingLaneChangeSchema = z.union([
       personas: LanePersonas.optional(),
       seniorities: LaneFilters.seniorities.optional(),
       person_locations: LaneFilters.person_locations.optional(),
-      company: CompanyTargetingSchema.partial().optional(),
+      company: CompanyTargetingWriteSchema.partial().optional(),
     })
     .strict()
     .refine((value) => Object.keys(value).some((key) => key !== "id"), "Supply a changed lane field."),
-  z.object({ personas: LanePersonas, ...LaneFilters, company: CompanyTargetingSchema.partial() }).strict(),
+  z.object({ personas: LanePersonas, ...LaneWriteFilters, company: CompanyTargetingWriteSchema.partial() }).strict(),
 ]);
 export const TargetingPatchSchema = z
   .object({
@@ -300,9 +317,9 @@ export const TargetingPatchSchema = z
 
 // Setup draft: Targeting without ids (the server assigns them on submit), the
 // inputs the criteria are written from, and the evidence behind them.
-const DraftLaneSchema = z
-  .object({ personas: unique(z.object({ ...PersonaValues, email_requirement: PersonaEmailRequirementSchema.optional() }).strict(), 30, (value) => value.name).min(1), ...LaneFilters })
-  .strict();
+const DraftPersonas = unique(z.object({ ...PersonaValues, email_requirement: PersonaEmailRequirementSchema.optional() }).strict(), 30, (value) => value.name).min(1);
+const DraftLaneSchema = z.object({ personas: DraftPersonas, ...LaneFilters }).strict();
+const DraftLaneWriteSchema = z.object({ personas: DraftPersonas, ...LaneWriteFilters }).strict();
 export const CriteriaInputsSchema = z
   .object({
     primary_motion: z.object({ name: text(200) }).strict().nullable(),
@@ -320,9 +337,9 @@ export const CriteriaInputsSchema = z
     ),
   })
   .strict();
-export const SetupDraftSchema = z
+const setupDraft = (lane: typeof DraftLaneSchema | typeof DraftLaneWriteSchema) => z
   .object({
-    targeting: z.object({ lanes: DraftLaneSchema.array().min(1).max(20) }).strict(),
+    targeting: z.object({ lanes: lane.array().min(1).max(20) }).strict(),
     criteria_inputs: CriteriaInputsSchema,
     evidence: z
       .array(
@@ -350,6 +367,9 @@ export const SetupDraftSchema = z
         });
     });
   });
+/** A saved draft as read; a save uses SetupDraftWriteSchema. */
+export const SetupDraftSchema = setupDraft(DraftLaneSchema);
+export const SetupDraftWriteSchema = setupDraft(DraftLaneWriteSchema);
 const SETUP_GATES = ["motion", "market", "exclusions", "boundaries", "persona"] as const;
 export const SetupGatesSchema = z
   .object({
@@ -385,7 +405,7 @@ export const SetupDraftGetSchema = z
 export const SetupDraftPatchSchema = z
   .object({
     expected_version: z.number().int().nonnegative(),
-    draft: SetupDraftSchema,
+    draft: SetupDraftWriteSchema,
     generated_criteria: GeneratedCriteriaSchema.nullable(),
   })
   .strict();

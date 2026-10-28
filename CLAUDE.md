@@ -162,6 +162,14 @@ gets the git version; a failed draft read serves published context.
 `GET /v1/admin/context` feeds the ops editor. Promotion opens a pull request
 here, checked by the Verify workflow.
 
+### Targeting vocabulary
+
+`src/generated/industry-labels.ts` and `src/generated/naics-2022.ts` are
+generated: regenerate them with `scripts/industry-labels.mjs` and
+`scripts/sync-naics-2022.mjs`, never by hand. Writes enforce them in
+`src/targeting-vocabulary.ts`; read schemas stay tolerant so values saved
+earlier still load and appear in `filter_warnings` (README).
+
 ### Writing rules
 
 The banned-phrase list is the database rulebook Jobs composes against

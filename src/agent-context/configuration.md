@@ -85,10 +85,17 @@ Preserve all existing lanes, persona identities, industry codes and domains.
 - personas, when given, replaces that lane's list. Keep an existing persona's
   id and email_requirement to preserve its identity and email policy; a persona without id is new. Persona names are
   labels; titles drive buyer search.
-- company.industries holds classification labels. A broad label such as real
-  estate does not by itself establish software fit or exclude brokerages.
-- company.industry_codes and excluded_industry_codes apply NAICS industry
-  filters. Filter first: put a known exclusion a filter can express in
+- company.industries takes only labels from the published industry label enum
+  in the targeting and setup request schemas, written exactly as listed; search
+  finds nobody for any other value. Translate the founder's words into labels
+  or NAICS codes yourself and never ask the founder for either. When no label
+  fits, use industry_codes. A rejected label or code returns INVALID_REQUEST
+  with close valid options: resend the one that keeps the founder's meaning. A
+  broad label such as real estate does not by itself establish software fit or
+  exclude brokerages.
+- company.industry_codes and excluded_industry_codes take 2022 NAICS codes at
+  any level from 2 to 6 digits, with the ranged sectors 31-33, 44-45 and 48-49
+  written as each two-digit part. Filter first: put a known exclusion a filter can express in
   Targeting so research does not repeatedly spend budget discovering the same
   preventable mismatch. Only exclusions that need evidence become criteria
   disqualifiers.

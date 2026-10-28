@@ -106,8 +106,9 @@ motions in parked_motions without interviewing them.
 
 ### Initial ICP
 
-Capture the target market (industries or industry codes), the size boundary
-and the founder's actual exclusions. If the founder bundles two operating
+Capture the target market in the founder's words and record it yourself as
+published industry labels or NAICS industry codes; never ask the founder for
+either. Capture the size boundary and the founder's actual exclusions. If the founder bundles two operating
 states, ask which is primary only when the distinction changes the initial
 search, and record the split in operating_state.
 

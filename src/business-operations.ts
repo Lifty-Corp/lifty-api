@@ -3,6 +3,7 @@ import type { AuthSession } from "./app.js";
 import { PublicError } from "./errors.js";
 import { rpcFailure } from "./rpc-errors.js";
 import * as contracts from "./business-contracts.js";
+import { targetingVocabularyIssues } from "./targeting-vocabulary.js";
 const Empty = z.object({}).strict();
 export const businessOperationDefinitions = {
   business: {
@@ -206,6 +207,37 @@ export function validateBusinessRequest(
     issues,
   });
 }
+type Rpc = { rpc(name: string, args: Record<string, unknown>): Promise<{ data: unknown; error: unknown }> };
+const businessUnavailable = (operation: string) => ({
+  operation,
+  code: "BUSINESS_UNAVAILABLE",
+  message: "Business state could not be verified. Read the resource before retrying a write.",
+});
+// LIF-1694: search finds nobody for an industry label or NAICS code outside the
+// published lists, so a write that sets one is refused before the database.
+function refuseUnsearchable(issues: ReturnType<typeof targetingVocabularyIssues>, message: string) {
+  if (issues.length) throw new PublicError({ status: 400, code: "INVALID_REQUEST", message, issues });
+}
+const REPAIR_MESSAGE = "Replace these industry labels or NAICS codes; search finds nobody with them.";
+// Setup submits the saved draft, which may predate the check: read it first.
+async function refuseUnsearchableDraft(session: AuthSession, expectedVersion: number) {
+  let result: { data: unknown; error: unknown };
+  try {
+    result = await (session.client as Rpc).rpc("get_lifty_setup_draft", { p_workspace_id: session.workspaceRef ?? null });
+  } catch (cause) {
+    throw rpcFailure(cause, businessUnavailable("get_lifty_setup_draft"));
+  }
+  if (result.error) throw rpcFailure(result.error, businessUnavailable("get_lifty_setup_draft"));
+  const saved = contracts.SetupDraftGetSchema.safeParse(result.data);
+  if (!saved.success)
+    throw new PublicError({ status: 502, code: "BUSINESS_UNAVAILABLE", message: "The setup draft could not be verified. Read it before submitting." });
+  // A submitted draft replays its receipt and another version is the database's conflict.
+  if (saved.data.submitted || saved.data.version !== expectedVersion) return;
+  refuseUnsearchable(
+    targetingVocabularyIssues(saved.data.draft?.targeting.lanes, ["draft", "targeting", "lanes"]),
+    "The saved setup draft has industry labels or NAICS codes search cannot use. Replace them with setup_patch_draft, then submit the version it returns.",
+  );
+}
 // The workspace is resolved in the database by the shared selection rule from
 // the x-lifty-workspace header the session client forwards. Typed database
 // errors map through the one table in rpc-errors.ts.
@@ -216,25 +248,25 @@ export async function executeBusinessOperation(
 ): Promise<unknown> {
   const entry = businessEntries().find((entry) => entry.key === key);
   if (!entry) throw new Error("Unknown Business operation");
+  if (key === "targeting.patch")
+    refuseUnsearchable(targetingVocabularyIssues((payload as { lanes: unknown }).lanes, ["lanes"]), REPAIR_MESSAGE);
+  if (key === "setup.patch_draft")
+    refuseUnsearchable(
+      targetingVocabularyIssues((payload as { draft: { targeting: { lanes: unknown } } }).draft.targeting.lanes, ["draft", "targeting", "lanes"]),
+      REPAIR_MESSAGE,
+    );
+  if (key === "setup.post")
+    await refuseUnsearchableDraft(session, (payload as { expected_draft_version: number }).expected_draft_version);
   const args =
     key === "business.post"
       ? { p_payload: payload }
       : key === "setup.post"
         ? { p_workspace_id: session.workspaceRef ?? null, p_expected_draft_version: (payload as { expected_draft_version: number }).expected_draft_version }
         : { p_workspace_id: session.workspaceRef ?? null, ...(entry.definition.method === "PATCH" ? { p_payload: payload } : {}) };
-  const unavailable = {
-    operation: entry.definition.rpc,
-    code: "BUSINESS_UNAVAILABLE",
-    message:
-      "Business state could not be verified. Read the resource before retrying a write.",
-  };
+  const unavailable = businessUnavailable(entry.definition.rpc);
   let result: { data: unknown; error: unknown };
   try {
-    result = await (
-      session.client as {
-        rpc(name: string, args: Record<string, unknown>): Promise<{ data: unknown; error: unknown }>;
-      }
-    ).rpc(entry.definition.rpc, args);
+    result = await (session.client as Rpc).rpc(entry.definition.rpc, args);
   } catch (cause) {
     throw rpcFailure(cause, unavailable);
   }
@@ -254,7 +286,7 @@ export async function executeBusinessOperation(
         ...context.data,
         generation_rules: contracts.SETUP_GENERATION_RULES,
         criteria_schema: z.toJSONSchema(contracts.GeneratedCriteriaSchema, { io: "input" }),
-        draft_schema: z.toJSONSchema(contracts.SetupDraftSchema, { io: "input" }),
+        draft_schema: z.toJSONSchema(contracts.SetupDraftWriteSchema, { io: "input" }),
       }
     : result.data;
   const parsed = entry.definition.response.safeParse(data);
@@ -264,6 +296,11 @@ export async function executeBusinessOperation(
       code: "BUSINESS_UNAVAILABLE",
       message: "The resource response could not be verified. Retry its read.",
     });
+  if (key === "targeting.get" || key === "targeting.patch") {
+    const targeting = parsed.data as z.infer<typeof contracts.TargetingGetSchema>;
+    const warnings = targetingVocabularyIssues(targeting.targeting?.lanes, ["targeting", "lanes"]);
+    if (warnings.length) return { ...targeting, filter_warnings: warnings };
+  }
   return parsed.data;
 }
 
