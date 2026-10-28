@@ -201,9 +201,13 @@ describe("operation analytics", () => {
     expect(log.mock.calls.map(([event]) => event.stage)).toEqual(["capture", "shutdown"]);
   });
 
-  it("names the surface from the MCP fence and the installed CLI's user agent", () => {
+  it("names the surface from the MCP fence and the CLI's or dashboard's user agent", () => {
     expect(analyticsSurface(true, "lifty-cli/1.2.0")).toBe("mcp");
+    expect(analyticsSurface(true, "lifty-dashboard")).toBe("mcp");
     expect(analyticsSurface(false, "lifty-cli/1.2.0 node/22")).toBe("cli");
+    expect(analyticsSurface(false, "lifty-dashboard")).toBe("dashboard");
+    expect(analyticsSurface(false, "Lifty-Dashboard/2026.10")).toBe("dashboard");
+    expect(analyticsSurface(false, "lifty-dashboards")).toBe("http");
     expect(analyticsSurface(false, "node")).toBe("http");
     expect(analyticsSurface(false, undefined)).toBe("http");
   });

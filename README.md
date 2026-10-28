@@ -131,7 +131,7 @@ that are not read-only, such as `crm.mapping_sources`) and per `next_step`
 read, the session heartbeat. Polling and other reads send nothing.
 
 - `api_operation_completed` / `api_operation_failed` carry `operation`
-  (`resource.action`), `surface` (`mcp`, `cli`, `http`), `request_id`,
+  (`resource.action`), `surface` (`mcp`, `cli`, `dashboard`, `http`), `request_id`,
   `duration_ms`, `http_status`, `outcome` and, on failure, the public
   `error_code`. Never the message or a provider body.
 - `distinct_id` is the Supabase user id, as in the dashboard's `identify`.
@@ -167,8 +167,10 @@ read, the session heartbeat. Polling and other reads send nothing.
   PostHog never changes a response. Events batch (10 events or 5 seconds) and
   flush once on `SIGTERM`/`SIGINT`; failures log `analytics_failed` without
   bodies. A stage adapter that forwards into its owning route counts once.
-- `surface: cli` needs the installed CLI to send a `lifty-cli/<version>`
-  user agent; until it does, CLI calls read as `http`.
+- `surface` comes from the MCP fence first, then the user agent:
+  `lifty-cli/<version>` is `cli` and `lifty-dashboard` (the dashboard's
+  server requests) is `dashboard`. Anything else, including CLI releases
+  that send no user agent, reads as `http`.
 
 ## Local development
 
