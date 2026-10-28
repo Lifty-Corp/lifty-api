@@ -22,6 +22,8 @@ Filter first: an exclusion a search filter can express (industry codes, employee
 
 Read setup_generation_context for the actual current Scout base, confirmed profile, draft and API schemas/rules. Generate only the criteria, then save the unchanged draft with generated_criteria `{text, research_fields, source_versions: {profile_version, base_version}}` copied from that context; the server binds the resulting draft version. Never translate targeting into a second local artifact or compute versions yourself.
 
+Draft saves accept only published industry labels and 2022 NAICS codes, and submission refuses a saved draft holding any other value: a save returns 422 SETUP_DRAFT_INVALID and a submission 422 SETUP_INVALID, with `/draft/...` paths and close options. Repair it with setup_patch_draft, then submit the version it returns.
+
 Submit setup_post `{expected_draft_version}` once. The transaction creates Targeting and criteria together at version 1, assigns lane and persona ids and returns an imported receipt with setup_ref and exact versions. Same version replays that receipt. Lost response: read status; a failed read means unknown. SETUP_STALE names stale_sources; read fresh context and regenerate. Another setup version cannot overwrite an existing setup.
 
 Discard the draft with DELETE only before submission; after submission it is immutable history. Later edits use each resource's PATCH. Saving/submitting does not activate recurring research, CRM sync or outreach. Use next_step to resume the existing checkpoint ids.
