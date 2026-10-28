@@ -246,6 +246,24 @@ describe("member Review transport", () => {
     expect((await h.request(value, { ...replyBody, text: `  ${text}  ` })).status).toBe(202);
     expect(h.rpc).toHaveBeenCalledWith("decide_reply_turn", expect.objectContaining({ p_decision: expect.objectContaining({ text }) }));
   });
+  it("relays a reply closed because the person answered in LinkedIn, before and after SQL names that cause", async () => {
+    // LIF-1583: the cause is SQL-owned text, so the API ships before the view emits answered_in_linkedin.
+    const typed = { ...turn.history[0]!, message_ref: "6f1c2a8e-3b4d-4c5e-9f60-718293a4b5c6", status: "sent", review_status: null,
+      is_draft: false, content: "Typed directly in LinkedIn", delivery_state: "confirmed", sent_at: "2026-10-06T12:05:00Z", copy_source: "manual" };
+    const closed = (cause: string | null, label: string, detail: string) => ({ ...turn, state: "suppressed", history: [...turn.history, typed],
+      view: { ...view, status: "suppressed", cause, label, detail, actions: [], approvedText: null, decidedAt: time, overdueAt: null } });
+    for (const reply of [closed(null, "Not sending", "No reply will be sent."),
+      closed("answered_in_linkedin", "Answered in LinkedIn", "Pinned Person answered this lead directly in LinkedIn.")]) {
+      const read = await harness({ workspace, turn: reply }).request(cases.find(value => value.action === "reply_get")!);
+      expect(read.status).toBe(200);
+      expect(await read.json()).toEqual({ workspace, turn: reply });
+      // A send clicked before the closure is stale: it repaints the closed view and dispatches nothing.
+      const stale = { workspace, turn: reply, view: reply.view, outcome: "stale", dispatch: null };
+      const decision = await harness(stale).request(cases.find(value => value.action === "reply_review_post")!);
+      expect(decision.status).toBe(202);
+      expect(await decision.json()).toEqual(stale);
+    }
+  });
   it("describes deferred sends and cancellation as pending for installed agent tools", () => {
     const tools = getStageMcpTools();
     for (const name of ["campaigns_reply_review_post", "campaigns_message_rewrite_post", "campaigns_lead_stop_post"]) {
