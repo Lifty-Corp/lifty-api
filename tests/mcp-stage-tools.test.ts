@@ -50,7 +50,8 @@ describe("generated MCP stage operations", () => {
     // Every turn of a connector carries this list; keep it bounded. LIF-1622
     // added the CRM automatic sync and test sync tools (about 4,000 characters).
     // LIF-1694 publishes the industry label enum in targeting_patch (twice) and
-    // setup_patch_draft: about 7,900 characters for 122 labels.
+    // setup_patch_draft: about 9,200 characters for 147 labels. The NAICS list
+    // is never published; codes carry only a pattern.
     expect(JSON.stringify(tools).length).toBeLessThan(205_000);
     expect(tools.find(tool => tool.name === "crm_mapping_sources")!.annotations.readOnlyHint).toBe(true);
     expect(tools.find(tool => tool.name === "sending_accounts_deliverability")!.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });

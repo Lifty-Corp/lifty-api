@@ -121,7 +121,7 @@ export function registerStageRoutes(app: OpenAPIHono<AppEnvironment>, dependenci
     app.on(definition.method, definition.route, handler);
     app.openAPIRegistry.registerPath({ method: definition.method.toLowerCase() as "get" | "post" | "patch" | "delete", path: definition.route, security: [{ bearerAuth: [] }],
       request: { headers: z.object({"x-lifty-workspace":z.string().max(100).optional()}), ...(["POST", "PATCH"].includes(definition.method) ? {body:{required:true,content:{"application/json":{schema:definition.request}}}} : {}) },
-      responses: { 200: { description: definition.description, content: { "application/json": { schema: definition.response } } }, ...(key === "business.post" ? {201:{description:"Workspace created",content:{"application/json":{schema:definition.response}}}} : {}), ...Object.fromEntries([400,401,403,409,413,422,429,502].map(code=>[code,{description:"Typed resource error",content:{"application/json":{schema:StageErrorSchema}}}])) }
+      responses: { 200: { description: definition.description, content: { "application/json": { schema: definition.response } } }, ...(key === "business.post" ? {201:{description:"Workspace created",content:{"application/json":{schema:definition.response}}}} : {}), ...Object.fromEntries([401,403,409,413,422,429,502].map(code=>[code,{description:"Typed resource error",content:{"application/json":{schema:StageErrorSchema}}}])) }
     });
   }
   // Research schedule and leads (LIF-1174). As for Business, the database

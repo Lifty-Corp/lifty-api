@@ -440,12 +440,12 @@ describe("typed Business direct HTTP boundary", () => {
     const patch = (company: Record<string, unknown>) =>
       h.request("/v1/workspace/targeting", "PATCH", { expected_version: 1, lanes: [{ id: laneFixture.id, company }] });
     const label = await patch({ industries: ["Data center construction"] });
-    expect(label.status).toBe(400);
-    expect((await label.json()).error).toMatchObject({ code: "INVALID_REQUEST", issues: [{ code: "industry_label_unknown",
+    expect(label.status).toBe(422);
+    expect((await label.json()).error).toMatchObject({ code: "TARGETING_INVALID", issues: [{ code: "industry_label_unknown",
       path: "/lanes/0/company/industries/0", message: expect.stringContaining('"Data center construction"'),
       suggestion: expect.stringContaining('"construction"') }] });
     const code = await patch({ excluded_industry_codes: ["327", "999999"] });
-    expect(code.status).toBe(400);
+    expect(code.status).toBe(422);
     expect((await code.json()).error.issues).toEqual([expect.objectContaining({ code: "industry_code_unknown",
       path: "/lanes/0/company/excluded_industry_codes/1", message: expect.stringContaining('"999999"'),
       suggestion: expect.stringMatching(/"\d{2,6}" \([A-Z][^)]+\)/) })]);
@@ -463,14 +463,15 @@ describe("typed Business direct HTTP boundary", () => {
     const invalid = { ...draftFixture, targeting: { lanes: [{ ...lane, company: { ...lane.company, industries: ["Wine & Spirits"] } }] } };
     const h = harness();
     const save = await h.request("/v1/workspace/setup/draft", "PATCH", { expected_version: 1, draft: invalid, generated_criteria: null });
-    expect(save.status).toBe(400);
-    expect((await save.json()).error.issues[0].path).toBe("/draft/targeting/lanes/0/company/industries/0");
+    expect(save.status).toBe(422);
+    expect((await save.json()).error).toMatchObject({ code: "SETUP_DRAFT_INVALID",
+      issues: [expect.objectContaining({ path: "/draft/targeting/lanes/0/company/industries/0" })] });
     expect(h.rpc).not.toHaveBeenCalled();
     // A draft saved before the check cannot be submitted until it is repaired.
     const saved = harness({ ...draftGetFixture, draft: invalid });
     const submit = await saved.request("/v1/workspace/setup", "POST", { expected_draft_version: 1 });
-    expect(submit.status).toBe(400);
-    expect((await submit.json()).error).toMatchObject({ code: "INVALID_REQUEST",
+    expect(submit.status).toBe(422);
+    expect((await submit.json()).error).toMatchObject({ code: "SETUP_INVALID",
       issues: [expect.objectContaining({ path: "/draft/targeting/lanes/0/company/industries/0" })] });
     expect(saved.rpc).toHaveBeenCalledExactlyOnceWith("get_lifty_setup_draft", { p_workspace_id: null });
   });

@@ -46,9 +46,12 @@ exactly, case included. `industry_codes` and `excluded_industry_codes` must
 exist in the embedded 2022 NAICS list (`src/generated/naics-2022.ts`) at any
 2–6 digit level, with the ranged sectors 31-33, 44-45 and 48-49 written as
 their two-digit parts. A targeting PATCH or setup draft save that sets another
-value, or a setup submission whose saved draft holds one, returns 400
-`INVALID_REQUEST` with one repair issue per value: its JSON-pointer path, the
-rejected value and up to five close options (codes with their titles). Values a
+value, or a setup submission whose saved draft holds one, returns 422 with the
+route's validation code (`TARGETING_INVALID`, `SETUP_DRAFT_INVALID` or
+`SETUP_INVALID`) and one repair issue per value: its JSON-pointer path, the
+rejected value and up to five close options (codes with their titles). The
+check runs in memory against the embedded lists; only the industry label enum
+is published in schemas, never the NAICS list. Values a
 request does not set are not checked: targeting reads and PATCH responses list
 saved values search cannot use in `filter_warnings`. Regenerate the label list
 with `scripts/industry-labels.mjs` (its header records the evidence method and

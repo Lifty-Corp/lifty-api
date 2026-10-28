@@ -214,13 +214,15 @@ const businessUnavailable = (operation: string) => ({
   message: "Business state could not be verified. Read the resource before retrying a write.",
 });
 // LIF-1694: search finds nobody for an industry label or NAICS code outside the
-// published lists, so a write that sets one is refused before the database.
-function refuseUnsearchable(issues: ReturnType<typeof targetingVocabularyIssues>, message: string) {
-  if (issues.length) throw new PublicError({ status: 400, code: "INVALID_REQUEST", message, issues });
+// published lists, so a write that sets one is refused before the database,
+// with the route's own validation code. The check is in memory against the
+// embedded lists.
+function refuseUnsearchable(issues: ReturnType<typeof targetingVocabularyIssues>, code: string, message: string) {
+  if (issues.length) throw new PublicError({ status: 422, code, message, issues });
 }
 const REPAIR_MESSAGE = "Replace these industry labels or NAICS codes; search finds nobody with them.";
 // Setup submits the saved draft, which may predate the check: read it first.
-async function refuseUnsearchableDraft(session: AuthSession, expectedVersion: number) {
+async function refuseUnsearchableDraft(session: AuthSession, expectedVersion: number, code: string) {
   let result: { data: unknown; error: unknown };
   try {
     result = await (session.client as Rpc).rpc("get_lifty_setup_draft", { p_workspace_id: session.workspaceRef ?? null });
@@ -235,6 +237,7 @@ async function refuseUnsearchableDraft(session: AuthSession, expectedVersion: nu
   if (saved.data.submitted || saved.data.version !== expectedVersion) return;
   refuseUnsearchable(
     targetingVocabularyIssues(saved.data.draft?.targeting.lanes, ["draft", "targeting", "lanes"]),
+    code,
     "The saved setup draft has industry labels or NAICS codes search cannot use. Replace them with setup_patch_draft, then submit the version it returns.",
   );
 }
@@ -248,15 +251,17 @@ export async function executeBusinessOperation(
 ): Promise<unknown> {
   const entry = businessEntries().find((entry) => entry.key === key);
   if (!entry) throw new Error("Unknown Business operation");
+  const { code } = entry.definition;
   if (key === "targeting.patch")
-    refuseUnsearchable(targetingVocabularyIssues((payload as { lanes: unknown }).lanes, ["lanes"]), REPAIR_MESSAGE);
+    refuseUnsearchable(targetingVocabularyIssues((payload as { lanes: unknown }).lanes, ["lanes"]), code, REPAIR_MESSAGE);
   if (key === "setup.patch_draft")
     refuseUnsearchable(
       targetingVocabularyIssues((payload as { draft: { targeting: { lanes: unknown } } }).draft.targeting.lanes, ["draft", "targeting", "lanes"]),
+      code,
       REPAIR_MESSAGE,
     );
   if (key === "setup.post")
-    await refuseUnsearchableDraft(session, (payload as { expected_draft_version: number }).expected_draft_version);
+    await refuseUnsearchableDraft(session, (payload as { expected_draft_version: number }).expected_draft_version, code);
   const args =
     key === "business.post"
       ? { p_payload: payload }
