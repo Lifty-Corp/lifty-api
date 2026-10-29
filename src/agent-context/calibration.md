@@ -88,7 +88,8 @@ leads, invent fit, or acquire repeated waves to satisfy the objective.
    current policy. This is not permission for another acquisition wave.
    A current `calibration_sample_incomplete` result means some profile or
    research evidence is still missing; identify the missing input before retrying.
-   For `research_limit_reached`, report the reset time. A `research_failed`
+   For `research_limit_reached`, report the reset time, or offer the paid
+   plans when the plan's total ran out (`context research-schedule`). A `research_failed`
    sample may be retried once against the saved candidates, preserving
    completed research and weekly usage. Never blindly retry low-fit results
    or a reached limit. A reset date limits new research, not account
