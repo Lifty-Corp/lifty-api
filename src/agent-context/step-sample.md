@@ -6,7 +6,9 @@ as they land. Do `actions` from `next_step` in order.
 1. The sample uses five people of this week's research volume. With fewer
    than five left, `sample_review_post` returns `RESEARCH_LIMIT_REACHED` with
    `resets_at`: give that reset time and offer outreach setup with saved leads
-   meanwhile.
+   meanwhile. When `research_schedule_status` shows `limit.total_remaining`
+   below five, the plan's total ran out and no reset renews it: ask which paid
+   plan the founder wants and send them to Plan in the Lifty dashboard.
 2. `sample_review_post` with body `{}` starts or returns the bounded first run.
    Keep its `run_ref`.
 3. Tell the founder you are finding and researching five people who match,
@@ -20,7 +22,8 @@ as they land. Do `actions` from `next_step` in order.
 A failed run is terminal; a read error is not. Retry a failed read with the
 same run and cursor. Use `sample_review_get` to read a failure and explain its
 `error_code` reason: `research_failed` may be retried once with
-`sample_review_post`; `research_limit_reached` reports its reset time;
+`sample_review_post`; `research_limit_reached` reports its reset time, or the
+paid plans when the plan's total ran out;
 `search_exhausted` calls for one specific wider targeting change;
 `targeting_matched_nobody` names lanes whose filters matched nobody, so repair
 that lane's filter within the founder's market instead of widening it. Never
