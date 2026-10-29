@@ -946,6 +946,20 @@ describe("research schedule, leads and sample share one workspace rule", () => {
     expect(response.status).toBe(502);
     expect((await response.json()).error.code).toBe(code);
   });
+  // LIF-1258: the database adds a plan's total to the limit after this API
+  // accepts it, so both shapes must pass the strict response schema.
+  it.each([
+    ["/v1/workspace/research-schedule", scheduleFixture],
+    ["/v1/workspace/research-schedule/status", statusFixture],
+  ])("returns %s with a plan's total and without one", async (path, fixture) => {
+    const seed = { ...limitFixture, plan_name: "Seed", total_research_limit: 50, total_remaining: 0 };
+    const paid = { ...limitFixture, plan_name: "Growth", total_research_limit: null, total_remaining: null };
+    for (const limit of [limitFixture, seed, paid]) {
+      const response = await harness({ ...fixture, limit }).request(path);
+      expect(response.status).toBe(200);
+      expect((await response.json()).limit).toEqual(limit);
+    }
+  });
   it("starts the sample inside the weekly limit and returns the reset time when it is reached", async () => {
     const enqueue = vi.fn(async () => ({ id: "job" }));
     const h = harness(null, { code: "PT409", message: "RESEARCH_LIMIT_REACHED", details: JSON.stringify({ resets_at: "2026-10-05T00:00:00Z" }) },

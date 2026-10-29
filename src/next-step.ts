@@ -139,7 +139,7 @@ export function nextStepGuide(reason: string, drafts: readonly ContextDraft[] = 
 // Customer reasons for a failed sample and the one next move for each.
 const sampleFailures: Record<z.infer<typeof RunErrorCodeSchema>, { action: string; tools: string[] }> = {
   research_limit_reached: {
-    action: `This week's research limit was reached. Read ${tool("research-schedule", "status")} and give the founder its resets_at; start the sample again with ${tool("sample-review", "post")} after that time. Volume does not carry over and the limit is not raised by retrying.`,
+    action: `The research limit was reached. Read ${tool("research-schedule", "status")}: when limit.total_remaining is below five, the plan's total is used and no reset renews it, so ask which paid plan the founder wants and send them to Plan in the Lifty dashboard. Otherwise give the founder its resets_at and start the sample again with ${tool("sample-review", "post")} after that time. Volume does not carry over and the limit is not raised by retrying.`,
     tools: [tool("research-schedule", "status"), tool("sample-review", "post")],
   },
   search_exhausted: {
@@ -377,7 +377,7 @@ export async function getNextStep(
     return response(
       "sample_not_started",
       [
-        `${tool("sample-review", "post")} with body {} and keep its run_ref. The sample uses five people of this week's research volume; with fewer than five left it returns RESEARCH_LIMIT_REACHED and resets_at: give the founder that reset time.`,
+        `${tool("sample-review", "post")} with body {} and keep its run_ref. The sample uses five people of this week's research volume; with fewer than five left it returns RESEARCH_LIMIT_REACHED and resets_at: give the founder that reset time, unless the plan's total is what ran out (context research-schedule).`,
         "Tell the founder you are finding and researching five matching people, that it takes a few minutes, and that you will share each one as it lands.",
         `${tool("sample-review", "progress")} with run_ref, then the returned cursor and wait_seconds 25 until terminal. Keep one request open and narrate each new lead in one line.`,
         "When terminal, call next_step. This bounded initial sample does not activate weekly research or outreach.",

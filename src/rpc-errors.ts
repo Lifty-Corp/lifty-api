@@ -44,7 +44,7 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
     "Save targeting and research criteria before activating weekly research.",
   WEEK_NOT_MONDAY: "Choose a week by its Monday (UTC) in YYYY-MM-DD form.",
   RESEARCH_LIMIT_REACHED:
-    "This week's research limit has fewer than five people left for a sample. Start it again after the returned reset time.",
+    "This week's research limit, or the plan's total, has fewer than five people left for a sample. A weekly limit resets at the returned time; a used total only returns with a paid plan.",
   // Senders and sending accounts (LIF-1182).
   SENDER_INVALID: "Repair the sender fields.",
   SENDER_NOT_FOUND: "This sender is not available in the selected workspace. Read senders for current ids.",
