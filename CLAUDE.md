@@ -113,7 +113,7 @@ new Functions migration or RPC shape, the migration ships first, and this API
 must tolerate both shapes during the rollout. Lifty RPC results and
 Jobs-written receipts are parsed with strict schemas, so a database or Jobs
 change that adds a key or code to a result this API reads needs the tolerant
-API active first (Tracecrew `lead-gen-system.lifty-api.rpc-output-compatibility`).
+API active first.
 State the order in the pull request and the issue; do not add per-release
 notes here.
 
@@ -189,69 +189,55 @@ gate for campaign shape. Optional template/variant `display_name` and step
 defaults or digest changes. `slots_spec_warnings` is computed from the parsed
 revision and never blocks a write or changes saved bytes.
 `src/campaign-test-failure.ts` turns a test sample's `failure` into the founder
-message, which never shows a raw HTTP status. A new failure code needs this API
-first: an unknown code fails the response with 502.
+message, never a raw HTTP status. A new failure code needs this API first: an
+unknown code fails the response with 502.
 
 ### Connection flows
 
+The contract is on [Connections](https://linear.app/lifty-corp/document/lead-gen-system-connections-2f15a8ae4cc6).
 Every browser integration callback uses `src/connection-confirmation.ts` and
 its typed flow inventory, and must pass the shared conformance suite in
-`npm run verify` (root Connection confirmation contract, LIF-1139). Keep the
-document response independent of provider I/O and use the bounded
-processing/status requests and durable attempt receipts. Unknown outcomes stay
-pending and never replay OAuth codes or create another resource. HubSpot and
-Slack fail closed before exchanging a code if the claim RPC is unavailable.
-Mailivery tokens stay ephemeral.
+`npm run verify`. HubSpot and Slack fail closed before exchanging a code if the
+claim RPC is unavailable. Mailivery tokens stay ephemeral.
 
-Sending account connection behavior, including disposable sign-in links and
-the recovery pass, is on Senders & sending accounts. `startConnectionRecovery`
-runs a pass every 15 seconds, but the database claims due attempts
-(`recovery_claim`) and schedules each retry; keep that ownership in the
-database so several servers or a restart never lose or repeat one.
+`startConnectionRecovery` runs a pass every 15 seconds, but the database claims
+due attempts (`recovery_claim`) and schedules each retry; keep that ownership in
+the database so several servers or a restart never lose or repeat one.
 
-Warmup setup behavior is on Email deliverability. Never repeat an uncertain
-Microsoft link request, replay Google tokens or infer warmup success from
-consent alone. A failed `lifty-email-warmup-verify` trigger never fails the
-handoff; the scheduled reconcile covers it. Legacy V1 warmup identity reads
-need `UNIPILE_PROVIDER_NAMESPACE`, matching the stored connection namespace; do
-not derive it from the DSN.
+Warmup (Email deliverability): never repeat an uncertain Microsoft link
+request, replay Google tokens or infer warmup success from consent alone. A
+failed `lifty-email-warmup-verify` trigger never fails the handoff; the
+scheduled reconcile covers it. Legacy V1 warmup identity reads need
+`UNIPILE_PROVIDER_NAMESPACE`, matching the stored connection namespace; do not
+derive it from the DSN.
 
 ### Sending accounts
 
-Account limits change only through the database RPC the dashboard calls for
-LIFT admins; this API exposes no write for them. `access_removal:
-not_applicable` needs no provider revocation, so disconnect and sender delete
-return 200 for it.
+This API exposes no write for account limits; LIFT admins change them through
+the database RPC the dashboard calls. `access_removal: not_applicable` needs no
+provider revocation, so disconnect and sender delete return 200 for it.
 
 ### CRM
 
 Behavior lives on CRM integration. Capabilities come from the scopes the
-provider reports; do not gate field creation on `allow_provisioning`. A missing
-scope or a provider 403 returns `HUBSPOT_PERMISSION_REQUIRED` /
-`ATTIO_PERMISSION_REQUIRED`, and refusal codes are the same on the attempt read
-and the browser page. The database owns automatic sync and test sync and
-creates their runs; the routes (`src/crm-sync-controls.ts`) only enqueue
-`lifty-crm-sync` for the run it returns. Unavailable customer-exclusion reads
-stay unknown, a file containing only rejected rows cannot clear the saved list,
-and a CRM connection never implies customer-source consent.
+provider reports; do not gate field creation on `allow_provisioning`. The
+database owns automatic sync and test sync and creates their runs; the routes
+(`src/crm-sync-controls.ts`) only enqueue `lifty-crm-sync` for the run it
+returns.
 
 ### Analytics
 
 `src/analytics.ts` records every catalog mutation and the next_step read at
-the `/v1/*` middleware (LIF-1663; events and milestones in README "Analytics
-events"). Event and group properties pass an allow-list by name and shape:
-codes, identifiers and enum values only, never free text, addresses, links or
+the `/v1/*` middleware (events and milestones in README "Analytics events").
+Event and group properties pass an allow-list by name and shape: codes,
+identifiers and enum values only, never free text, addresses, links or
 anything read from a request body. A new milestone is one `MILESTONES` entry
 plus the README table. Keep `observe` outside the request path: no await on
 the sink, no new per-request reads before the response.
 
 ### Notifications
 
-Module page: [Notifications & Slack](https://linear.app/lifty-corp/document/lead-gen-system-notifications-and-slack-a6e52a3fd81f).
-Configuration and delivery controls go through the `notifications` schema's customer-edge
-functions with the caller's session; the legacy `*_lifty_notification_*` RPCs
-are not called. Type codes are checked by shape, so a new catalog type needs no
-API release. Test sends trigger `notifications-test` in the notifications
-service's own Trigger.dev project: the full runtime profile refuses to start
-without `NOTIFICATIONS_TRIGGER_SECRET_KEY`, which must differ from
-`TRIGGER_SECRET_KEY`.
+Behavior is on [Notifications & Slack](https://linear.app/lifty-corp/document/lead-gen-system-notifications-and-slack-a6e52a3fd81f);
+configuration and test sends are in README. Call the `notifications` schema's
+customer-edge functions with the caller's session, never the legacy
+`*_lifty_notification_*` RPCs.
