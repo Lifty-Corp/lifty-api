@@ -689,7 +689,9 @@ Every `email-deliverability.v1` inbox carries one member-facing `status` and a
 `next_step` (`code`, `owner`, `label`, `description`) built from the current
 account first, then the shared sender gate's reason, then campaigns. A missing
 send-time safety check (`email_safety_check_required`, the gate's last check)
-is not a blocker: such an inbox is `ready_idle` without an active campaign. New
+is not a blocker: such an inbox is `ready_idle` without an active campaign. A
+failed latest check arrives as `email_safety_check_failed` (LIF-1741) and is
+`on_hold`, with Lifty reviewing it. New
 status codes are `disconnected`, `needs_reconnect`, `on_hold` and
 `setup_needed`. A LIFT pause never changes the verdict; `account.outreach` and
 `connections[].controls` still report it. The dashboard reads status codes as
