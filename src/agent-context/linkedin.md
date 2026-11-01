@@ -8,7 +8,8 @@ Send the chosen workspace as `references.common` describes.
 ## Who owns what
 
 - **Campaigns** (`lifty context campaigns`) own the sequence, the message
-  content, the schedule, the permitted senders, approval, activation and pause.
+  content, the schedule, approval, activation and pause. They name no senders:
+  every person with a LinkedIn account takes part in new Journeys.
   Change LinkedIn outreach there; this stage has no settings.
 - **Sending accounts** (`lifty context sending-accounts`) own each person's
   LinkedIn account and connecting it. Connect with
@@ -20,7 +21,7 @@ Send the chosen workspace as `references.common` describes.
 - **LinkedIn** (this stage) reports what was done and why work waits.
 
 Connecting an account never starts outreach. LinkedIn work runs only for an
-approved, active Campaign that permits that sender.
+approved, active Campaign.
 
 ## People already connected to the sender
 

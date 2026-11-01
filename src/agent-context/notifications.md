@@ -1,16 +1,19 @@
 # Notifications
 
-Purpose: authorize Slack, choose Slack channels and decide which notification
-types reach each destination. Read `references.common` and
+Purpose: choose notification activity sources and delivery destinations, pause a
+workspace, and authorize Slack when Slack delivery is wanted. Read `references.common` and
 `references.connections` in full.
 
 ## Read current state
 
 GET without `attempt_ref` reads Slack status, the notification `types` and the
-`destinations`. Each type has a `code`, a `name`, the `channels` that can show
+`destinations`, plus `controls` when the shared controls migration is installed.
+`controls.global` and `controls.workspace` contain `enabled`, activity `sources`
+(`email`, `linkedin`), allowed delivery `channels` (`slack`, `email`) and `version`.
+Global restrictions win; a workspace cannot override them. Each type has a `code`, a `name`, the `channels` that can show
 it (`slack`, `email`), `default_on`, `email_fallback` and `paused` (LIFT paused
-that type for every workspace; while paused its notifications are skipped and
-never sent later).
+that type for every workspace; skipped notices are never sent later), plus
+`email_explicit` when the workspace has made an explicit destination choice.
 Each destination is a saved Slack channel (`address` is its channel ID) or the
 workspace owner's email (`channel: email`, with `address` and `name` null).
 Its `types` lists the codes it receives; `active: false` means Lifty stopped
@@ -28,7 +31,26 @@ Every workspace has one email destination: the owner's Lifty login address.
 Email needs no setup. A type with `email_fallback` reaches that email only
 while no active Slack destination receives it; once a Slack channel receives
 it, the email stops. A type whose `channels` lists only `slack` is never
-emailed.
+emailed. Replies retain legacy fallback only without connected active Slack;
+turning their Slack route off does not itself enable an email. Explicit Email or
+Both overrides fallback, while explicit Off never falls back to email.
+
+Activity source and receipt are independent: LinkedIn activity may arrive by email.
+Neutral workspace/leads/CRM notices are not guessed from a contact profile.
+Pausing preserves preferences and never resumes outreach or replays skipped notices.
+
+`notifications_controls_set` takes `body` with `enabled`, `sources`, `channels`
+and `expected_version` from the latest workspace controls read. Lists must be
+nonempty and unique; use `enabled: false` to pause. The workspace is the current
+selection; do not send a workspace ID. A stale edit returns
+`NOTIFICATION_SETTINGS_CHANGED`: read again before trying another change.
+
+`notifications_preferences_set` takes `body` with `notification_type`, `channels`
+and `slack_destination_ref`. Choose `channels: []` and a null Slack ref for Off;
+`["email"]` and null for Email; `["slack"]` or `["slack","email"]` with the saved
+Slack destination ref for Slack or Both. Only supported type channels are accepted.
+This atomically replaces that type's workspace destinations and returns the saved
+configuration. Email/Off do not require a Slack connection.
 
 ## First setup and required inputs
 
@@ -53,7 +75,10 @@ operation; do not include an `operation` selector or `values` wrapper. Read
 `notifications_get` to confirm the saved setup.
 
 The CLI and HTTP API retain PATCH with `operation: destination` or
-`operation: route` and the corresponding fields inside `values`.
+`operation: route` and the corresponding fields inside `values`. They also accept
+`operation: controls` or `operation: preferences` with the fields above in `values`.
+HTTP clients can PUT the same fields to `/v1/notifications/controls` or
+`/v1/notifications/preferences`. No global controls are exposed to founders.
 
 ## Later edits
 

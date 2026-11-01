@@ -22,7 +22,9 @@ readback) and reruns the sample. Never relabel grades, widen the
 market or invent fit. When several leads missed for the same reason a search
 filter can express (industry, company size, location), propose that Targeting
 filter: research costs time and budget, and the filter keeps it on people who
-can fit. `references.calibration` covers diagnosis.
+can fit. A lane that matched nobody (`matching_people: 0` in `lanes`) needs
+its filter repaired, never a wider market. `references.calibration` covers
+diagnosis.
 
 When the founder confirms the sample, or moves on without asking for changes,
 record it once with `sample_review_confirm` and the sample's `run_ref`.

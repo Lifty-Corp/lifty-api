@@ -41,6 +41,7 @@ export const RunErrorCodeSchema = z.enum([
   "calibration_review_required",
   "research_failed",
   "search_exhausted",
+  "targeting_matched_nobody",
   "research_limit_reached",
 ]);
 
@@ -75,6 +76,17 @@ const RunLeadSchema = z
   })
   .strict();
 
+// What one Targeting lane's search matched in the sample (LIF-1696): lane_ref
+// is the Targeting lane id; only personas that searched are listed. A lane with
+// matching_people 0 matched nobody. Optional until the database returns it;
+// null when the run recorded no lane evidence.
+const RunLanePersonaSchema = z
+  .object({ persona_ref: z.string().min(1), name: z.string(), matching_people: z.number().int().nonnegative() })
+  .strict();
+const RunLaneSchema = z
+  .object({ lane_ref: z.string().min(1), matching_people: z.number().int().nonnegative(), personas: z.array(RunLanePersonaSchema) })
+  .strict();
+
 export const RunStatusSchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("none") }).strict(),
   z
@@ -92,6 +104,7 @@ export const RunStatusSchema = z.discriminatedUnion("state", [
       reviewed_at: z.string().nullable(),
       workspace: WorkspaceReferenceSchema,
       leads: z.array(RunLeadSchema).nullable(),
+      lanes: z.array(RunLaneSchema).nullable().optional(),
     })
     .strict(),
 ]);
@@ -230,6 +243,21 @@ export const IntegrationConnectionStatusSchema = z.union([
 export const NotificationTypeCodeSchema = z.string().max(100).regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/);
 export const NotificationChannelSchema = z.enum(["slack", "email"]);
 
+const notificationSources = z.array(z.enum(["email", "linkedin"])).min(1).max(2).refine(v => new Set(v).size === v.length);
+const notificationChannels = z.array(NotificationChannelSchema).min(1).max(2).refine(v => new Set(v).size === v.length);
+export const NotificationSettingsSchema = z.object({
+  enabled: z.boolean(), sources: notificationSources, channels: notificationChannels, version: z.number().int().nonnegative(),
+}).strict();
+export const NotificationControlsSchema = z.object({ global: NotificationSettingsSchema, workspace: NotificationSettingsSchema }).strict();
+export const SetNotificationControlsRequestSchema = NotificationSettingsSchema.omit({ version: true }).extend({ expected_version: z.number().int().nonnegative() });
+export const SetNotificationPreferencesRequestSchema = z.object({
+  notification_type: NotificationTypeCodeSchema,
+  channels: z.array(NotificationChannelSchema).max(2).refine(v => new Set(v).size === v.length),
+  slack_destination_ref: z.uuid().nullable(),
+}).strict().refine(v => v.channels.includes("slack") === (v.slack_destination_ref !== null), "A Slack choice requires its destination");
+export type SetNotificationControlsRequest = z.infer<typeof SetNotificationControlsRequestSchema>;
+export type SetNotificationPreferencesRequest = z.infer<typeof SetNotificationPreferencesRequestSchema>;
+
 export const SlackNotificationChannelSchema = z
   .object({
     id: z.string().regex(/^[CG][A-Z0-9]{2,31}$/),
@@ -252,6 +280,7 @@ export const NotificationCatalogTypeSchema = z
     paused: z.boolean(),
     // Reaches the owner email only while no active Slack destination is subscribed.
     email_fallback: z.boolean(),
+    email_explicit: z.boolean().optional(),
   })
   .strict();
 
@@ -286,6 +315,7 @@ export const NotificationConfigSchema = z
     slack: NotificationSlackStatusSchema,
     types: z.array(NotificationCatalogTypeSchema),
     destinations: z.array(NotificationDestinationSchema),
+    controls: NotificationControlsSchema.optional(),
   })
   .strict();
 

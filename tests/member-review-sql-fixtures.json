@@ -1148,6 +1148,76 @@
     "history_complete": true,
     "revisions_complete": true
   },
+  "reassign": {
+    "workspace": {
+      "name": "Message revision contracts",
+      "state": "ready_for_connections",
+      "workspace_ref": "db043fba-2be7-4b89-b974-6ae112c2a0a9"
+    },
+    "request_ref": "27f33eed-550e-4363-b704-2cfc711ba081",
+    "actor_ref": "6c31250f-a341-4ee7-87ca-699b11e7fb51",
+    "reassigned_at": "2026-10-27T15:00:00.000000+00:00",
+    "reason": "Their LinkedIn account was lost; these leads have not been contacted.",
+    "to": {
+      "kind": "sender",
+      "sender_id": "ead05fe3-dc98-4dc5-a14a-c07bee430b9d"
+    },
+    "remaining": 0,
+    "results": [
+      {
+        "lead_ref": "077f303e-4ce4-444c-94dc-e7c6dd736abe",
+        "outcome": "reassigned",
+        "from_sender_id": "bdc8b6f7-231c-4ba1-95a0-b5eeaaaeec6f",
+        "to_sender_id": "ead05fe3-dc98-4dc5-a14a-c07bee430b9d",
+        "refusal": null
+      },
+      {
+        "lead_ref": "e5776e4c-55bd-418b-827a-0731dab1931b",
+        "outcome": "refused",
+        "from_sender_id": "bdc8b6f7-231c-4ba1-95a0-b5eeaaaeec6f",
+        "to_sender_id": null,
+        "refusal": "outreach_started"
+      },
+      {
+        "lead_ref": "773cf12d-37f8-4bf5-b16d-c6ad95ace14a",
+        "outcome": "unchanged",
+        "from_sender_id": "ead05fe3-dc98-4dc5-a14a-c07bee430b9d",
+        "to_sender_id": "ead05fe3-dc98-4dc5-a14a-c07bee430b9d",
+        "refusal": null
+      }
+    ]
+  },
+  "reassign_round_robin": {
+    "workspace": {
+      "name": "Message revision contracts",
+      "state": "ready_for_connections",
+      "workspace_ref": "db043fba-2be7-4b89-b974-6ae112c2a0a9"
+    },
+    "request_ref": "38b2b2a4-a2fd-486d-b23f-1795c29fe0aa",
+    "actor_ref": "6c31250f-a341-4ee7-87ca-699b11e7fb51",
+    "reassigned_at": "2026-10-27T15:05:00.000000+00:00",
+    "reason": "Their LinkedIn account was lost; these leads have not been contacted.",
+    "to": {
+      "kind": "round_robin"
+    },
+    "remaining": 0,
+    "results": [
+      {
+        "lead_ref": "077f303e-4ce4-444c-94dc-e7c6dd736abe",
+        "outcome": "reassigned",
+        "from_sender_id": "bdc8b6f7-231c-4ba1-95a0-b5eeaaaeec6f",
+        "to_sender_id": "ead05fe3-dc98-4dc5-a14a-c07bee430b9d",
+        "refusal": null
+      },
+      {
+        "lead_ref": "65434258-690d-40d3-8dd4-715d40444e09",
+        "outcome": "reassigned",
+        "from_sender_id": "bdc8b6f7-231c-4ba1-95a0-b5eeaaaeec6f",
+        "to_sender_id": "bd7b8a91-bf3e-4cd2-86c6-7c721b123aa8",
+        "refusal": null
+      }
+    ]
+  },
   "requests": {
     "settings_update": {
       "path": {
@@ -1216,6 +1286,52 @@
         "note": "Clear ask",
         "learning_scope": "voice"
       }
+    },
+    "reassign": {
+      "path": {
+        "workspace_id": "db043fba-2be7-4b89-b974-6ae112c2a0a9"
+      },
+      "body": {
+        "request_ref": "27f33eed-550e-4363-b704-2cfc711ba081",
+        "confirm": true,
+        "reason": "Their LinkedIn account was lost; these leads have not been contacted.",
+        "leads": {
+          "lead_refs": [
+            "077f303e-4ce4-444c-94dc-e7c6dd736abe",
+            "e5776e4c-55bd-418b-827a-0731dab1931b",
+            "773cf12d-37f8-4bf5-b16d-c6ad95ace14a"
+          ]
+        },
+        "to": {
+          "kind": "sender",
+          "sender_id": "ead05fe3-dc98-4dc5-a14a-c07bee430b9d"
+        }
+      }
+    },
+    "reassign_round_robin": {
+      "path": {
+        "workspace_id": "db043fba-2be7-4b89-b974-6ae112c2a0a9"
+      },
+      "body": {
+        "request_ref": "38b2b2a4-a2fd-486d-b23f-1795c29fe0aa",
+        "confirm": true,
+        "reason": "Their LinkedIn account was lost; these leads have not been contacted.",
+        "leads": {
+          "from_sender_id": "bdc8b6f7-231c-4ba1-95a0-b5eeaaaeec6f"
+        },
+        "to": {
+          "kind": "round_robin"
+        }
+      }
     }
+  },
+  "pending_capture": {
+    "entries": [
+      "reassign",
+      "reassign_round_robin",
+      "requests.reassign",
+      "requests.reassign_round_robin"
+    ],
+    "note": "Hand-written from the LIF-1671 contract until the Functions suite captures reassign_lifty_leads; replace them with that capture."
   }
 }

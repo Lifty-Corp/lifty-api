@@ -38,7 +38,7 @@ export const laneFixture = {
   person_locations: ["Argentina"],
   company: {
     locations: ["Argentina"],
-    industries: ["software"],
+    industries: ["computer software"],
     industry_codes: ["5415"],
     excluded_industry_codes: ["5241"],
     domains: null,

@@ -229,3 +229,12 @@ describe("Mailivery warmup configuration", () => {
     expect(() => loadConfig({ ...validEnvironment, LIFTY_CRM_SERVER_KEY: key, MAILIVERY_API_KEY: key })).toThrow(/distinct/);
   });
 });
+
+it("captures product analytics only with a PostHog project key and an HTTPS ingest origin (LIF-1663)", () => {
+  const key = "phc_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG";
+  expect(loadConfig(validEnvironment).posthog).toBeNull();
+  expect(loadConfig({ ...validEnvironment, POSTHOG_API_KEY: key }).posthog).toEqual({ apiKey: key, host: "https://us.i.posthog.com" });
+  expect(loadConfig({ ...validEnvironment, POSTHOG_API_KEY: key, POSTHOG_HOST: "https://eu.i.posthog.com/" }).posthog?.host).toBe("https://eu.i.posthog.com");
+  expect(() => loadConfig({ ...validEnvironment, POSTHOG_API_KEY: key, POSTHOG_HOST: "http://posthog.example.com" })).toThrow("POSTHOG_HOST");
+  expect(() => loadConfig({ ...validEnvironment, POSTHOG_API_KEY: "not a key" })).toThrow("POSTHOG_API_KEY");
+});

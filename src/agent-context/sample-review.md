@@ -6,9 +6,11 @@ Read `references.common` and `references.calibration` in full.
 ## Read current state
 
 GET returns the existing run, actual grades, evidence/links, its calibration
-policy and `reviewed_at`, set once the founder confirmed this sample. It does not
-invent a review result. Preserve historical policy and grades; old cohorts are
-not new research.
+policy and `reviewed_at`, set once the founder confirmed this sample. `lanes`
+lists what each Targeting lane's search matched (`lane_ref` is the lane's
+`id`, with each persona's count); `matching_people: 0` means that lane matched
+nobody, whatever the run's outcome. It does not invent a review result.
+Preserve historical policy and grades; old cohorts are not new research.
 
 ## Founder confirmation
 
@@ -27,7 +29,9 @@ After setup is imported, POST with an empty object body starts or re-attaches
 the five-person sample for the current targeting. It uses five people of this
 week's research volume (see `context research-schedule`); with fewer than five
 left it returns 409 `RESEARCH_LIMIT_REACHED` with `resets_at` and starts
-nothing. Give the founder that reset time. It does not repeatedly research new
+nothing. Give the founder that reset time, unless the plan's total is what ran
+out (`limit.total_remaining` below five): then follow "When the plan's total is
+used" in `context research-schedule`. It does not repeatedly research new
 people until a desired grade appears. Use the returned `run_ref` with
 `sample-review.progress` while work is pending. The first read returns immediately;
 pass its `cursor` and `wait_seconds: 25` on the next call to wait for a change.
@@ -55,9 +59,19 @@ but cannot guarantee the host narrates each lead in real time.
 A failed sample's `error_code` is one of these customer reasons:
 
 - `research_limit_reached`: this week's volume ran out. Give `resets_at`
-  from `research-schedule status`; start again after it.
+  from `research-schedule status`; start again after it. When its
+  `limit.total_remaining` is below five, the plan's total ran out instead: no
+  reset renews it, so offer the paid plans as `context research-schedule`
+  describes.
 - `search_exhausted`: the targeting ran out of new matching people. Propose
-  one specific wider targeting change and, once agreed, a new sample.
+  one specific wider targeting change and, once agreed, a new sample. Repair
+  any lane with `matching_people: 0` first.
+- `targeting_matched_nobody`: a lane's filters matched nobody, so its places
+  could not fill. This is not a small market: never widen it. In `lanes`,
+  inspect each lane with `matching_people: 0` (keywords, industries, industry
+  codes, titles, seniorities, locations, employee ranges), change the one
+  filter most likely to match no one within the founder's market, confirm a
+  material change with the founder, then start a new sample.
 - `research_failed`: a technical failure. Retry once with POST; it reuses the
   saved people and completed research.
 - `calibration_sample_incomplete`: some people lack current research, a valid

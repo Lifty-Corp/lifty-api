@@ -1,3 +1,4 @@
+import { NotificationControlsSchema, SetNotificationControlsRequestSchema, SetNotificationPreferencesRequestSchema, type SetNotificationControlsRequest, type SetNotificationPreferencesRequest } from "./contracts.js";
 import { z } from "zod";
 import type { AuthSession } from "./app.js";
 import { DisconnectResultSchema, type DisconnectResult, type Provider, RunStatusSchema, type RunStatus, StartRunResultSchema, type StartRunResult, StartCrmSyncResultSchema, type StartCrmSyncResult, CrmSyncStatusSchema, type CrmSyncStatus, WorkspaceStatusSchema, type WorkspaceStatus, NotificationChannelSchema, type NotificationConfig, type NotificationDestination, NotificationTestResultSchema, type NotificationTestResult, NotificationTypeCodeSchema, SetNotificationRouteRequestSchema, type SetNotificationRouteRequest, SlackNotificationChannelsSchema, type SlackNotificationChannels, UpsertNotificationDestinationRequestSchema, type UpsertNotificationDestinationRequest } from "./contracts.js";
@@ -369,6 +370,7 @@ function notificationsClient(session: AuthSession): RpcClient {
 // The database is the authority on the catalog: unknown type codes pass by
 // shape, and fields this API does not publish are dropped, never forwarded.
 const StoredNotificationConfigurationSchema = z.object({
+  controls: NotificationControlsSchema.optional(),
   types: z.array(z.object({
     code: NotificationTypeCodeSchema,
     name: z.string(),
@@ -376,6 +378,7 @@ const StoredNotificationConfigurationSchema = z.object({
     email_fallback: z.boolean(),
     default_on: z.boolean(),
     paused: z.boolean(),
+    email_explicit: z.boolean().optional(),
   })).nullable(),
   destinations: z.array(z.object({
     id: z.uuid(),
@@ -386,7 +389,7 @@ const StoredNotificationConfigurationSchema = z.object({
     types: z.array(NotificationTypeCodeSchema),
   })).nullable(),
 });
-type StoredNotificationConfiguration = { types: NotificationConfig["types"]; destinations: NotificationDestination[] };
+type StoredNotificationConfiguration = Pick<NotificationConfig, "types" | "destinations" | "controls">;
 
 const StoredSlackConnectionSchema = z.union([
   z.object({ status: z.literal("not_connected") }),
@@ -409,6 +412,7 @@ function notificationsRpcError(error: unknown, operation: string, forbidden: (ca
   const code = error && typeof error === "object" && "code" in error ? error.code : null;
   const mapped = code === "42501" ? forbidden(error)
     : code === "22023" ? new PublicError({ status: 400, code: "INVALID_REQUEST", message: "The notification request is invalid.", cause: error })
+    : code === "40001" ? new PublicError({ status: 409, code: "NOTIFICATION_SETTINGS_CHANGED", message: "Notification settings changed. Read them again before saving.", cause: error })
     : code === "23514" ? channelUnsupported(error)
     : code === "23503" ? typeUnknown(error)
     : mapRpcError(error);
@@ -429,8 +433,10 @@ async function readNotificationConfiguration(session: AuthSession, workspaceRef:
   const parsed = StoredNotificationConfigurationSchema.safeParse(data);
   if (!parsed.success) throw invalidResponse(parsed.error);
   return {
+    ...(parsed.data.controls ? { controls: parsed.data.controls } : {}),
     types: (parsed.data.types ?? []).map(type => ({ code: type.code, name: type.name, channels: type.channels,
-      default_on: type.default_on, paused: type.paused, email_fallback: type.email_fallback })),
+      default_on: type.default_on, paused: type.paused, email_fallback: type.email_fallback,
+      ...(type.email_explicit !== undefined ? { email_explicit: type.email_explicit } : {}) })),
     destinations: (parsed.data.destinations ?? []).map(destination => ({ destination_ref: destination.id,
       channel: destination.channel, address: destination.address, name: destination.name,
       active: destination.active, types: destination.types })),
@@ -579,4 +585,28 @@ export async function sendNotificationTest(
   const requestRef = crypto.randomUUID();
   await enqueue({ workspaceId: workspaceRef, destinationId: destination.destination_ref, requestId: requestRef });
   return NotificationTestResultSchema.parse({ destination_ref: destination.destination_ref, request_ref: requestRef, status: "queued" });
+}
+
+
+export async function setNotificationControls(session: AuthSession, input: SetNotificationControlsRequest): Promise<NotificationConfig> {
+  const value = SetNotificationControlsRequestSchema.parse(input);
+  const workspaceRef = await notificationWorkspace(session);
+  const { error } = await notificationsClient(session).rpc<unknown>("set_controls", {
+    p_workspace_id: workspaceRef, p_expected_version: value.expected_version, p_enabled: value.enabled,
+    p_sources: value.sources, p_channels: value.channels,
+  });
+  if (error) throw notificationsRpcError(error, "notifications.set_controls");
+  return getNotificationConfig(session);
+}
+
+export async function setNotificationPreferences(session: AuthSession, input: SetNotificationPreferencesRequest): Promise<NotificationConfig> {
+  const value = SetNotificationPreferencesRequestSchema.parse(input);
+  const workspaceRef = await notificationWorkspace(session);
+  if (value.channels.includes("slack")) requireUsableSlack(await readSlackStatus(session));
+  const { error } = await notificationsClient(session).rpc<unknown>("set_preferences", {
+    p_workspace_id: workspaceRef, p_type_code: value.notification_type, p_channels: value.channels,
+    p_slack_destination_id: value.slack_destination_ref,
+  });
+  if (error) throw notificationsRpcError(error, "notifications.set_preferences");
+  return getNotificationConfig(session);
 }

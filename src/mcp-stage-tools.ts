@@ -13,8 +13,10 @@ export interface StageMcpTool {
   annotations: { title: string; readOnlyHint: boolean; destructiveHint: boolean; openWorldHint: boolean };
 }
 const notificationWriteDescriptions = {
-  destination: "Save a Slack channel as a notification destination in the current workspace, or rename or reactivate the saved one, and return the saved destination with the types it receives. Needs connected Slack. A new destination receives every default-on type Slack can show; a type that falls back to email stops reaching the owner's email while an active Slack channel receives it. Does not post a message or start outreach.",
-  route: "Subscribe or unsubscribe one saved destination (a Slack channel or the owner email destination) to one notification type in the current workspace and return the updated destination. Controls whether future notifications of that type reach it. Does not authorize Slack, post a message or start outreach.",
+  controls: "Set workspace notification enablement and independent activity-source and delivery-channel filters. Global restrictions win. Preserves preferences; never changes outreach.",
+  preferences: "Set one alert to Slack, owner email, both or Off. Slack requires an owned destination. Explicit email overrides fallback; Off sends nothing. Never changes outreach.",
+  destination: "Save, rename or reactivate one workspace Slack destination; requires connected Slack. New destinations subscribe to default-on types. Does not post a message or change outreach.",
+  route: "Subscribe or unsubscribe one saved workspace Slack or owner-email destination to one alert type. Returns the saved destination. Changes future routing; does not send or change outreach.",
 };
 // Reuse each branch's existing strict input schema. Only the adapter selects
 // the HTTP discriminator; a model cannot switch operations through the body.

@@ -12,6 +12,7 @@ import { stageOperations } from "../src/stage-contracts.js";
 import { confirmRunReview, getRunStatus, startRun } from "../src/workspace-operations.js";
 import { createRunProgressReader } from "../src/run-progress.js";
 import { DEFAULT_DASHBOARD_ORIGIN } from "../src/config.js";
+import { INDUSTRY_LABELS } from "../src/targeting-vocabulary.js";
 import {
   profileFixture,
   membershipFixture,
@@ -120,6 +121,10 @@ const rpcNames: Record<string, unknown> = {
       rules: [],
     },
   },
+};
+const rpcReply = (data: unknown) => {
+  const result = Promise.resolve({ data, error: null });
+  return Object.assign(result, { abortSignal: () => result });
 };
 function harness(
   reply?: unknown,
@@ -429,6 +434,58 @@ describe("typed Business direct HTTP boundary", () => {
     expect(h.rpc).toHaveBeenLastCalledWith("patch_lifty_targeting", { p_workspace_id: null, p_payload: body });
   });
 
+  // LIF-1694: search finds nobody for an unknown industry label or NAICS code.
+  it("refuses industry labels and NAICS codes search cannot use, with close options, before any write", async () => {
+    const h = harness(rpcNames.get_lifty_targeting);
+    const patch = (company: Record<string, unknown>) =>
+      h.request("/v1/workspace/targeting", "PATCH", { expected_version: 1, lanes: [{ id: laneFixture.id, company }] });
+    const label = await patch({ industries: ["Data center construction"] });
+    expect(label.status).toBe(422);
+    expect((await label.json()).error).toMatchObject({ code: "TARGETING_INVALID", issues: [{ code: "industry_label_unknown",
+      path: "/lanes/0/company/industries/0", message: expect.stringContaining('"Data center construction"'),
+      suggestion: expect.stringContaining('"construction"') }] });
+    const code = await patch({ excluded_industry_codes: ["327", "999999"] });
+    expect(code.status).toBe(422);
+    expect((await code.json()).error.issues).toEqual([expect.objectContaining({ code: "industry_code_unknown",
+      path: "/lanes/0/company/excluded_industry_codes/1", message: expect.stringContaining('"999999"'),
+      suggestion: expect.stringMatching(/"\d{2,6}" \([A-Z][^)]+\)/) })]);
+    // Labels match exactly: a case variant gets the one exact label to resend.
+    const variant = await patch({ industries: ["Construction"] });
+    expect((await variant.json()).error.issues[0].suggestion).toContain('for example "construction".');
+    expect(h.rpc).not.toHaveBeenCalled();
+    const repaired = { industries: ["construction"], industry_codes: ["23", "31", "484"], excluded_industry_codes: ["327", "332", "335"] };
+    expect((await patch(repaired)).status).toBe(200);
+    expect(h.rpc).toHaveBeenCalledExactlyOnceWith("patch_lifty_targeting", { p_workspace_id: null,
+      p_payload: { expected_version: 1, lanes: [{ id: laneFixture.id, company: repaired }] } });
+  });
+  it("refuses saving or submitting a setup draft that holds an unsearchable industry", async () => {
+    const lane = draftFixture.targeting.lanes[0]!;
+    const invalid = { ...draftFixture, targeting: { lanes: [{ ...lane, company: { ...lane.company, industries: ["Wine & Spirits"] } }] } };
+    const h = harness();
+    const save = await h.request("/v1/workspace/setup/draft", "PATCH", { expected_version: 1, draft: invalid, generated_criteria: null });
+    expect(save.status).toBe(422);
+    expect((await save.json()).error).toMatchObject({ code: "SETUP_DRAFT_INVALID",
+      issues: [expect.objectContaining({ path: "/draft/targeting/lanes/0/company/industries/0" })] });
+    expect(h.rpc).not.toHaveBeenCalled();
+    // A draft saved before the check cannot be submitted until it is repaired.
+    const saved = harness({ ...draftGetFixture, draft: invalid });
+    const submit = await saved.request("/v1/workspace/setup", "POST", { expected_draft_version: 1 });
+    expect(submit.status).toBe(422);
+    expect((await submit.json()).error).toMatchObject({ code: "SETUP_INVALID",
+      issues: [expect.objectContaining({ path: "/draft/targeting/lanes/0/company/industries/0" })] });
+    expect(saved.rpc).toHaveBeenCalledExactlyOnceWith("get_lifty_setup_draft", { p_workspace_id: null });
+  });
+  it("reports saved values search cannot use without refusing reads or edits that leave them alone", async () => {
+    const stored = { ...laneFixture, company: { ...laneFixture.company, industries: ["Industrial manufacturing"], industry_codes: ["446110"] } };
+    const h = harness({ workspace_ref: workspaceRef, targeting: { version: 1, updated_at: profileFixture.updated_at, lanes: [stored] } });
+    const read = await h.request("/v1/workspace/targeting");
+    expect(read.status).toBe(200);
+    expect((await read.json()).filter_warnings.map((warning: { path: string }) => warning.path))
+      .toEqual(["/targeting/lanes/0/company/industries/0", "/targeting/lanes/0/company/industry_codes/0"]);
+    const edit = await h.request("/v1/workspace/targeting", "PATCH", { expected_version: 1, lanes: [{ id: stored.id, seniorities: ["founder"] }] });
+    expect(edit.status).toBe(200);
+    expect(await (await harness().request("/v1/workspace/targeting")).json()).not.toHaveProperty("filter_warnings");
+  });
   it("saves voice version0 directly and rejects unrelated business facts", async () => {
     const h = harness({
       workspace_ref: workspaceRef,
@@ -528,7 +585,11 @@ describe("typed Business direct HTTP boundary", () => {
       criteria_version: 1,
       submitted_at: profileFixture.updated_at,
     };
-    const h = harness(receipt);
+    const h = harness();
+    // Submission first reads the saved draft it submits (LIF-1694).
+    h.rpc.mockImplementation((name: string) => rpcReply(
+      name === "submit_lifty_setup" ? receipt : { ...draftGetFixture, version: 2, submitted: h.rpc.mock.calls.length > 2 },
+    ));
     for (let i = 0; i < 2; i++)
       expect(
         await (
@@ -537,11 +598,11 @@ describe("typed Business direct HTTP boundary", () => {
           })
         ).json(),
       ).toEqual(receipt);
-    expect(h.rpc.mock.calls[0]).toEqual([
-      "submit_lifty_setup",
-      { p_workspace_id: null, p_expected_draft_version: 2 },
+    const submits = h.rpc.mock.calls.filter(([name]) => name === "submit_lifty_setup");
+    expect(submits).toEqual([
+      ["submit_lifty_setup", { p_workspace_id: null, p_expected_draft_version: 2 }],
+      ["submit_lifty_setup", { p_workspace_id: null, p_expected_draft_version: 2 }],
     ]);
-    expect(h.rpc.mock.calls[1]).toEqual(h.rpc.mock.calls[0]);
     const forbidden = harness(null, {
       code: "PT409",
       message: "SETUP_ALREADY_SUBMITTED",
@@ -658,6 +719,13 @@ describe("Business catalog, lifecycle and next-step conformance", () => {
         "account_delete",
       ]),
     );
+  });
+  it("publishes the searchable industry labels from their one list in each targeting write schema", () => {
+    for (const [task, action] of [["targeting", "patch"], ["setup", "patch_draft"]] as const) {
+      const context = getAgentContext(task)!;
+      expect(JSON.stringify(context.operations![action]!.request.body)).toContain(`"enum":${JSON.stringify(INDUSTRY_LABELS)}`);
+      expect(JSON.stringify(context)).toContain("never ask the founder for either");
+    }
   });
   it("returns identical repair issues through MCP and forwards selected workspace", async () => {
     const h = harness();
@@ -878,6 +946,20 @@ describe("research schedule, leads and sample share one workspace rule", () => {
     expect(response.status).toBe(502);
     expect((await response.json()).error.code).toBe(code);
   });
+  // LIF-1258: the database adds a plan's total to the limit after this API
+  // accepts it, so both shapes must pass the strict response schema.
+  it.each([
+    ["/v1/workspace/research-schedule", scheduleFixture],
+    ["/v1/workspace/research-schedule/status", statusFixture],
+  ])("returns %s with a plan's total and without one", async (path, fixture) => {
+    const seed = { ...limitFixture, plan_name: "Seed", total_research_limit: 50, total_remaining: 0 };
+    const paid = { ...limitFixture, plan_name: "Growth", total_research_limit: null, total_remaining: null };
+    for (const limit of [limitFixture, seed, paid]) {
+      const response = await harness({ ...fixture, limit }).request(path);
+      expect(response.status).toBe(200);
+      expect((await response.json()).limit).toEqual(limit);
+    }
+  });
   it("starts the sample inside the weekly limit and returns the reset time when it is reached", async () => {
     const enqueue = vi.fn(async () => ({ id: "job" }));
     const h = harness(null, { code: "PT409", message: "RESEARCH_LIMIT_REACHED", details: JSON.stringify({ resets_at: "2026-10-05T00:00:00Z" }) },
@@ -1007,6 +1089,7 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
   it.each([
     ["research_limit_reached", "research_schedule_status", "resets_at"],
     ["search_exhausted", "targeting_patch", "wider targeting"],
+    ["targeting_matched_nobody", "targeting_patch", "not a wider market"],
     ["research_failed", "sample_review_post", "Retry once"],
     ["calibration_sample_incomplete", "sample_review_post", "Retry once"],
     ["calibration_review_required", "sample_review_post", "same saved people"],
@@ -1065,14 +1148,14 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
       identityOperation: async () => ({ status: 200, body: linkedinRoster(status) }) });
     const result = await (await h.request("/v1/workspace/next-step")).json();
     expect(result.reason).toBe(reason);
-    // The agent acts on the exact account: templates permit its sender, a reconnect needs its id.
+    // The agent acts on the exact account: a reconnect needs its id.
     if (reason === "linkedin_connected" || reason === "linkedin_reconnect_needed") {
       const account = sendersFixture.senders[0]!.accounts[0]!;
       expect(result.receipt).toEqual({ account: { id: account.id, sender_id: account.sender_id, sender: "Ana Pérez", status } });
-      expect(result.actions.join(" ")).toContain(reason === "linkedin_connected" ? "permitting Ana Pérez" : `path.id ${account.id}`);
+      if (reason === "linkedin_reconnect_needed") expect(result.actions.join(" ")).toContain(`path.id ${account.id}`);
     }
   });
-  // Parts 3 and 4 resume from the founder's mailbox, warmup, placement and plan (LIF-1260).
+  // Parts 3 and 4 resume from the founder's mailbox, warmup and placement (LIF-1260).
   const mailbox = { ...sendersFixture.senders[0]!.accounts[0]! };
   const linkedinAccount = { ...mailbox, id: laneFixture.personas[0]!.id.replace(/.$/, "f"), channel: "linkedin" as const,
     identity: "https://www.linkedin.com/in/ana", declaration: null };
@@ -1083,7 +1166,7 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
   const scheduleRead = (source: string) => ({ version: 1, state: "paused", weekly_target: 25,
     limit: { weekly_research_limit: 25, source, effective_from: profileFixture.updated_at }, effective_target: 25,
     updated_at: profileFixture.updated_at, updated_by: null });
-  const emailHarness = (state: { accounts?: unknown[]; warmup?: unknown; placement?: unknown; plan?: string; campaigns?: string[]; run?: unknown }) => harness(undefined, null, {
+  const emailHarness = (state: { accounts?: unknown[]; warmup?: unknown; placement?: unknown; campaigns?: string[]; run?: unknown }) => harness(undefined, null, {
     getRunStatus: async () => (state.run ?? runFixture) as never,
     outreachOperation: async (_session, key) => ({ ...emptyOutreach(key), campaigns: (state.campaigns ?? []).map(value => ({ ...canonicalCampaign, state: value })) }),
     identityOperation: async () => ({ status: 200, body: roster(state.accounts ?? [mailbox]) }),
@@ -1092,7 +1175,8 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
       return (state.warmup ?? warmupRead("not_started")) as never;
     },
     getEmailPlacement: async () => (state.placement ?? { passing_until: null, test: null }) as never,
-    researchOperation: async () => scheduleRead(state.plan ?? "free"),
+    // Every workspace here is on the free Seed plan, which never gates email (LIF-1258).
+    researchOperation: async () => scheduleRead("free"),
   });
   it.each([
     [{}, "email_connected", "email"],
@@ -1101,12 +1185,11 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
     [{ warmup: warmupRead("warming", { spam: { holds_sending: true } }) }, "email_held", "email"],
     [{ warmup: warmupRead("warming"), placement: { passing_until: null, test: { state: "failed" } } }, "email_held", "email"],
     [{ accounts: [{ ...mailbox, status: "needs_reconnect" }] }, "email_held", "email"],
-    [{ warmup: warmupRead("warming", { warmup_ready: true }), placement: passing }, "paid_plan_needed", "kickoff"],
-    [{ warmup: warmupRead("warming", { warmup_ready: true }), placement: passing, plan: "paid" }, "email_ready", "kickoff"],
+    [{ warmup: warmupRead("warming", { warmup_ready: true }), placement: passing }, "email_ready", "kickoff"],
     // A founder workspace has no passing_until (placement is advisory there):
     // its latest completed test decides (LIF-1223).
     [{ warmup: warmupRead("warming", { warmup_ready: true }), placement: { gates_sending: false, last_passed_at: "2026-10-07T12:00:00Z",
-      passing_until: null, test: { state: "passed" } } }, "paid_plan_needed", "kickoff"],
+      passing_until: null, test: { state: "passed" } } }, "email_ready", "kickoff"],
     [{ warmup: warmupRead("warming", { warmup_ready: true }), placement: { gates_sending: false, last_passed_at: "2026-10-07T12:00:00Z",
       passing_until: null, test: { state: "failed" } } }, "email_held", "email"],
     // Ready needs a passing placement test, not warmup alone.
@@ -1135,16 +1218,31 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
       expect(result.recommended_tools).not.toContain("sending_accounts_placement_start");
     }
   });
-  it("hands a free workspace with a ready mailbox to David without activating anything", async () => {
+  // LIF-1670: a mailbox still preparing already takes part, so with no active
+  // campaign Part 3 asks for one now instead of waiting for the mailbox.
+  it.each([
+    [{}, "email_connected", true],
+    [{ warmup: warmupRead("warming") }, "email_preparing", true],
+    [{ accounts: [linkedinAccount, mailbox], campaigns: ["active"] }, "email_connected", false],
+    [{ accounts: [linkedinAccount, mailbox], campaigns: ["active"], warmup: warmupRead("warming") }, "email_preparing", false],
+  ] as const)("asks to draft and approve a campaign in Part 3 from %j only while none is active", async (state, reason, draft) => {
+    const result = await (await emailHarness(state as never).request("/v1/workspace/next-step")).json();
+    expect(result.reason).toBe(reason);
+    expect(result.actions.join(" ").includes("ask the founder to approve it in this conversation")).toBe(draft);
+    expect(result.recommended_tools.includes("campaigns_post")).toBe(draft);
+  });
+  it("continues a free workspace with a ready mailbox to its email campaign without asking for a plan or activating anything", async () => {
     const result = await (await emailHarness({ warmup: warmupRead("warming", { warmup_ready: true }), placement: passing }).request("/v1/workspace/next-step")).json();
-    expect(result).toMatchObject({ reason: "paid_plan_needed", step: "plan", receipt: { plan: "free", mailbox: { id: mailbox.id } } });
-    expect(result.actions.join(" ")).toContain("David from LIFT");
+    expect(result).toMatchObject({ reason: "email_ready", step: "email", receipt: { mailbox: { id: mailbox.id } } });
+    expect(result.actions.join(" ")).not.toMatch(/paid plan|David/);
     expect(result.actions.join(" ")).toContain("never activates outreach");
+    expect(result.recommended_tools).toContain("campaigns_post");
     expect(result.recommended_tools).not.toContain("campaigns_activate");
   });
-  // Several senders: the agent asks whose account or campaign it is instead of
-  // acting on the first one; one sender is assumed.
-  it.each(["connected", "needs_reconnect", "email_ready"] as const)("names every sender for a %s step and asks which one", async position => {
+  // Several senders: the agent asks which account to reconnect instead of
+  // acting on the first one. Campaigns name no senders, so drafting one never
+  // asks which person sends (LIF-1670).
+  it.each(["connected", "needs_reconnect", "email_ready"] as const)("names every sender for a %s step and asks only which to reconnect", async position => {
     const ana = { ...sendersFixture.senders[0]!, accounts: [position === "email_ready" ? mailbox
       : { ...linkedinAccount, status: position === "needs_reconnect" ? "needs_reconnect" as const : "connected" as const }] };
     const luisId = "44444444-4444-4444-8444-444444444444";
@@ -1154,8 +1252,7 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
       outreachOperation: async (_session, key) => emptyOutreach(key),
       identityOperation: async () => ({ status: 200, body: { ...sendersFixture, senders: [ana, luis] } }),
       getEmailWarmup: async () => warmupRead("warming", { warmup_ready: true }) as never,
-      getEmailPlacement: async () => passing as never,
-      researchOperation: async () => scheduleRead("paid") });
+      getEmailPlacement: async () => passing as never });
     const result = await (await h.request("/v1/workspace/next-step")).json();
     const actions = result.actions.join(" ");
     expect(result.reason).toBe(position === "connected" ? "linkedin_connected" : position === "needs_reconnect" ? "linkedin_reconnect_needed" : "email_ready");
@@ -1164,8 +1261,8 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
       expect(actions).toContain(`${ana.accounts[0]!.id} (Ana Pérez), ${luis.accounts[0]!.id} (Luis Gómez)`);
     } else {
       if (position === "connected") expect(actions).toContain("LinkedIn is connected for Ana Pérez, Luis Gómez");
-      expect(actions).toContain("ask which of them this campaign sends from");
-      expect(actions).not.toContain("permitting Ana Pérez");
+      expect(actions).toContain("ask no sender question");
+      expect(actions).not.toMatch(/permitting|which of them this campaign sends from/);
     }
   });
   // Accounts or campaigns set up while the sample ran never skip its review:
@@ -1191,6 +1288,27 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
     expect(result.recommended_tools).not.toContain("sample_review_confirm");
     expect(result.actions.join(" ")).toContain("already confirmed this sample");
     expect(result.actions.join(" ")).toContain("set up LinkedIn outreach");
+  });
+  // LIF-1696: a lane that matched nobody is named whatever the sample's outcome.
+  it("names a lane that matched nobody on a failed and on a successful sample", async () => {
+    const live = { lane_ref: "11111111-1111-4111-8111-111111111111", matching_people: 449,
+      personas: [{ persona_ref: "p-1", name: "Quote desk - commercial lighting", matching_people: 449 }] };
+    const dead = { lane_ref: "22222222-2222-4222-8222-222222222222", matching_people: 0,
+      personas: [{ persona_ref: "p-2", name: "Quote desk - commercial plumbing", matching_people: 0 }] };
+    const named = "22222222-2222-4222-8222-222222222222 (Quote desk - commercial plumbing) matched nobody";
+    const failed = await (await harness(undefined, null, { getRunStatus: async () => ({
+      ...runFixture, state: "failed" as const, error_code: "targeting_matched_nobody", lanes: [dead] }) })
+      .request("/v1/workspace/next-step")).json();
+    expect(failed).toMatchObject({ reason: "sample_failed", receipt: { lanes: [dead] } });
+    expect(failed.actions.join(" ")).toContain(named);
+    // The reason's own action carries the repair; it is not repeated.
+    expect(failed.actions.join(" ")).not.toContain("Repair that lane first");
+    expect(failed.recommended_tools).toEqual(expect.arrayContaining(["targeting_get", "targeting_patch"]));
+    const review = await (await emailHarness({ accounts: [], run: { ...runFixture, reviewed_at: null, lanes: [live, dead] } } as never)
+      .request("/v1/workspace/next-step")).json();
+    expect(review.reason).toBe("sample_ready_for_founder_review");
+    expect(review.actions.join(" ")).toContain(`${named} in this sample (receipt.lanes, matching_people 0), so its share never fills. Repair that lane first`);
+    expect(review.actions.join(" ")).not.toContain(live.lane_ref);
   });
   it("confirms the exact run and reports a sample that cannot be confirmed yet", async () => {
     const h = harness(undefined, null, runAdapters);
