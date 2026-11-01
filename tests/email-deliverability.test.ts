@@ -304,6 +304,14 @@ describe("member verdict and next step (LIF-1603)", () => {
     expect(sending.next_step.code).toBe("none");
   });
 
+  // LIF-1741: a failed safety check stops sends, so the inbox is not ready.
+  it("stops an inbox whose latest safety check failed", () => {
+    const failed = verdict("email_safety_check_failed", item => { item.campaigns[0]!.states = { active: 1 }; });
+    expect(failed.readiness.code).toBe("blocked");
+    expect(failed.status).toMatchObject({ code: "on_hold", label: "Too many bounces", tone: "bad" });
+    expect(failed.next_step).toMatchObject({ code: "lifty_review", owner: "lifty" });
+  });
+
   // LIF-1672: persons follow the Journeys, so the account's participation, not
   // the campaigns a connection reports, decides an unblocked inbox's verdict.
   it("follows the account's participation once nothing blocks the inbox and never asks to add it to a campaign", () => {
