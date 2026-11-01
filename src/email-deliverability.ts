@@ -282,6 +282,7 @@ const controlReasons: Record<string, string> = {
   email_warmup_spam: "Warmup emails are landing in spam. Sending remains held until a later sufficient clean measurement.",
   email_placement_required: "This mailbox needs a passing placement test from the last ten days before sending.",
   email_safety_check_required: "This mailbox needs a recent successful safety check before sending.",
+  email_safety_check_failed: "5% or more of this mailbox's emails in the last 7 days bounced, so sending stopped until the rate falls.",
   email_critical_hold: "An explicit safety hold blocks this mailbox.",
 };
 
@@ -310,7 +311,8 @@ function controlReason(value: string): Reason {
  * last 15 minutes, written only while a send path evaluates the inbox. Every
  * earlier check (policy, account, holds, declaration, warmup, placement) has
  * passed when it is the reason, so on its own it means "checked at send time",
- * never blocked (LIF-1603).
+ * never blocked (LIF-1603). A failed latest check arrives as
+ * email_safety_check_failed instead and blocks (LIF-1741).
  */
 const SEND_TIME_CHECK = "email_safety_check_required";
 
@@ -592,6 +594,9 @@ function presentVerdict(parts: {
       }
       case "email_critical_hold":
         return blocked("on_hold", "On hold", "bad", "A safety hold stops sends from this inbox.", LIFTY_REVIEW);
+      case "email_safety_check_failed":
+        return blocked("on_hold", "Too many bounces", "bad",
+          "5% or more of this inbox's emails in the last 7 days bounced, so Lifty stopped sending from it until the rate falls.", LIFTY_REVIEW);
       case "sender_mailbox_ineligible": {
         // Warmup or its placement test resolves this; nobody reviews it.
         const source = currentWarmupSource(warmup);
