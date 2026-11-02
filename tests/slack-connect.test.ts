@@ -93,6 +93,66 @@ describe("hosted Slack connection operations", () => {
     });
   });
 
+  it("connects a Slack workspace that already has the internal app install", async () => {
+    // Slack reports the cumulative bot scopes, including the internal install's.
+    const requests: Array<{ url: string; init: RequestInit | undefined }> = [];
+    const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      requests.push({ url, init });
+      if (url.endsWith("oauth.v2.access")) {
+        return Response.json({
+          ok: true,
+          access_token: "xoxb-installed-token",
+          token_type: "bot",
+          scope: "chat:write,groups:history,incoming-webhook,channels:read,groups:read",
+          bot_user_id: "U123BOT",
+          team: { id: "T123TEAM", name: "Example" },
+        });
+      }
+      if (url.endsWith("auth.test")) {
+        return Response.json({ ok: true, team_id: "T123TEAM", user_id: "U123BOT", bot_id: "B123BOT" });
+      }
+      return Response.json({ provider: "slack", status: "connected" });
+    }) as typeof fetch;
+    const operations = createSlackConnectOperations({ ...SETTINGS, fetchImpl });
+
+    await expect(operations.completeCallback({
+      code: "authorization-code",
+      state: sealSlackConnectIntent("b".repeat(64), SETTINGS.clientSecret),
+    })).resolves.toEqual({ teamId: "T123TEAM", teamName: "Example" });
+    expect(JSON.parse(String(requests[2]?.init?.body)).p_scopes)
+      .toEqual(["channels:read", "chat:write", "groups:read"]);
+  });
+
+  // LIF-1282: the page and the attempt read name a known refusal.
+  it.each([
+    ["channels:read,chat:write,groups:read,channels:history", { ok: true, team_id: "T123TEAM", user_id: "U123BOT", bot_id: "B123BOT" }, null, "permission_missing"],
+    ["channels:read,chat:write,groups:read", { ok: true, team_id: "T123TEAM", user_id: "U123BOT", bot_id: "B123BOT" }, "lifty_slack_team_already_connected", "account_in_use"],
+    ["channels:read,chat:write,groups:read", { ok: true, team_id: "TOTHER", user_id: "U123BOT", bot_id: "B123BOT" }, null, "callback_failed"],
+  ])("records the refusal code for scope %s", async (scope, auth, completion, code) => {
+    const failures: unknown[] = [];
+    const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("oauth.v2.access")) {
+        return Response.json({ ok: true, access_token: "xoxb-installed-token", token_type: "bot", scope,
+          bot_user_id: "U123BOT", team: { id: "T123TEAM", name: "Example" } });
+      }
+      if (url.endsWith("auth.test")) return Response.json(auth);
+      if (url.endsWith("fail_lifty_connect_attempt")) {
+        failures.push(JSON.parse(String(init?.body)));
+        return Response.json({ status: "failed" });
+      }
+      return Response.json({ message: completion }, { status: 409 });
+    }) as typeof fetch;
+    const operations = createSlackConnectOperations({ ...SETTINGS, fetchImpl });
+
+    await expect(operations.completeCallback({
+      code: "authorization-code",
+      state: sealSlackConnectIntent("e".repeat(64), SETTINGS.clientSecret),
+    })).rejects.toBeInstanceOf(SlackCallbackError);
+    expect(failures).toEqual([{ p_provider: "slack", p_intent_token: "e".repeat(64), p_status: "failed", p_error_code: code }]);
+  });
+
   it.each([
     ["lifty_connect_intent_replayed", "link_used", 409],
     ["lifty_connect_intent_revoked", "link_revoked", 403],

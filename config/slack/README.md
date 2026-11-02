@@ -19,6 +19,12 @@ exactly `channels:read`, `chat:write` and `groups:read`; `src/slack-oauth.ts` an
 its tests own that contract. Slack's generic Add to Slack URL uses the broader
 internal app scope set and must not replace the hosted customer flow.
 
+Slack reports a workspace's cumulative bot scopes, so connecting a Slack
+workspace that already has the internal install (LIFT's own) returns its
+`groups:history` and `incoming-webhook` too. The callback accepts those known
+extras, records only the three customer scopes, and refuses any other scope as
+`permission_missing`.
+
 Bot tokens are exchanged server-side and persisted through the authorized
 completion RPC. Keep credentials, signed response URLs and invitation links out
 of source control. Distribution state is maintained separately in the Slack

@@ -33,10 +33,11 @@ export async function getConnectionAttempt(session: AuthSession, provider: Conne
   return parsed.data;
 }
 
-// LIF-1282: the code a refused CRM callback records, keyed by its callback
-// reason. The attempt read and the browser page show the same code.
-export const CRM_REFUSAL_CODES: Readonly<Record<string, string>> = {
-  portal_taken: "account_in_use", workspace_taken: "account_in_use", account_mismatch: "account_mismatch",
+// LIF-1282: the code a refused CRM or Slack callback records, keyed by its
+// callback reason. The attempt read and the browser page show the same code.
+export const CONNECTION_REFUSAL_CODES: Readonly<Record<string, string>> = {
+  portal_taken: "account_in_use", workspace_taken: "account_in_use", team_taken: "account_in_use",
+  account_mismatch: "account_mismatch",
   scope_mismatch: "permission_missing", crm_provider_conflict: "crm_provider_conflict",
 };
 

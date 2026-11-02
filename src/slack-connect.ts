@@ -9,7 +9,7 @@ import {
   type SlackConnectionStatus,
 } from "./contracts.js";
 import { PublicError } from "./errors.js";
-import { recordOAuthFailure } from "./connection-attempt.js";
+import { CONNECTION_REFUSAL_CODES, recordOAuthFailure } from "./connection-attempt.js";
 import { exchangeAndVerifySlackGrant } from "./slack-oauth.js";
 import { openSlackConnectIntent, sealSlackConnectIntent } from "./slack-state.js";
 
@@ -280,7 +280,7 @@ export function createSlackConnectOperations(
       try { return await completeCallback(input); }
       catch (error) {
         if (error instanceof SlackCallbackError && error.status < 500 && !["link_invalid", "link_used", "link_expired", "link_revoked"].includes(error.reason)) {
-          try { await failCallback(input.state, "failed", error.reason === "exchange_failed" ? "token_exchange_failed" : "callback_failed"); }
+          try { await failCallback(input.state, "failed", error.reason === "exchange_failed" ? "token_exchange_failed" : CONNECTION_REFUSAL_CODES[error.reason] ?? "callback_failed"); }
           catch { /* Preserve the original safe failure; reads remain unverified if persistence failed. */ }
         }
         throw error;
