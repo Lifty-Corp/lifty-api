@@ -34,7 +34,8 @@ const rewriteBody = { request_ref: message.message_ref, source_digest: message.s
 const rewrite = { ...captures.approve, message: { ...message, review_status: "pending" }, rewrite_work: {
   work_ref: message.message_ref, message_ref: message.message_ref, source_digest: message.source_digest, state: "queued",
   replacement_message_ref: null, error_code: null } };
-// LIF-1671: hand-written until the Functions suite captures reassign_lifty_leads (pending_capture).
+// Captured from Functions supabase/tests/lif1625_journey_participation.sql, which
+// pins every field of these reassign_lifty_leads receipts except reassigned_at.
 const reassignBody = sql.requests.reassign.body;
 const reassign = sql.reassign;
 type Case = { action: keyof typeof memberReviewOperationDefinitions; receipt: unknown; body?: unknown; ref?: string };
@@ -76,13 +77,13 @@ describe("member Review transport", () => {
       expect(contracts.ReplyTurnResultSchema.safeParse(receipt).success).toBe(false);
     for (const receipt of [sql.email_approve, sql.email_uncertain, sql.rewrite, sql.rewrite_done]) contracts.CampaignMessageResultSchema.parse(receipt);
     contracts.StopLeadOutreachResultSchema.parse(sql.stop);
-    expect(sql.pending_capture.entries).toEqual(expect.arrayContaining(["reassign", "reassign_round_robin"]));
     for (const [action, request, receipt] of [
       ["review_settings_patch", sql.requests.settings_update, sql.settings_changed],
       ["message_rating_post", sql.requests.rating, sql.rating],
       ["message_rewrite_post", sql.requests.rewrite, sql.rewrite],
       ["lead_stop_post", sql.requests.stop, sql.stop],
       ["lead_reassign_post", sql.requests.reassign, sql.reassign],
+      ["lead_reassign_post", sql.requests.reassign_refused, sql.reassign_refused],
       ["lead_reassign_post", sql.requests.reassign_round_robin, sql.reassign_round_robin],
     ] as const) {
       const path = request.path as { message_id?: string; turn_id?: string; lead_id?: string };
@@ -146,8 +147,8 @@ describe("member Review transport", () => {
       ["lead_reassign_post", { ...reassign, results: [...reassign.results, { ...reassign.results[0]!, lead_ref: message.message_ref }] }],
       ["lead_reassign_post", { ...reassign, results: [{ ...reassign.results[0]!, to_sender_id: message.sender_id }, ...reassign.results.slice(1)] }],
       ["lead_reassign_post", { ...reassign, results: [{ ...reassign.results[0]!, to_sender_id: null }, ...reassign.results.slice(1)] }],
-      ["lead_reassign_post", { ...reassign, results: [reassign.results[0], { ...reassign.results[1]!, refusal: null }, reassign.results[2]] }],
-      ["lead_reassign_post", { ...reassign, results: [...reassign.results.slice(0, 2), { ...reassign.results[2]!, to_sender_id: message.sender_id }] }],
+      ["lead_reassign_post", { ...reassign, results: [{ ...reassign.results[0]!, outcome: "refused", to_sender_id: null }] }],
+      ["lead_reassign_post", { ...reassign, results: [{ ...reassign.results[0]!, outcome: "unchanged" }] }],
     ];
     for (const [action, receipt] of changed) {
       const value = cases.find(value => value.action === action)!;

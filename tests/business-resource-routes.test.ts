@@ -1042,7 +1042,7 @@ const sendersFixture = {
     checked_at: profileFixture.updated_at, observation: { state: "verified" as const },
     connected_at: profileFixture.updated_at, disconnected_at: null, access_revoked_at: null, access_removal: null,
     declaration: { mailbox_use: "habitual" as const, declared_by: null, declared_at: profileFixture.updated_at },
-    sends: { today: 1, last_7_days: 3 } }] }],
+    sends: { today: 1, last_7_days: 3 }, participation: { status: "sending" as const, cause: "active_journeys" as const } }] }],
 };
 const summaryReads: Partial<AppDependencies> = {
   getWorkspace: async () => ({
