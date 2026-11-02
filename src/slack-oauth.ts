@@ -32,14 +32,22 @@ function normalizeScopes(value: unknown): string[] {
   return [...new Set(entries.map(String).filter(Boolean))].sort();
 }
 
-export function slackScopeSetMatchesExactly(
+// The shared app's internal install (config/slack/lifty.manifest.json) holds
+// these too. Slack reports a workspace's cumulative bot scopes, so connecting
+// a Slack workspace where that install exists returns them alongside ours.
+export const SLACK_INTERNAL_APP_SCOPES: readonly string[] = Object.freeze([
+  "groups:history",
+  "incoming-webhook",
+]);
+
+export function slackScopesAcceptable(
   grantedScopes: readonly string[],
   requiredScopes: readonly string[] = SLACK_REQUIRED_SCOPES,
 ): boolean {
   const granted = new Set(grantedScopes);
-  const required = new Set(requiredScopes);
-  return granted.size === required.size
-    && [...required].every((scope) => granted.has(scope));
+  const allowed = new Set([...requiredScopes, ...SLACK_INTERNAL_APP_SCOPES]);
+  return requiredScopes.every((scope) => granted.has(scope))
+    && [...granted].every((scope) => allowed.has(scope));
 }
 
 export function buildSlackAuthorizationUrl(options: {
@@ -104,10 +112,12 @@ export async function exchangeAndVerifySlackGrant(options: {
   if (payload.token_type !== "bot" || !accessToken.startsWith("xoxb-")) {
     throw new Error("slack_bot_grant_invalid");
   }
-  const scopes = normalizeScopes(payload.scope);
-  if (!slackScopeSetMatchesExactly(scopes)) {
+  if (!slackScopesAcceptable(normalizeScopes(payload.scope))) {
     throw new Error("slack_scope_mismatch");
   }
+  // Record the scopes this connection uses; an internal install's extras are
+  // never used through it.
+  const scopes = [...SLACK_REQUIRED_SCOPES].sort();
 
   const team = payload.team as Record<string, unknown> | undefined;
   const enterprise = payload.enterprise as Record<string, unknown> | null | undefined;

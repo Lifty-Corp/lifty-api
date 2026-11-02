@@ -7,7 +7,7 @@ import {
   type HubspotConnectionStatus,
 } from "./contracts.js";
 import { PublicError } from "./errors.js";
-import { CRM_REFUSAL_CODES, recordOAuthFailure } from "./connection-attempt.js";
+import { CONNECTION_REFUSAL_CODES, recordOAuthFailure } from "./connection-attempt.js";
 import {
   HUBSPOT_REQUIRED_SCOPES,
   exchangeAuthorizationCode,
@@ -310,7 +310,7 @@ export function createHubspotConnectOperations(
       try { return await completeCallback(input); }
       catch (error) {
         if (error instanceof HubspotCallbackError && error.status < 500 && !["link_invalid", "link_used", "link_expired"].includes(error.reason)) {
-          try { await failCallback(input.state, "failed", CRM_REFUSAL_CODES[error.reason] ?? "callback_failed"); }
+          try { await failCallback(input.state, "failed", CONNECTION_REFUSAL_CODES[error.reason] ?? "callback_failed"); }
           catch { /* Preserve the original safe failure; reads remain unverified if persistence failed. */ }
         }
         throw error;
