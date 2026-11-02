@@ -41,6 +41,8 @@ describe("runtime context discovery and connection handoff", () => {
       post: "POST /v1/workspace/senders",
       patch: "PATCH /v1/workspace/senders/{id}",
       delete: "POST /v1/workspace/senders/{id}/delete",
+      turn_off: "POST /v1/workspace/senders/{id}/turn-off",
+      turn_on: "POST /v1/workspace/senders/{id}/turn-on",
     });
     expect(getAgentContext("senders")!.instructions).toContain("lifty post senders delete");
     expect(getAgentContext("senders")!.instructions).toContain("lifty context senders");

@@ -104,7 +104,7 @@ through one table in `src/rpc-errors.ts`; an unknown code is a 502
 - `POST /v1/workspace/sample-review`, `GET …/sample-review`, `GET /v1/workspace/runs/progress` — five-person calibration sample, its results and bounded progress
 - `GET /v1/workspace/research-schedule`, `PATCH …/research-schedule`, `POST …/research-schedule/activate`, `POST …/research-schedule/pause`, `GET …/research-schedule/status` — weekly research schedule and weekly status
 - `GET /v1/workspace/leads` — researched leads, newest first, with grade/week filters and an opaque cursor
-- `GET /v1/workspace/senders`, `POST …/senders`, `PATCH …/senders/{id}`, `POST …/senders/{id}/delete` — senders (people) with versioned name, signature and booking link; soft delete
+- `GET /v1/workspace/senders`, `POST …/senders`, `PATCH …/senders/{id}`, `POST …/senders/{id}/delete`, `POST …/senders/{id}/turn-off|turn-on` — senders (people) with versioned name, signature and booking link; soft delete; turning a person off drains their admitted leads to another person and keeps their accounts connected
 - `GET /v1/workspace/sending-accounts`, `POST …/sending-accounts/connect`, `GET …/sending-accounts/attempts/{id}`, `POST …/sending-accounts/{id}/reconnect|pause|resume|disconnect` — accounts each sender owns
 - `GET /v1/workspace/crm/preferences`, `PATCH …/crm/preferences` — the selected CRM's research-note, conversation and channel choices with expected_version; reads `public.get_lifty_crm_preferences` and writes through `public.patch_lifty_crm_preferences`
 - `GET /v1/workspace/linkedin` — read-only LinkedIn activity (confirmed invitations, acceptances, messages and replies today and over the last 7 days) and each LinkedIn account's waiting reason; reads `public.get_lifty_linkedin`
@@ -228,7 +228,7 @@ A sender is a named person; every LinkedIn account or mailbox (a sending account
 belongs to one sender, at most one LinkedIn account per sender. Every workspace
 uses the same operations; the database resolves the workspace from
 `x-lifty-workspace` (`src/identity-operations.ts`, member RPCs `get_lifty_senders`,
-`create_/patch_/delete_lifty_sender`, `get_lifty_sending_accounts`,
+`create_/patch_/delete_/turn_off_/turn_on_lifty_sender`, `get_lifty_sending_accounts`,
 `connect_/reconnect_lifty_sending_account`, `get_lifty_sending_account_attempt`,
 `pause_/resume_/disconnect_lifty_sending_account`). Reads are pure: they never
 check or change a provider. Account `observation` and `sends` come from SQL.
