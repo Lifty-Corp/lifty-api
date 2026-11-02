@@ -48,6 +48,9 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   // Senders and sending accounts (LIF-1182).
   SENDER_INVALID: "Repair the sender fields.",
   SENDER_NOT_FOUND: "This sender is not available in the selected workspace. Read senders for current ids.",
+  // Turning a sender off (LIF-1764).
+  DRAIN_TARGET_INVALID: "Choose another person in this workspace who is on and not deleted to take these leads. Read senders for current ids and sending states.",
+  DRAIN_MODE_UNAVAILABLE: "This drain mode is not available yet. Omit drain_mode or send unused_channels.",
   CAMPAIGN_RESUME_ACCOUNT_BLOCKED: "Reconnect the same LinkedIn account and resume its usage first. Sending holds and unverified health must be resolved before resuming campaigns.",
   ACCOUNT_NOT_FOUND: "This sending account is not available in the selected workspace. Read sending-accounts for current ids.",
   ACCOUNT_DISCONNECTED: "This account is disconnected. Reconnect it before resuming or changing it.",

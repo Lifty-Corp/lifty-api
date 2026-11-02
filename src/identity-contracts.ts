@@ -44,11 +44,12 @@ const Limits = z.union([
 // LIF-1672: whether the account takes part in new Journeys now, and why not.
 // Each status has its own causes; waiting_journeys counts the started
 // Journeys a paused account holds.
+// LIF-1764: sender_off is a connected account whose person is turned off.
 const PARTICIPATION = {
   sending: ["active_journeys"],
   no_active_campaign: ["no_active_campaign_on_channel"],
   waiting_for_first_lead: ["no_lead_yet"],
-  paused: ["paused_by_member", "paused_by_disconnect", "campaign_paused", "workspace_suspended"],
+  paused: ["paused_by_member", "paused_by_disconnect", "campaign_paused", "workspace_suspended", "sender_off"],
   not_connected: ["disconnected", "needs_reconnect", "unverified"],
   email_not_ready: ["warming", "placement_required", "declaration_required", "signature_missing", "mailbox_not_ready"],
 } as const;
@@ -89,6 +90,21 @@ export type Account = z.infer<typeof AccountSchema>;
 /** Disconnected with provider access still to remove (a retired provider's account has none). */
 export const removalPending = (account: Account) =>
   account.status === "disconnected" && !account.access_revoked_at && account.access_removal !== "not_applicable";
+// LIF-1764: how a person who is off hands over their admitted leads. continue
+// is stored by the database but refused until it ships.
+export const DrainMode = z.enum(["unused_channels", "continue"]);
+// The database stores the reason trimmed, 1–500 characters (code points).
+const OffReason = z.string().min(1).refine(value => [...value].length <= 500);
+/** Present only while the person is off; a person who is on has no `sending`. */
+export const SenderSendingSchema = z.object({
+  state: z.literal("off"),
+  off_at: Timestamp,
+  reason: OffReason,
+  drain_to_sender_id: Id,
+  drain_mode: DrainMode,
+  // Leads still owned by this person with an active or paused run.
+  leads_remaining: Count,
+}).strict();
 export const SenderSchema = z.object({
   id: Id,
   version: Version,
@@ -96,6 +112,7 @@ export const SenderSchema = z.object({
   signature: Signature.nullable(),
   booking_url: z.string().max(2048).nullable(),
   accounts: z.array(AccountSchema).max(1000),
+  sending: SenderSendingSchema.optional(),
 }).strict();
 
 const Workspace = { workspace: WorkspaceIdentitySchema };
@@ -106,6 +123,32 @@ export const SenderDeleteResultSchema = z.object({ ...Workspace,
   sender: z.object({ id: Id, version: Version, deleted_at: Timestamp }).strict(),
   accounts: z.array(AccountSchema).max(1000),
 }).strict();
+
+// LIF-1764 drain receipt: the first batch a turn-off drains at once. An
+// outcome that did not happen is absent: moved (the target started a run),
+// closed (nothing left to send), skipped (the lead or its run changed
+// meanwhile), waiting_send (a send is in flight), waiting_customer_list,
+// error (rolled back and retried by the scheduled drain).
+const Positive = z.number().int().positive();
+const DrainOutcomes = z.object({
+  moved: Positive.optional(), closed: Positive.optional(), skipped: Positive.optional(),
+  waiting_send: Positive.optional(), waiting_customer_list: Positive.optional(), error: Positive.optional(),
+}).strict();
+// Raw database text never reaches a customer: the API drops `message`.
+const DrainLeadError = z.object({ lead_ref: Id, sqlstate: z.string().regex(/^[0-9A-Z]{5}$/) }).strict();
+const DrainLeadErrorReceipt = DrainLeadError.extend({ message: z.string() }).strict();
+const drainTarget = { sender_id: Id, drain_to_sender_id: Id, mode: DrainMode };
+// A drain that ran, or one that waits as a whole: the target was deleted or
+// turned off meanwhile, or the customer list holds outreach. The function's
+// state "on" cannot follow a turn-off in the same transaction.
+const drainShapes = <E extends z.ZodType>(error: E) => z.union([
+  z.object({ ...drainTarget, outcomes: DrainOutcomes, errors: z.array(error).max(10), remaining: Count }).strict(),
+  z.object({ ...drainTarget, state: z.enum(["target_unavailable", "waiting_customer_list"]) }).strict(),
+]);
+export const SenderDrainSchema = drainShapes(DrainLeadError);
+export const SenderTurnOffResultSchema = SenderResultSchema.extend({ drain: SenderDrainSchema }).strict();
+/** The database's receipt before the API drops each failed lead's message. */
+export const SenderTurnOffReceiptSchema = SenderResultSchema.extend({ drain: drainShapes(DrainLeadErrorReceipt) }).strict();
 export const AccountsGetSchema = z.object({ ...Workspace, accounts: z.array(AccountSchema).max(5000) }).strict();
 export const AccountResultSchema = z.object({ ...Workspace, account: AccountSchema }).strict();
 export const CampaignResumeResultSchema = AccountResultSchema.extend({
@@ -209,6 +252,21 @@ export const SenderPatchSchema = z.object({
 }).strict().refine(value => value.name !== undefined || value.signature !== undefined || value.booking_url !== undefined,
   { message: "Change at least one of name, signature or booking_url.", path: [] });
 export const SenderDeleteSchema = z.object({ expected_version: Version, confirm: z.literal(true) }).strict();
+/** LIF-1764: turn a person off and name who takes their admitted leads. */
+export const SenderTurnOffSchema = z.object({
+  expected_version: Version,
+  confirm: z.literal(true),
+  // No field descriptions: the operation description covers them, and every
+  // MCP turn carries the whole tool list.
+  reason: z.string().refine(value => { const length = [...value.trim()].length; return length >= 1 && length <= 500; },
+    "Give the founder's reason in 1–500 characters."),
+  // Another person in the roster who is on. The database refuses this person,
+  // a deleted one or one who is off with DRAIN_TARGET_INVALID.
+  drain_to_sender_id: Id,
+  // Omitted uses the workspace's mode, normally unused_channels.
+  drain_mode: DrainMode.optional(),
+}).strict();
+export const SenderTurnOnSchema = z.object({ expected_version: Version, confirm: z.literal(true) }).strict();
 export const AccountsQuerySchema = z.object({ sender_id: Id.optional(), channel: Channel.optional() }).strict();
 export const ConnectSchema = z.object({ sender_id: Id, channel: Channel }).strict();
 export const DisconnectSchema = z.object({ confirm: z.literal(true) }).strict();
