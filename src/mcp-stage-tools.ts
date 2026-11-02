@@ -31,6 +31,8 @@ export type McpRouteDispatch = (route: string, init: RequestInit) => Promise<Res
 const openWorld = new Set(["sample-review.post", "research-schedule.activate", "campaigns.activate", "journeys.activate",
   "campaigns.review_settings_patch", "campaigns.message_review_post", "campaigns.reply_review_post", "campaigns.lead_stop_post",
   "sending-accounts.resume", "sending-accounts.resume_campaigns", "sending-accounts.declare", "sending-accounts.warmup_start", "sending-accounts.warmup_resume", "sending-accounts.placement_start", "notifications.test",
+  // Draining starts the target's runs; turning on lets the person's accounts take new Journeys.
+  "senders.turn_off", "senders.turn_on",
   // Removing Lifty's access at the account provider.
   "sending-accounts.disconnect", "senders.delete"]);
 // Creating a resource changes nothing that exists.

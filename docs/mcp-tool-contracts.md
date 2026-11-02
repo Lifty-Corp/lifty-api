@@ -38,6 +38,8 @@ operation, including persisted provider maintenance and enabled scheduled work.
 | `campaigns_activate` | false / true / true | Selects an approved revision and active intent, or resumes retained work that can contact recipients. |
 | `campaigns_post` | false / false / false | Adds an inactive, unapproved private Campaign draft. |
 | `campaigns_draft_patch` | false / true / false | Replaces the effective unapproved draft and refreshes default Business/current sender revision pins. |
+| `senders_turn_off` | false / true / true | Stops a person's new Journeys and outreach while their accounts stay connected, and drains their admitted leads to another person, whose new runs can contact recipients on the unused channels. Never deletes or disconnects. |
+| `senders_turn_on` | false / true / true | Lets a person who is off take part in new Journeys again, which can then contact recipients through their accounts. Drained leads stay with their new person. |
 | `sending_accounts_resume` | false / true / true | Resumes an existing account; already active approved Campaigns may automatically send pending work to external recipients. |
 | `campaigns_review_settings_patch` | false / true / true | Saves channel review choices; send-and-sample enables future unflagged drafts to send automatically under existing Campaign and safety gates. Existing pending drafts remain held. |
 | `notifications_connect` | false / true / false | Starts a Slack consent attempt and supersedes earlier unused pending links; does not replace the existing grant or post messages. |

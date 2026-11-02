@@ -351,6 +351,95 @@ describe("Identity member routes", () => {
   });
 });
 
+// LIF-1764: a person who is off keeps their accounts and drains their admitted
+// leads to a target person; turning them on lets them take new leads again.
+describe("sender turn-off and turn-on", () => {
+  const target = "77777777-7777-4777-8777-777777777777";
+  const leadRef = "88888888-8888-4888-8888-888888888888";
+  const sending = { state: "off", off_at: "2026-11-02T12:00:00.123456+00:00", reason: "Ana left the company",
+    drain_to_sender_id: target, drain_mode: "unused_channels", leads_remaining: 3 };
+  const offSender = { ...sender, version: 3, sending,
+    accounts: [account(accountId, { participation: { status: "paused", cause: "sender_off", waiting_journeys: 2 } })] };
+  const turnOff = { expected_version: 2, confirm: true, reason: "Ana left the company", drain_to_sender_id: target };
+  const drainTarget = { sender_id: senderId, drain_to_sender_id: target, mode: "unused_channels" };
+
+  it("calls the documented RPCs, returns the drain receipt and keeps raw database text private", async () => {
+    const drain = { ...drainTarget, outcomes: { moved: 2, closed: 1, waiting_send: 1, error: 1 },
+      errors: [{ lead_ref: leadRef, sqlstate: "23505", message: "private database detail" }], remaining: 3 };
+    const h = harness(name => ({
+      turn_off_lifty_sender: { workspace, sender: offSender, drain },
+      turn_on_lifty_sender: { workspace, sender: { ...sender, version: 4 } },
+    } as Record<string, unknown>)[name]);
+    const off = await h.request("POST", `/v1/workspace/senders/${senderId}/turn-off`, turnOff);
+    expect(off.status).toBe(200);
+    const text = await off.text();
+    expect(JSON.parse(text)).toEqual({ workspace, sender: offSender, drain: { ...drain, errors: [{ lead_ref: leadRef, sqlstate: "23505" }] } });
+    expect(text).not.toContain("private database detail");
+    const on = await h.request("POST", `/v1/workspace/senders/${senderId}/turn-on`, { expected_version: 3, confirm: true });
+    expect(on.status).toBe(200);
+    expect(await on.json()).toEqual({ workspace, sender: { ...sender, version: 4 } });
+    expect(h.calls).toEqual([
+      { name: "turn_off_lifty_sender", args: { p_workspace_id: null, p_sender_id: senderId, p_payload: turnOff } },
+      { name: "turn_on_lifty_sender", args: { p_workspace_id: null, p_sender_id: senderId, p_payload: { expected_version: 3, confirm: true } } },
+    ]);
+    // Neither disconnects an account nor touches the provider.
+    expect(h.effects.revoke).not.toHaveBeenCalled();
+    expect(h.effects.reconcileAttempt).not.toHaveBeenCalled();
+  });
+
+  it("publishes an off person's sending state and sender_off participation, and nothing new for a person who is on", async () => {
+    const response = await harness(() => ({ workspace, senders: [sender, offSender] })).request("GET", "/v1/workspace/senders");
+    expect(response.status).toBe(200);
+    const read = await response.json();
+    expect(read.senders).toEqual([sender, offSender]);
+    expect(read.senders[0]).not.toHaveProperty("sending");
+    // A drain that waits as a whole has no outcomes.
+    const waiting = { workspace, sender: offSender, drain: { ...drainTarget, state: "target_unavailable" } };
+    const off = await harness(() => waiting).request("POST", `/v1/workspace/senders/${senderId}/turn-off`, turnOff);
+    expect([off.status, await off.json()]).toEqual([200, waiting]);
+    for (const invalid of [
+      { ...sender, sending: null },
+      { ...offSender, sending: { ...sending, state: "on" } },
+      { ...offSender, sending: { ...sending, drain_mode: "handoff" } },
+      { ...offSender, sending: { ...sending, paused_at: now } },
+      { ...sender, accounts: [account(accountId, { participation: { status: "not_connected", cause: "sender_off" } })] },
+    ]) {
+      expect((await harness(() => ({ workspace, senders: [invalid] })).request("GET", "/v1/workspace/senders")).status).toBe(502);
+    }
+    const unknownOutcome = { workspace, sender: offSender, drain: { ...drainTarget, outcomes: { failed: 1 }, errors: [], remaining: 0 } };
+    expect((await harness(() => unknownOutcome).request("POST", `/v1/workspace/senders/${senderId}/turn-off`, turnOff)).status).toBe(502);
+  });
+
+  it.each([
+    ["turn-off", { ...turnOff, confirm: false }],
+    ["turn-off", { expected_version: 2, confirm: true, reason: "Ana left the company" }],
+    ["turn-off", { ...turnOff, reason: "   " }],
+    ["turn-off", { ...turnOff, reason: "x".repeat(501) }],
+    ["turn-off", { ...turnOff, drain_to_sender_id: "Bruno" }],
+    ["turn-off", { ...turnOff, drain_mode: "handoff" }],
+    ["turn-off", { ...turnOff, disconnect: true }],
+    ["turn-on", { expected_version: 3 }],
+    ["turn-on", { expected_version: 3, confirm: true, reason: "back" }],
+  ] as const)("rejects %s %j before any database call", async (action, body) => {
+    const h = harness(() => { throw new Error("must not be called"); });
+    const response = await h.request("POST", `/v1/workspace/senders/${senderId}/${action}`, body);
+    expect([response.status, (await response.json()).error.code]).toEqual([400, "INVALID_REQUEST"]);
+    expect(h.calls).toEqual([]);
+  });
+
+  it.each([
+    ["turn-off", { ...turnOff, drain_to_sender_id: senderId }, dbError("PT422", "DRAIN_TARGET_INVALID"), 422, {}],
+    ["turn-off", { ...turnOff, drain_mode: "continue" }, dbError("PT409", "DRAIN_MODE_UNAVAILABLE"), 409, {}],
+    ["turn-off", turnOff, dbError("PT409", "VERSION_CONFLICT", { current_version: 3 }), 409, { current_version: 3 }],
+    ["turn-on", { expected_version: 2, confirm: true }, dbError("PT409", "VERSION_CONFLICT", { current_version: 3 }), 409, { current_version: 3 }],
+  ] as const)("maps %s %j to its typed error", async (action, body, error, status, detail) => {
+    const h = harness(() => { throw error; });
+    const response = await h.request("POST", `/v1/workspace/senders/${senderId}/${action}`, body);
+    expect([response.status, (await response.json()).error]).toMatchObject([status, { code: error.message, ...detail }]);
+    expect(h.calls).toEqual([{ name: `${action.replace("-", "_")}_lifty_sender`, args: { p_workspace_id: null, p_sender_id: senderId, p_payload: body } }]);
+  });
+});
+
 describe("account disconnect and sender delete receipts", () => {
   it("returns 200 only after provider evidence confirms access removal", async () => {
     let revoked = false;

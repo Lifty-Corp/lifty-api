@@ -51,8 +51,9 @@ describe("generated MCP stage operations", () => {
     // added the CRM automatic sync and test sync tools (about 4,000 characters).
     // LIF-1694 publishes the industry label enum in targeting_patch (twice) and
     // setup_patch_draft: about 9,200 characters for 147 labels. The NAICS list
-    // is never published; codes carry only a pattern.
-    expect(JSON.stringify(tools).length).toBeLessThan(205_000);
+    // is never published; codes carry only a pattern. LIF-1764 adds
+    // senders_turn_off and senders_turn_on (about 3,600 characters).
+    expect(JSON.stringify(tools).length).toBeLessThan(208_000);
     expect(tools.find(tool => tool.name === "crm_mapping_sources")!.annotations.readOnlyHint).toBe(true);
     expect(tools.find(tool => tool.name === "sending_accounts_deliverability")!.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
     expect(tools.find(tool => tool.name === "sending_accounts_disconnect")!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: true });
@@ -84,6 +85,18 @@ describe("generated MCP stage operations", () => {
     expect(tools.find(tool => tool.name === "summary_get")!.annotations.openWorldHint).toBe(false);
     expect(tools.find(tool => tool.name === "next_step")!.annotations.openWorldHint).toBe(false);
     expect(tools.find(tool => tool.name === "sending_accounts_reconnect")!.inputSchema.required).toEqual(["path"]);
+  });
+
+  // LIF-1764: draining starts the target's runs and turning on lets the person
+  // take new Journeys, so both can lead to sends to external recipients.
+  it("annotates turning a sender off or on as an open-world write", () => {
+    const tools = getStageMcpTools();
+    for (const name of ["senders_turn_off", "senders_turn_on"]) {
+      const tool = tools.find(item => item.name === name)!;
+      expect(tool.annotations, name).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: true });
+      expect(tool.inputSchema.required, name).toEqual(["path", "body"]);
+    }
+    expect(tools.find(tool => tool.name === "senders_turn_off")!.description).toContain("Never deletes, disconnects or sends by itself");
   });
 
   it("exposes destination and route writes independently, without a model-selected operation", () => {
