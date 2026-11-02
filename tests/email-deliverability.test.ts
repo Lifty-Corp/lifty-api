@@ -278,7 +278,8 @@ describe("member verdict and next step (LIF-1603)", () => {
     const current: Account = { id: mailbox.connections[0]!.connection_ref, sender_id: mailbox.connections[0]!.sender_ref!, channel: "email",
       identity: mailbox.email, status: "connected", state: "active", sending: { allowed: true, reason: null, scope: null },
       limits: { emails_per_day: 10 }, checked_at: now.toISOString(), observation: { state: "verified" }, connected_at: now.toISOString(),
-      disconnected_at: null, access_revoked_at: null, access_removal: null, declaration: null, sends: { today: 0, last_7_days: 0 }, ...account };
+      disconnected_at: null, access_revoked_at: null, access_removal: null, declaration: null, sends: { today: 0, last_7_days: 0 },
+      participation: { status: "no_active_campaign", cause: "no_active_campaign_on_channel" }, ...account };
     const others = history.map((item, index) => ({ ...current, id: `10393000-0000-4000-8000-00000000009${index}`, ...item }));
     return inbox(presentDeliverability(value, now, { accounts: new Map([[mailbox.workspace_ref, [...others, current]]]) }), "uni-only@a.test");
   }
@@ -299,7 +300,8 @@ describe("member verdict and next step (LIF-1603)", () => {
     expect(idle.account?.outreach.code).toBe("idle");
     expect(idle.status).toMatchObject({ code: "ready_idle", label: "Connected", description: "Sends once a campaign is active." });
     expect(idle.next_step.code).toBe("none");
-    const sending = verdict("email_safety_check_required", item => { item.campaigns[0]!.states = { active: 1 }; });
+    const sending = verdict("email_safety_check_required", item => { item.campaigns[0]!.states = { active: 1 }; },
+      { participation: { status: "sending", cause: "active_journeys" } });
     expect(sending.status).toMatchObject({ code: "in_campaign", label: "In campaign" });
     expect(sending.next_step.code).toBe("none");
   });

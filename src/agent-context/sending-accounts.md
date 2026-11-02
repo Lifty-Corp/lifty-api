@@ -24,7 +24,7 @@ behind Lifty’s connection pages.
   waits for a fresh check.
 - `declaration`: what the person confirmed on Lifty's connect page.
 - `sends`: sends today and over the last seven days.
-- `participation` (absent until Lifty reports it): whether the account takes
+- `participation`: whether the account takes
   part in new Journeys now, as `status` and its `cause`: `sending`;
   `waiting_for_first_lead` (no lead has reached its channel yet);
   `no_active_campaign` (it sends once a campaign on its channel is active);
