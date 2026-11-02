@@ -75,7 +75,8 @@ CLI and dashboard alongside this API cutover; v7 is deliberately retired.
 
 Weekly research (LIF-1174) is one schedule per workspace: `weekly_target` plus
 active or paused, with CAS `expected_version`. A `null` target follows the
-plan's full limit (LIF-1247). The plan's explicit weekly research allowance is read-only;
+plan's full limit (LIF-1247). It starts paused; confirming the sample turns it
+on unless the founder already activated or paused it (LIF-1776). The plan's explicit weekly research allowance is read-only;
 LIFT admins assign entitlements independently of payment arrangements. a Monday 00:00 UTC week counts
 each person once, when their first research completes, and includes the
 five-person sample. Weekly status, the calibration sample and the lead list
