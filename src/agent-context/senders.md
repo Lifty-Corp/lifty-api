@@ -57,10 +57,51 @@ intended edit. A changed signature redoes previews of leads whose Journey has
 not started (`recomposing` counts them); show the new previews before
 approving them. Started Journeys keep their signature.
 
+## Turn a person off or on
+
+When a person should stop sending (they left, are away, or their leads belong
+with someone else) turn them off instead of deleting them: they stay in the
+roster and keep every account connected, so replies keep arriving. Only with the
+founder's explicit yes and the person who takes their leads:
+
+1. Read `senders_get`. The founder chooses the target: another person in the
+   roster who is on (no `sending` object). Never choose it yourself.
+2. `senders_turn_off` (`lifty post senders turn-off`) with `path.id` and
+   `{"expected_version":…,"confirm":true,"reason":"…","drain_to_sender_id":"…"}`.
+   The reason is the founder's own words, 1–500 characters.
+
+A person who is off shows `sending.state: "off"`, takes part in no new Journey
+and sends no outreach; their accounts report participation `paused` with cause
+`sender_off`. Their admitted leads drain to the target: each lead's run ends and
+the target starts one with only the channels that prospect never received
+(`drain_mode` `unused_channels`); a lead with nothing left to send keeps no run.
+`continue` is not available yet (`DRAIN_MODE_UNAVAILABLE`). Turning off never
+deletes, disconnects or sends by itself; the target's new runs send on the
+target's normal schedule.
+
+The response's `drain` is the first batch: `outcomes` counts leads `moved`,
+`closed` (nothing left to send), `skipped`, `waiting_send` (a send in flight
+settles first) or `error`, and `remaining` counts leads still to move. Lifty
+drains the rest and retries errors on its own; `sending.leads_remaining` in the
+roster shows progress. `drain.state` `target_unavailable` means the target was
+deleted or turned off meanwhile: turn the person off again with another target.
+`waiting_customer_list` means the customer list holds outreach until it is
+current (`lifty context customer-exclusions`). `DRAIN_TARGET_INVALID` writes
+nothing: the target is this person, deleted, off or not in the workspace.
+
+After an uncertain response read the roster before retrying:
+`sending.state: "off"` means it was saved. Turning off a person who is already
+off, with their current version, changes the reason or target.
+
+With the founder's yes, `senders_turn_on` (`lifty post senders turn-on`) with
+`{"expected_version":…,"confirm":true}` lets the person take part in new
+Journeys again. Leads already drained stay with the person they moved to.
+
 ## Delete
 
-Only with the founder's explicit yes: `senders_delete` (`lifty post senders
-delete`) with `path.id` and `{"expected_version":…,"confirm":true}`. The person
+Delete only when the person leaves the roster for good, and only with the
+founder's explicit yes: `senders_delete` (`lifty post senders delete`) with
+`path.id` and `{"expected_version":…,"confirm":true}`. The person
 leaves the roster and every account they own is disconnected exactly like
 `sending_accounts_disconnect`; history stays and it is not reversible.
 200 means Lifty's access was removed from every account. 202 means the accounts
@@ -72,4 +113,5 @@ A deleted sender cannot receive connections or take part in new Journeys.
 Removing or replacing a person's account never moves their leads on its own.
 When leads wait on a person's lost account and their outreach has not started,
 move them with `lead_reassign_post` (`lifty context campaigns`); it never moves
-contacted leads.
+contacted leads. To hand over every admitted lead of a person, contacted or
+not, turn them off with a target.

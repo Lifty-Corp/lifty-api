@@ -71,6 +71,21 @@ export const identityOperationDefinitions = {
       args: input => ({ p_sender_id: path(input), p_payload: input.body }),
       description: "Soft-delete a person with expected_version and confirm:true. The person leaves the roster and every account they own is disconnected exactly as sending-accounts disconnect; history stays. 200 when Lifty's access was confirmed removed for every account (or not applicable), 202 when the accounts are blocked and removal at the provider continues on its own: do not repeat the request. Not reversible.",
     },
+    // LIF-1764: off is reversible and keeps the person's accounts connected.
+    turn_off: {
+      method: "POST", route: `${sendersRoute}/{id}/turn-off`, cli: { operation: "turn-off" }, rpc: "turn_off_lifty_sender",
+      path: contracts.IdPath, query: Empty, request: contracts.SenderTurnOffSchema, invalid: invalidRequest,
+      response: contracts.SenderTurnOffResultSchema, success: 200,
+      args: input => ({ p_sender_id: path(input), p_payload: input.body }),
+      description: "Turn a person off with expected_version, confirm:true, a reason and drain_to_sender_id (another person who is on). Their accounts stay connected so replies keep arriving; they take part in no new Journey and send no outreach. Their admitted leads drain to the target, who sends only channels each prospect never received (drain_mode unused_channels; continue is not available yet). drain reports the first batch; Lifty drains the remaining leads on its own. Never deletes, disconnects or sends by itself: the target's runs send on the target's schedule. After an uncertain response read senders: sending.state off means it is saved.",
+    },
+    turn_on: {
+      method: "POST", route: `${sendersRoute}/{id}/turn-on`, cli: { operation: "turn-on" }, rpc: "turn_on_lifty_sender",
+      path: contracts.IdPath, query: Empty, request: contracts.SenderTurnOnSchema, invalid: invalidRequest,
+      response: contracts.SenderResultSchema, success: 200,
+      args: input => ({ p_sender_id: path(input), p_payload: input.body }),
+      description: "Turn a person who is off back on with expected_version and confirm:true: they take part in new Journeys again; drained leads stay with the person they moved to. Never connects or sends by itself. After an uncertain response read senders: no sending object means the person is on.",
+    },
   },
   "sending-accounts": {
     get: {
@@ -321,6 +336,11 @@ export async function executeIdentityOperation(session: AuthSession, key: string
     const accounts = await revokeWithinBudget([receipt.account], receipt.account.sender_id);
     const account = accounts.find(item => item.id === receipt.account.id) ?? receipt.account;
     return { status: contracts.removalPending(account) ? 202 : 200, body: { ...receipt, account } };
+  }
+  if (key === "senders.turn_off") {
+    const { drain, ...receipt } = verified(contracts.SenderTurnOffReceiptSchema, data);
+    const errors = "errors" in drain ? { errors: drain.errors.map(({ message: _message, ...error }) => error) } : {};
+    return { status: 200, body: verified(contracts.SenderTurnOffResultSchema, { ...receipt, drain: { ...drain, ...errors } }) };
   }
   if (key === "senders.delete") {
     const receipt = verified(contracts.SenderDeleteResultSchema, data);
