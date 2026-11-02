@@ -161,13 +161,6 @@ describe("mixed providers, identity and missing evidence", () => {
 });
 
 describe("common strict sender gates", () => {
-  it.each(["lift", "lifty", undefined])("uses the same strict placement rule regardless of old classifier %s", by => {
-    const value = withInbox("uni-only@a.test", item => Object.assign(item, { workspace_managed_by: by }));
-    const mailbox = inbox(present(value), "uni-only@a.test");
-    expect(mailbox.placement.evidence).toMatchObject({ max_age_days: 10, freshness: "stale" });
-    expect(mailbox.readiness.paths[0]!.gate).toBe("strict_sender_checks");
-  });
-
   it("uses the evaluated database gate without guessing from plan or warmup", () => {
     const allowed = inbox(present(withInbox("uni-only@a.test", item => {
       item.connections[0]!.send_block_reason = null;

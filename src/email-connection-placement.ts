@@ -31,7 +31,7 @@ const StoredStatus = z.object({
   workspace_ref: z.uuid(), connection_ref: z.uuid(), email: z.email().nullable(),
   provider: z.literal("mailivery"), method: z.literal("connected_mailbox"),
   can_request: z.boolean(), blocked_reason: z.string().regex(/^[a-z][a-z0-9_]{0,63}$/).nullable(),
-  gates_sending: z.boolean(), last_passed_at: timestamp.nullable(), passing_until: timestamp.nullable(),
+  last_passed_at: timestamp.nullable(), passing_until: timestamp.nullable(),
   test: z.object({
     placement_ref: z.uuid(), status: z.enum(["queued", "creating", "ambiguous", "running", "completed", "failed"]),
     origin: z.enum(["member", "warmup_complete", "connected", "recurring"]), test_ref: z.string().regex(/^[1-9][0-9]{0,17}$/).nullable(), total_seeds: count.nullable(),
@@ -51,7 +51,6 @@ export const ConnectionPlacementStatus = z.object({
   email: z.email().nullable(),
   can_request: z.boolean(),
   blocked_reason: Reason.nullable(),
-  gates_sending: z.boolean(),
   rule: z.string().min(1).max(400),
   last_passed_at: timestamp.nullable(),
   passing_until: timestamp.nullable(),
@@ -136,10 +135,8 @@ export function presentConnectionPlacement(stored: z.infer<typeof StoredStatus>)
     message: blockedMessages[stored.blocked_reason] ?? "A placement test can't be requested for this mailbox right now." } : null;
   return ConnectionPlacementStatus.parse({
     provider: "mailivery", method: "connected_mailbox", workspace_ref: stored.workspace_ref, connection_ref: stored.connection_ref,
-    email: stored.email, can_request: stored.can_request, blocked_reason: blocked, gates_sending: stored.gates_sending,
-    rule: stored.gates_sending
-      ? "This mailbox can send campaign email only with a passing placement test from the last 10 days, after 21 active warmup days and an explicit release. A test never releases the mailbox by itself."
-      : "Placement is advisory for this workspace: the result is shown to you but does not block or allow sending.",
+    email: stored.email, can_request: stored.can_request, blocked_reason: blocked,
+    rule: "This mailbox can send campaign email only with a passing placement test from the last 10 days, after 21 active warmup days and an explicit release. A test never releases the mailbox by itself.",
     last_passed_at: stored.last_passed_at, passing_until: stored.passing_until, test,
   });
 }
