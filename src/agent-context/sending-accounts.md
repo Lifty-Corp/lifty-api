@@ -237,10 +237,9 @@ yourself. `uncertain` means Lifty is checking whether Mailivery created the
 test and will not create a second one. `did_not_run` is not a placement
 result.
 
-When `gates_sending` is true (LIFT client mailboxes), the mailbox can send
-campaign email only with a passing test from the last 10 days, after 21 active
-warmup days and an explicit operator release. A passing test never releases the
-mailbox or starts campaigns by itself. For founders it is advisory.
+A mailbox can send campaign email only with a passing test from the last 10
+days, after 21 active warmup days and an explicit release. A passing test never
+releases the mailbox or starts campaigns by itself.
 
 ## Inbox health
 
