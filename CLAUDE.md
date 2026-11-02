@@ -19,6 +19,8 @@ Headless workers (`claudex -p`, `codex exec`) implement their brief directly: no
   behavior. The hub lists it as the interim doc for that module.
 - [RUNBOOK.md](RUNBOOK.md): configuration, environments, deploy, rollback and
   the connection pilot.
+- [Slack app configuration](config/slack/README.md): the shared app manifest and
+  hosted customer authorization boundaries.
 - [docs/](docs/): MCP authorization and tool contracts, email providers and
   the session fence.
 - Module pages this API serves:
@@ -47,11 +49,12 @@ workflow also runs `python3 -m unittest discover -s scripts -p test_deploy_pilot
 ## Release
 
 Feature PRs target `develop`, which only verifies. A batched release promotes
-`develop` to `main` (Compass `CLAUDE.md`). `staging` holds `main` plus the
-isolated pilot; each push deploys the pilot without running the test suite, and
-its workflow can migrate the existing pilot app source from `develop` to
-`staging` in its single deployment, preserving the app identity and encrypted
-settings.
+`develop` to `main` (Compass `CLAUDE.md`). `staging` holds `main`
+plus the isolated pilot: every push to `main` merges into it automatically
+([Sync staging](.github/workflows/sync-staging.yml)), and each `staging` push
+deploys the pilot without running the test suite; its workflow can migrate the
+existing pilot app source from `develop` to `staging` in its single deployment,
+preserving the app identity and encrypted settings.
 
 Merging to `main` starts the `Deploy` workflow. It runs `npm run verify` (or
 reuses a passing pull request Verify run on the identical tree), deploys that
@@ -161,6 +164,14 @@ gets the git version; a failed draft read serves published context.
 `GET /v1/admin/context` feeds the ops editor. Promotion opens a pull request
 here, checked by the Verify workflow.
 
+### Targeting vocabulary
+
+`src/generated/industry-labels.ts` and `src/generated/naics-2022.ts` are
+generated: regenerate them with `scripts/industry-labels.mjs` and
+`scripts/sync-naics-2022.mjs`, never by hand. Writes enforce them in
+`src/targeting-vocabulary.ts`; read schemas stay tolerant so values saved
+earlier still load and appear in `filter_warnings` (README).
+
 ### Writing rules
 
 The banned-phrase list is the database rulebook Jobs composes against
@@ -215,6 +226,16 @@ provider reports; do not gate field creation on `allow_provisioning`. The
 database owns automatic sync and test sync and creates their runs; the routes
 (`src/crm-sync-controls.ts`) only enqueue `lifty-crm-sync` for the run it
 returns.
+
+### Analytics
+
+`src/analytics.ts` records every catalog mutation and the next_step read at
+the `/v1/*` middleware (events and milestones in README "Analytics events").
+Event and group properties pass an allow-list by name and shape: codes,
+identifiers and enum values only, never free text, addresses, links or
+anything read from a request body. A new milestone is one `MILESTONES` entry
+plus the README table. Keep `observe` outside the request path: no await on
+the sink, no new per-request reads before the response.
 
 ### Notifications
 

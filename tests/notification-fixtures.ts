@@ -28,6 +28,7 @@ export const connectedSlack = { provider: "slack", status: "connected", team_id:
 
 export interface NotificationsDatabaseOptions {
   workspace?: unknown;
+  controls?: unknown;
   slack?: unknown;
   types?: StoredType[];
   destinations?: StoredDestination[];
@@ -47,7 +48,7 @@ export function notificationsDatabase(options: NotificationsDatabaseOptions = {}
     if (key === "public.get_lifty_workspace_status") return { data: options.workspace ?? readyWorkspace, error: null };
     if (key === "public.get_lifty_slack_connection") return { data: options.slack ?? connectedSlack, error: null };
     if (key === "notifications.get_configuration") {
-      return { data: { types: types.length ? structuredClone(types) : null,
+      return { data: { ...(options.controls === undefined ? {} : { controls: options.controls }), types: types.length ? structuredClone(types) : null,
         destinations: destinations.length ? structuredClone(destinations) : null }, error: null };
     }
     if (key === "notifications.save_slack_destination") {
@@ -60,6 +61,7 @@ export function notificationsDatabase(options: NotificationsDatabaseOptions = {}
         active: true, types: types.filter(type => type.default_on && type.channels.includes("slack")).map(type => type.code) });
       return { data: createdRef, error: null };
     }
+    if (key === "notifications.set_controls" || key === "notifications.set_preferences") return { data: null, error: null };
     if (key === "notifications.set_subscription") {
       const destination = destinations.find(item => item.id === args?.p_destination_id)!;
       const code = String(args?.p_type_code);

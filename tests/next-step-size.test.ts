@@ -28,10 +28,10 @@ const limits: Record<string, number> = {
   campaigns_saved: 80_000,
   linkedin_outreach_active: 25_000,
   linkedin_reconnect_needed: 25_000,
-  email_connected: 25_000,
-  email_preparing: 25_000,
+  // LIF-1670: Part 3 also asks to draft and approve a campaign while none is active.
+  email_connected: 27_000,
+  email_preparing: 27_000,
   email_held: 25_000,
-  paid_plan_needed: 80_000,
   email_ready: 80_000,
 };
 
@@ -39,6 +39,9 @@ const identity = { workspace_ref: workspaceRef, name: "Example", state: "ready_f
 const at = profileFixture.updated_at;
 const run = { state: "succeeded", run_ref: "run-1", requested_leads: 5, leads_discovered: 5, leads_researched: 5,
   error_code: null, started_at: at, completed_at: at, reviewed_at: at, workspace: { workspace_ref: workspaceRef, name: "Example" }, leads: [] };
+// LIF-1696: a lane that matched nobody adds its repair line to the sample steps.
+const deadLane = [{ lane_ref: "44444444-4444-4444-8444-444444444444", matching_people: 0,
+  personas: [{ persona_ref: "55555555-5555-4555-8555-555555555555", name: "Quote desk - commercial plumbing", matching_people: 0 }] }];
 const senderId = "22222222-2222-4222-8222-222222222222";
 const linkedinAccount = (status: string) => ({ id: "11111111-1111-4111-8111-111111111111", sender_id: senderId, channel: "linkedin",
   identity: "https://www.linkedin.com/in/ada", status, state: "active", sending: { allowed: true, reason: null, scope: null }, limits: null,
@@ -52,8 +55,6 @@ const mailboxOwner = (status: string) => ({ ...founder(status), accounts: [{ ...
 const warmup = (state: string, extra: Record<string, unknown> = {}) => ({ state, warmup_ready: false, spam: null,
   recommended_go_live: { kind: "projected", date: "2026-10-27", remaining_active_days: 21, message: "About three weeks of warmup." }, ...extra });
 const passed = { passing_until: "2099-01-01T00:00:00Z", test: { state: "passed" } };
-const schedule = (source: string) => ({ version: 1, state: "paused", weekly_target: 25,
-  limit: { weekly_research_limit: 25, source, effective_from: at }, effective_target: 25, updated_at: at, updated_by: null });
 const unset = { targeting: { workspace_ref: workspaceRef, targeting: null }, criteria: { workspace_ref: workspaceRef, criteria: null } };
 const base = {
   business: { workspace: identity, profile: profileFixture } as unknown,
@@ -66,7 +67,6 @@ const base = {
   senders: [] as unknown[] | "unavailable",
   warmup: warmup("not_started") as unknown,
   placement: { passing_until: null, test: null } as unknown,
-  plan: "free",
   hubspot: { provider: "hubspot", status: "not_connected" } as unknown,
 };
 const connectedHubspot = { provider: "hubspot", status: "connected", portal_id: "1622001", hub_domain: null,
@@ -84,11 +84,11 @@ const states: Partial<typeof base>[] = [
     draft_version: 1, profile_version: 1, targeting_version: 1, criteria_version: 1, submitted_at: at } },
   {},
   { run: { ...run, state: "running", completed_at: null, reviewed_at: null } },
-  { run: { ...run, state: "failed", error_code: "search_exhausted" } },
+  { run: { ...run, state: "failed", error_code: "search_exhausted", lanes: deadLane } },
   { run },
   { run, campaigns: [campaignSummary] },
   // LIF-1622: a new CRM connection waits with automatic sync paused.
-  { run, hubspot: connectedHubspot },
+  { run: { ...run, lanes: deadLane }, hubspot: connectedHubspot },
   { run, senders: [founder("connected")] },
   { run, campaigns: [activeLinkedin] },
   { run, senders: [founder("needs_reconnect")] },
@@ -96,7 +96,6 @@ const states: Partial<typeof base>[] = [
   { run, senders: [mailboxOwner("connected")], warmup: warmup("warming") },
   { run, senders: [mailboxOwner("connected")], warmup: warmup("warming", { spam: { holds_sending: true } }) },
   { run, senders: [mailboxOwner("connected")], warmup: warmup("warming", { warmup_ready: true }), placement: passed },
-  { run, senders: [mailboxOwner("connected")], warmup: warmup("warming", { warmup_ready: true }), placement: passed, plan: "paid" },
 ];
 
 async function nextStep(state: Partial<typeof base>) {
@@ -113,7 +112,6 @@ async function nextStep(state: Partial<typeof base>) {
     customerExclusionsOperation: async () => ({ workspace_ref: workspaceRef, mode: "unselected", provider: null, sources: [], version: 0, updated_at: null, refresh_pending: false }),
     getEmailWarmup: async () => current.warmup,
     getEmailPlacement: async () => current.placement,
-    researchOperation: async () => schedule(current.plan),
     identityOperation: async () => {
       if (current.senders === "unavailable") throw new Error("roster unavailable");
       return { status: 200, body: { workspace: identity, senders: current.senders } };

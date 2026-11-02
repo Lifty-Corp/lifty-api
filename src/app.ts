@@ -1,4 +1,5 @@
 import { connectionProfileAllows } from "./runtime-profile.js";
+import { SetNotificationControlsRequestSchema, SetNotificationPreferencesRequestSchema, type SetNotificationControlsRequest, type SetNotificationPreferencesRequest } from "./contracts.js";
 import { historicalEmailResult, historicalOperation, HistoricalEmailResultSchema } from "./historical-outreach.js";
 import { executeOutreachOperation, type OutreachInput } from "./outreach-operations.js";
 import { executeLinkedinOperation, type LinkedinInput } from "./linkedin-operations.js";
@@ -33,6 +34,7 @@ import { DeleteLoginRequest, DeleteLoginResult, type DeleteLoginInput, type Dele
 import { MemberWorkspacesResult, type MemberWorkspacesOutput } from "./member-workspaces.js";
 
 import { OpenAPIHono, z } from "@hono/zod-openapi";
+import { analyticsSurface, isInternalRequest, noopAnalytics, type Analytics, type AnalyticsSurface } from "./analytics.js";
 import { CLIENT_UPGRADE_MESSAGE, STAGE_CLIENT_CONTRACT, SUPPORTED_CLIENT_CONTRACTS, AgentContextSchema, getAgentContext, isSupportedClientContract, type ContextDraft } from "./agent-context.js";
 import { readContextDrafts } from "./context-drafts.js";
 import type { Context } from "hono";
@@ -149,6 +151,8 @@ export interface AppDependencies {
   enqueueIntegrationRevocation: EnqueueIntegrationRevocation;
   /** Notification configuration in the notifications schema (LIF-1464). */
   getNotificationConfig(session: AuthSession): Promise<NotificationConfig>;
+  setNotificationControls(session: AuthSession, input: SetNotificationControlsRequest): Promise<NotificationConfig>;
+  setNotificationPreferences(session: AuthSession, input: SetNotificationPreferencesRequest): Promise<NotificationConfig>;
   companyMapping: CompanyMappingOperation;
   listSlackNotificationChannels(session: AuthSession): Promise<SlackNotificationChannels>;
   upsertNotificationDestination(
@@ -198,6 +202,8 @@ export interface AppDependencies {
   checkCompanyReadiness(): Promise<boolean>;
   checkCrmMappingReadiness(): Promise<boolean>;
   connectionCallbacks?: ConfirmationAdapters;
+  /** LIF-1663: operation events for PostHog; the default captures nothing. */
+  analytics: Analytics;
   log(event: LogEvent): void;
 }
 
@@ -226,6 +232,9 @@ export type AppEnvironment = {
     requestStartedAt: number;
     operationStage?: string;
     authSession: AuthSession;
+    surface: AnalyticsSurface;
+    /** Non-secret facts a handler learned for analytics (the CRM provider of an attempt). */
+    analyticsFacts?: { provider?: string };
   };
 };
 
@@ -769,6 +778,8 @@ const defaultDependencies: AppDependencies = {
   enqueueIntegrationRevocation: async () => {
     throw new Error("enqueueIntegrationRevocation is not configured");
   },
+  setNotificationControls: async () => { throw new Error("setNotificationControls is not configured"); },
+  setNotificationPreferences: async () => { throw new Error("setNotificationPreferences is not configured"); },
   getNotificationConfig: async () => {
     throw new Error("getNotificationConfig is not configured");
   },
@@ -826,6 +837,7 @@ const defaultDependencies: AppDependencies = {
   checkReadiness: async () => true,
   checkCompanyReadiness: async () => false,
   checkCrmMappingReadiness: async () => false,
+  analytics: noopAnalytics,
   log: (event) => process.stderr.write(`${JSON.stringify(event)}\n`),
 };
 
@@ -1199,10 +1211,23 @@ export function createApp(
       );
     }
     context.set("authSession", authentication.session);
+    context.set("surface", analyticsSurface(Boolean(trusted), context.req.header("user-agent")));
     if (!isSupportedClientContract(context.req.header("x-lifty-client-contract"))) {
       return errorJson(context, 409, "CONTEXT_CLIENT_UNSUPPORTED", CLIENT_UPGRADE_MESSAGE);
     }
     await next();
+    // LIF-1663: the operation is decided; record it without touching the response.
+    if (dependencies.analytics.enabled && !isInternalRequest(context.req.raw)) {
+      const error = context.error;
+      dependencies.analytics.observe({
+        session: authentication.session, method: context.req.method, path: context.req.path,
+        query: { attempt_ref: context.req.query("attempt_ref") }, surface: context.get("surface"),
+        requestId: context.get("requestId"), selection: context.req.header("x-lifty-workspace")?.trim() || null,
+        status: context.res.status, durationMs: Date.now() - context.get("requestStartedAt"),
+        errorCode: error instanceof PublicError ? error.code : error ? "INTERNAL_ERROR" : null,
+        facts: context.get("analyticsFacts"), response: context.res,
+      });
+    }
   });
 
   // Expired entries are removed on access, without a process-owning timer.
@@ -1340,6 +1365,27 @@ export function createApp(
     );
     return context.json(NotificationDestinationSchema.parse(result));
   });
+
+  for (const [path, schema, operation] of [
+    ["controls", SetNotificationControlsRequestSchema, (session: AuthSession, input: unknown) => dependencies.setNotificationControls(session, SetNotificationControlsRequestSchema.parse(input))],
+    ["preferences", SetNotificationPreferencesRequestSchema, (session: AuthSession, input: unknown) => dependencies.setNotificationPreferences(session, SetNotificationPreferencesRequestSchema.parse(input))],
+  ] as const) {
+    app.openAPIRegistry.registerPath({ method: "put", path: `/v1/notifications/${path}`,
+      operationId: path === "controls" ? "setNotificationControls" : "setNotificationPreferences", security: [{ bearerAuth: [] }],
+      request: { body: { required: true, content: { "application/json": { schema } } } },
+      responses: { 200: JsonResponse(NotificationConfigSchema), 400: JsonResponse(ErrorResponseSchema),
+        401: JsonResponse(ErrorResponseSchema), 403: JsonResponse(ErrorResponseSchema), 409: JsonResponse(ErrorResponseSchema) },
+    });
+    app.put(`/v1/notifications/${path}`, async context => {
+      const body = await readRequestTextWithinLimit(context.req.raw, MAX_CREATE_WORKSPACE_BYTES);
+      if (!body.ok) return errorJson(context, 413, "PAYLOAD_TOO_LARGE", "Notification settings exceed 16 KiB.");
+      let value: unknown;
+      try { value = JSON.parse(body.text); } catch { value = null; }
+      const parsed = schema.safeParse(value);
+      if (!parsed.success) return errorJson(context, 400, "INVALID_REQUEST", "Notification settings are invalid.");
+      return context.json(NotificationConfigSchema.parse(await operation(context.get("authSession"), parsed.data)));
+    });
+  }
 
   app.post(
     "/v1/notifications/destinations/:destination_ref/test",

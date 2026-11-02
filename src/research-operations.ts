@@ -21,6 +21,11 @@ const Grade = z.enum(["A", "B", "C"]);
 export const ResearchLimitSchema = z
   .object({
     weekly_research_limit: z.number().int().positive(),
+    // LIF-1258: a plan's total and what is left of it, null when the plan has
+    // none (Seed has 50). Optional until every database release reports them.
+    total_research_limit: z.number().int().positive().nullable().optional(),
+    total_remaining: Count.nullable().optional(),
+    plan_name: z.string().min(1).optional(),
     source: z.enum(["free", "paid"]),
     effective_from: Timestamp,
   })
@@ -168,7 +173,7 @@ export const researchOperationDefinitions = {
       unavailable: schedule,
       args: () => ({}),
       description:
-        "Read the weekly research schedule: active or paused, weekly_target, this workspace's weekly research limit and the effective target (the lower of the two). Until the founder sets a number, weekly_target follows the plan and reads as its limit. Every workspace has one from creation, paused at version 0.",
+        "Read the weekly research schedule: active or paused, weekly_target, this workspace's plan with its weekly research limit and, when the plan has one, its total and what is left of it, and the effective target (the weekly target capped by the limit and by what was left of the total when the week began). Until the founder sets a number, weekly_target follows the plan and reads as its limit. Every workspace has one from creation, paused at version 0.",
     },
     patch: {
       method: "PATCH",

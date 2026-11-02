@@ -47,6 +47,8 @@ export const memberReviewOperationDefinitions = {
     "Request a new pending draft from one exact pending source_digest with an idempotent request_ref. Preserves earlier bytes and provenance and never approves. Read the source message's rewrite_work until it supplies the exact replacement or a bounded failure; never restart an uncertain job blindly.", { path: c.CampaignMessagePathSchema, request: c.CampaignMessageRewriteSchema, success: 202 }),
   lead_stop_post: operation("lead_stop_post", "POST", "leads/{lead_ref}/stop-outreach", "stop_lifty_lead_outreach", c.StopLeadOutreachResultSchema,
     "Explicitly stop every proactive LinkedIn and email Campaign for this lead with confirm:true and an idempotent request_ref. Writes the local manual_stop barrier and requests provider cancellation; provider_stops_pending means reconciliation is still required. Inbound replies remain available.", { path: c.LeadOutreachPathSchema, request: c.StopLeadOutreachSchema, success: 202 }),
+  lead_reassign_post: operation("lead_reassign_post", "POST", "leads/reassign", "reassign_lifty_leads", c.ReassignLeadsResultSchema,
+    "Move admitted leads whose outreach has not started to another person who takes part, with confirm:true, a reason and an idempotent request_ref (repeating it returns the original receipt). Select lead_refs (up to 500) or from_sender_id (that person's not-started leads); target one sender_id or round_robin among the other participating persons whose accounts cover the lead's channels. Not started means no sent, begun or uncertain outbound on any channel; a lead with any contact is refused with outreach_started and never moves. Each result is reassigned, unchanged or refused with its refusal; remaining counts leads left for another request. A moved lead prepares again with its new person's signature. Contacts nobody.", { request: c.ReassignLeadsSchema }),
 };
 
 export function memberReviewReceiptMatches(action: string, input: IdentityInput, value: unknown): boolean | undefined {
@@ -99,6 +101,16 @@ export function memberReviewReceiptMatches(action: string, input: IdentityInput,
           && message.channel === receipt.message.channel && message.account_id === receipt.message.account_id);
     }
     case "lead_stop_post": return c.StopLeadOutreachResultSchema.parse(value).lead_ref === input.path.lead_ref;
+    case "lead_reassign_post": {
+      const request = c.ReassignLeadsSchema.parse(input.body);
+      const receipt = c.ReassignLeadsResultSchema.parse(value);
+      const leads = receipt.results.map(result => result.lead_ref);
+      const requested = "lead_refs" in request.leads ? request.leads.lead_refs : null;
+      const sender = request.to.kind === "sender" ? request.to.sender_id : null;
+      return receipt.request_ref === request.request_ref
+        && (!requested || (leads.length === requested.length && new Set(leads).size === leads.length && leads.every(lead => requested.includes(lead))))
+        && (!sender || receipt.results.every(result => result.outcome !== "reassigned" || result.to_sender_id === sender));
+    }
     default: return true;
   }
 }

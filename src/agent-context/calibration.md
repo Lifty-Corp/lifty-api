@@ -80,13 +80,16 @@ leads, invent fit, or acquire repeated waves to satisfy the objective.
    budget, and the filter keeps it on people who can fit. A reason that needs
    evidence to detect stays in the research criteria. A `search_exhausted`
    sample means the targeting ran out of new matching people: propose one
-   specific wider change.
+   specific wider change. A lane with `matching_people: 0` in the sample's
+   `lanes` (and a `targeting_matched_nobody` sample) matched nobody: a filter
+   is wrong, not the market too small, so repair that lane's filter first.
 4. A historical `calibration_review_required` result can be retried explicitly
    through `lifty post sample-review` to evaluate its saved cohort under the
    current policy. This is not permission for another acquisition wave.
    A current `calibration_sample_incomplete` result means some profile or
    research evidence is still missing; identify the missing input before retrying.
-   For `research_limit_reached`, report the reset time. A `research_failed`
+   For `research_limit_reached`, report the reset time, or offer the paid
+   plans when the plan's total ran out (`context research-schedule`). A `research_failed`
    sample may be retried once against the saved candidates, preserving
    completed research and weekly usage. Never blindly retry low-fit results
    or a reached limit. A reset date limits new research, not account

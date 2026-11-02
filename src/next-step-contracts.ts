@@ -20,13 +20,12 @@ export const NextStepSchema = z
       "campaign",
       "linkedin",
       "email",
-      "plan",
     ]),
     reason: z.string().min(1),
     section: z
       .enum(["leads", "outreach", "email", "kickoff"])
       .describe(
-        "Roadmap part: 1 leads (interview, search, sample, CRM), 2 outreach (LinkedIn), 3 email (mailbox preparation), 4 kickoff (ready mailbox, email campaign and plan).",
+        "Roadmap part: 1 leads (interview, search, sample, CRM), 2 outreach (LinkedIn), 3 email (mailbox preparation), 4 kickoff (ready mailbox and email campaign).",
       ),
     actions: z
       .array(z.string().min(1))

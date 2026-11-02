@@ -41,6 +41,26 @@ const Limits = z.union([
   z.object({ emails_per_day: Limit }).strict(),
   z.object({ invitations_per_day: Limit, messages_per_day: Limit, invitations_per_7_days: Limit }).strict(),
 ]);
+// LIF-1672: whether the account takes part in new Journeys now, and why not.
+// Each status has its own causes; waiting_journeys counts the started
+// Journeys a paused account holds.
+const PARTICIPATION = {
+  sending: ["active_journeys"],
+  no_active_campaign: ["no_active_campaign_on_channel"],
+  waiting_for_first_lead: ["no_lead_yet"],
+  paused: ["paused_by_member", "paused_by_disconnect", "campaign_paused", "workspace_suspended"],
+  not_connected: ["disconnected", "needs_reconnect", "unverified"],
+  email_not_ready: ["warming", "placement_required", "declaration_required", "signature_missing", "mailbox_not_ready"],
+} as const;
+type ParticipationStatus = keyof typeof PARTICIPATION;
+const participationStatuses = Object.keys(PARTICIPATION) as [ParticipationStatus, ...ParticipationStatus[]];
+type ParticipationCause = (typeof PARTICIPATION)[ParticipationStatus][number];
+const participationCauses = Object.values(PARTICIPATION).flat() as [ParticipationCause, ...ParticipationCause[]];
+export const ParticipationSchema = z.object({
+  status: z.enum(participationStatuses), cause: z.enum(participationCauses), waiting_journeys: Count.optional(),
+}).strict().refine(value => (PARTICIPATION[value.status] as readonly string[]).includes(value.cause), "The cause belongs to another status.")
+  .refine(value => value.status === "paused" || value.waiting_journeys === undefined, "Only a paused account reports waiting Journeys.");
+export type Participation = z.infer<typeof ParticipationSchema>;
 export const AccountSchema = z.object({
   id: Id,
   sender_id: Id,
@@ -62,6 +82,8 @@ export const AccountSchema = z.object({
   declaration: Declaration.nullable(),
   // Connection-only deployments have no receipt metrics; null is unavailable.
   sends: z.object({ today: Count, last_7_days: Count }).strict().nullable(),
+  // Optional so this API deploys before the database reports it.
+  participation: ParticipationSchema.optional(),
 }).strict();
 export type Account = z.infer<typeof AccountSchema>;
 /** Disconnected with provider access still to remove (a retired provider's account has none). */
@@ -135,16 +157,20 @@ const WarmupStep = z.object({
   body: z.object({ workspace: Id, connection_ref: Id }).strict(),
   message: z.string(),
 }).strict();
+// LIF-1670: a connected account leads the agent back to next_step, which
+// drafts and asks for Campaign approval in the same conversation.
+const NextStepCall = z.object({ operation: z.literal("next_step"), message: z.string() }).strict();
 /**
  * The attempt with who acts next and what is permitted, the same for the
  * agent and the dashboard. `connection_url` is present while the account
- * owner still has to open it; a connected mailbox's next step is its warmup.
+ * owner still has to open it; a connected mailbox's next step is its warmup,
+ * a connected LinkedIn account's is next_step.
  */
 export const AttemptReadSchema = AttemptSchema.extend({
   connection_url: z.url().optional(),
   action_owner: AttemptActionOwner,
   actions: z.array(AttemptAction),
-  next_step: z.union([WarmupStep, AttemptStep]).optional(),
+  next_step: z.union([WarmupStep, AttemptStep, NextStepCall]).optional(),
 }).strict();
 export type AttemptRead = z.infer<typeof AttemptReadSchema>;
 export const AttemptQuerySchema = z.object({

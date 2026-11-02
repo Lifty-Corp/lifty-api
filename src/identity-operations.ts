@@ -62,7 +62,7 @@ export const identityOperationDefinitions = {
       method: "PATCH", route: `${sendersRoute}/{id}`, rpc: "patch_lifty_sender", path: contracts.IdPath, query: Empty,
       request: contracts.SenderPatchSchema, invalid: senderInvalid, response: contracts.SenderPatchResultSchema, success: 200,
       args: input => ({ p_sender_id: path(input), p_payload: input.body }),
-      description: "Change name, signature and/or booking_url with expected_version. Omitted fields stay; null clears signature or booking_url. A new signature signs newly prepared emails and recomposes still-unapproved previews (recomposing counts them); approved emails keep their exact text. Never sends.",
+      description: "Change name, signature and/or booking_url with expected_version. Omitted fields stay; null clears signature or booking_url. A lead's signature is fixed when its Journey starts: a new signature signs Journeys that start afterwards and redoes previews of leads not started yet (recomposing counts them); started Journeys and approved emails keep theirs, and no Campaign needs re-approval. Never sends.",
     },
     delete: {
       method: "POST", route: `${sendersRoute}/{id}/delete`, cli: { operation: "delete" }, rpc: "delete_lifty_sender",
@@ -90,7 +90,7 @@ export const identityOperationDefinitions = {
       readOnly: false,
       path: contracts.IdPath, query: contracts.AttemptQuerySchema, request: null, invalid: invalidRequest,
       response: contracts.AttemptReadSchema, success: 200, args: input => ({ p_attempt_id: path(input) }),
-      description: "Read one connection attempt with who acts next (action_owner), what is permitted (actions) and next_step. state: pending, connected (account_id), failed (reason) or expired. While the account owner still has to sign in, connection_url is the link to show. verifying means Lifty received the sign-in and finishes the connection/reconnection the user already requested on its own, even with every page closed; nobody signs in again. With wait_seconds (up to 25) the read returns as soon as the attempt changes. A failed or timed-out read is unknown, not a failed connection. Never creates a link or starts outreach. A connected mailbox's next_step is its warmup setup, a second sign-in by its owner.",
+      description: "Read one connection attempt with who acts next (action_owner), what is permitted (actions) and next_step. state: pending, connected (account_id), failed (reason) or expired. While the account owner still has to sign in, connection_url is the link to show. verifying means Lifty received the sign-in and finishes the connection/reconnection the user already requested on its own, even with every page closed; nobody signs in again. With wait_seconds (up to 25) the read returns as soon as the attempt changes. A failed or timed-out read is unknown, not a failed connection. Never creates a link or starts outreach. A connected mailbox's next_step is its warmup setup, a second sign-in by its owner; a connected LinkedIn account's is next_step.",
     },
     close_attempt: {
       method: "POST", route: `${accountsRoute}/attempts/{id}/close`, cli: { operation: "close-attempt" }, rpc: "close_lifty_sending_account_attempt",
@@ -218,12 +218,16 @@ export function presentAttempt(attempt: contracts.Attempt, connector: AccountCon
     // Connecting a mailbox is only half of its setup: warmup and the placement
     // test need the owner's second consent, which an agent would otherwise miss
     // right where it reports success. warmup_start issues no link for a mailbox
-    // whose warmup is already set up. The connection profile has no warmup.
-    if (profile !== "full" || attempt.channel !== "email" || !attempt.account_id) return view("none", []);
+    // whose warmup is already set up. Both channels then lead to next_step, so
+    // a Campaign can be drafted and approved in the same conversation
+    // (LIF-1670). The connection profile has neither.
+    if (profile !== "full" || !attempt.account_id) return view("none", []);
+    if (attempt.channel === "linkedin") return view("agent", [], { next_step: { operation: "next_step",
+      message: "The LinkedIn account is connected. Call next_step now and follow it in this same reply." } });
     return view("agent", [], { next_step: {
       operation: "sending_accounts_warmup_start",
       body: { workspace: attempt.workspace.workspace_ref, connection_ref: attempt.account_id },
-      message: "The mailbox is connected, but it cannot warm up or get its placement test until its owner signs in to it once more. Call sending_accounts_warmup_start once with this body now and, in the same reply, show its setup link as that second sign-in. Reuse the link while it is valid: another call replaces it. A null connect_url means this mailbox's warmup is already set up.",
+      message: "The mailbox is connected, but it cannot warm up or get its placement test until its owner signs in to it once more. Call sending_accounts_warmup_start once with this body now and, in the same reply, show its setup link as that second sign-in. Reuse the link while it is valid: another call replaces it. A null connect_url means this mailbox's warmup is already set up. Either way, then call next_step.",
     } });
   }
   if (attempt.state === "pending" && attempt.recovery) {

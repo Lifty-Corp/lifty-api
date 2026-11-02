@@ -18,7 +18,6 @@ import { readCrmConnection } from "./crm-connection.js";
 import { CrmAutomaticSyncSchema } from "./crm-sync-controls.js";
 import { CampaignsSchema } from "./outreach-contracts.js";
 import { SendersGetSchema } from "./identity-contracts.js";
-import { ResearchScheduleSchema } from "./research-operations.js";
 import { PublicError } from "./errors.js";
 import { CustomerSourceChoice } from "./customer-exclusions.js";
 import { z } from "zod";
@@ -98,26 +97,24 @@ export const NEXT_STEP_CATALOG: Record<string, NextStepEntry> = {
   // passing placement test until LIF-1223 replaces that check (LIF-1260).
   email_connected: { step: "email", state: "action_required", section: "email",
     when: ["The founder confirmed the first sample", "No connected LinkedIn account is waiting for its first active campaign",
-      "An email account is connected", "Its warmup and placement test have not started"],
+      "An email account is connected", "Its warmup and placement test have not started",
+      "With no active campaign, it also asks to draft, preview and approve one now"],
     guide: { task: "sending-accounts", references: ["common"] }, context: "sending-accounts",
-    related: ["notifications", "research-schedule", "senders", "campaigns"] },
+    related: ["notifications", "research-schedule", "senders", "campaigns", "journeys"] },
   email_preparing: { step: "email", state: "pending", section: "email",
     when: ["The founder confirmed the first sample", "No connected LinkedIn account is waiting for its first active campaign",
-      "A mailbox's warmup or placement test is running"],
+      "A mailbox's warmup or placement test is running",
+      "With no active campaign, it also asks to draft, preview and approve one now"],
     guide: { task: "sending-accounts", references: ["common"] }, context: "sending-accounts",
-    related: ["notifications", "research-schedule", "campaigns"] },
+    related: ["notifications", "research-schedule", "campaigns", "journeys"] },
   email_held: { step: "email", state: "blocked", section: "email",
     when: ["The founder confirmed the first sample", "No connected LinkedIn account is waiting for its first active campaign",
       "A mailbox needs reconnecting, its warmup has a problem or lands in spam, or its placement test failed"],
     guide: { task: "sending-accounts", references: ["common"] }, context: "sending-accounts", related: ["senders"] },
-  // Part 4: a ready mailbox; a free workspace is handed to David for a paid
-  // plan until checkout exists (LIF-1262). The plan never gates activation here.
-  paid_plan_needed: { step: "plan", state: "action_required", section: "kickoff",
-    when: ["The founder confirmed the first sample", "A mailbox's warmup is ready and its placement test passed", "The workspace is on the free plan"],
-    guide: { task: "campaigns", references: ["common", "writing", "anti_slop"] }, context: "campaigns",
-    related: ["research-schedule", "sending-accounts", "journeys"] },
+  // Part 4: a ready mailbox continues to the email campaign on every plan,
+  // the free Seed plan included (LIF-1258).
   email_ready: { step: "email", state: "action_required", section: "kickoff",
-    when: ["The founder confirmed the first sample", "A mailbox's warmup is ready and its placement test passed", "The workspace plan allows outreach"],
+    when: ["The founder confirmed the first sample", "A mailbox's warmup is ready and its placement test passed"],
     guide: { task: "campaigns", references: ["common", "writing", "anti_slop"] }, context: "campaigns",
     related: ["journeys", "commercial-voice", "senders", "sending-accounts", "research-schedule"] },
 };
@@ -142,11 +139,16 @@ export function nextStepGuide(reason: string, drafts: readonly ContextDraft[] = 
 // Customer reasons for a failed sample and the one next move for each.
 const sampleFailures: Record<z.infer<typeof RunErrorCodeSchema>, { action: string; tools: string[] }> = {
   research_limit_reached: {
-    action: `This week's research limit was reached. Read ${tool("research-schedule", "status")} and give the founder its resets_at; start the sample again with ${tool("sample-review", "post")} after that time. Volume does not carry over and the limit is not raised by retrying.`,
+    action: `The research limit was reached. Read ${tool("research-schedule", "status")}: when limit.total_remaining is below five, the plan's total is used and no reset renews it, so ask which paid plan the founder wants and send them to Plan in the Lifty dashboard. Otherwise give the founder its resets_at and start the sample again with ${tool("sample-review", "post")} after that time. Volume does not carry over and the limit is not raised by retrying.`,
     tools: [tool("research-schedule", "status"), tool("sample-review", "post")],
   },
   search_exhausted: {
     action: `The search ran out of new matching people. Propose one specific wider targeting change; after the founder agrees, save it with ${tool("targeting", "patch")} and its expected_version, then start a new sample with ${tool("sample-review", "post")}.`,
+    tools: [tool("targeting", "get"), tool("targeting", "patch"), tool("sample-review", "post")],
+  },
+  // LIF-1696: a filter matched nobody; repair the named lane, never widen.
+  targeting_matched_nobody: {
+    action: `A Targeting lane matched nobody, so the sample could not fill. The repair is that lane's filter, not a wider market: read ${tool("targeting", "get")}, inspect the named lane's keywords, industries, industry codes, titles, seniorities, locations and employee ranges, and change the one most likely to match no one while keeping the founder's market. Confirm a material change with the founder, save it with ${tool("targeting", "patch")} and its expected_version, then start a new sample with ${tool("sample-review", "post")}.`,
     tools: [tool("targeting", "get"), tool("targeting", "patch"), tool("sample-review", "post")],
   },
   research_failed: {
@@ -162,6 +164,19 @@ const sampleFailures: Record<z.infer<typeof RunErrorCodeSchema>, { action: strin
     tools: [tool("sample-review", "post")],
   },
 };
+// A lane that matched nobody is named whatever the sample's outcome (LIF-1696),
+// so a dead lane is never silent when other lanes fill the sample.
+type RunLanes = { lanes?: Array<{ lane_ref: string; matching_people: number; personas: Array<{ name: string }> }> | null | undefined };
+const hasDeadLane = (run: RunLanes) => (run.lanes ?? []).some(lane => lane.matching_people === 0);
+const laneTools = (run: RunLanes) => hasDeadLane(run) ? [tool("targeting", "get"), tool("targeting", "patch")] : [];
+function deadLanes(run: RunLanes, withRepair: boolean): string[] {
+  const dead = (run.lanes ?? []).filter(lane => lane.matching_people === 0);
+  if (dead.length === 0) return [];
+  const named = `Targeting lane ${dead.map(lane => `${lane.lane_ref} (${lane.personas.map(persona => persona.name).join(", ")})`).join("; ")} matched nobody in this sample (receipt.lanes, matching_people 0)`;
+  return [withRepair
+    ? `${named}, so its share never fills. Repair that lane first: inspect its filters with ${tool("targeting", "get")} and change the one most likely to match no one, keeping the founder's market; confirm a material change with the founder before ${tool("targeting", "patch")}.`
+    : `${named}.`];
+}
 // Parts 3 and 4 classify the founder's mailboxes from today's reads (LIF-1260):
 // "ready" is warmup ready and a passing placement test until LIF-1223 replaces
 // that check. An unreadable status is unknown, never ready or held.
@@ -169,19 +184,15 @@ type Mailbox = { id: string; sender_id: string; sender: string; email: string | 
 type EmailKind = "held" | "ready" | "preparing" | "connected";
 async function emailPosition(deps: Reads, session: AuthSession, workspace: string, mailboxes: Mailbox[]) {
   const now = Date.now();
-  const [checked, schedule] = await Promise.all([
-    Promise.all(mailboxes.slice(0, 5).map(async mailbox => {
-      if (mailbox.status !== "connected") return { mailbox, warmup: null, placement: null };
-      const [warmup, placement] = await Promise.all([
-        readComponent(() => deps.getEmailWarmup(session, workspace, mailbox.id)),
-        readComponent(() => deps.getEmailPlacement(session, { workspace, connection_ref: mailbox.id })),
-      ]);
-      return { mailbox, warmup: warmup.status === "available" ? warmup.value : null,
-        placement: placement.status === "available" ? placement.value : null };
-    })),
-    readComponent(async () => ResearchScheduleSchema.parse(
-      await deps.researchOperation(session, "research-schedule.get", { query: {}, body: undefined }))),
-  ]);
+  const checked = await Promise.all(mailboxes.slice(0, 5).map(async mailbox => {
+    if (mailbox.status !== "connected") return { mailbox, warmup: null, placement: null };
+    const [warmup, placement] = await Promise.all([
+      readComponent(() => deps.getEmailWarmup(session, workspace, mailbox.id)),
+      readComponent(() => deps.getEmailPlacement(session, { workspace, connection_ref: mailbox.id })),
+    ]);
+    return { mailbox, warmup: warmup.status === "available" ? warmup.value : null,
+      placement: placement.status === "available" ? placement.value : null };
+  }));
   const positions = checked.map(({ mailbox, warmup, placement }) => {
     const test = placement?.test?.state ?? null;
     // A client mailbox needs a pass inside its validity window. A founder
@@ -203,10 +214,8 @@ async function emailPosition(deps: Reads, session: AuthSession, workspace: strin
         placement: placement ? { test, passing_until: placement.passing_until } : null } };
   });
   // An actionable problem first, then the furthest-along mailbox.
-  const chosen = (["held", "ready", "preparing", "connected"] as const)
+  return (["held", "ready", "preparing", "connected"] as const)
     .map(kind => positions.find(item => item.kind === kind)).find(item => item !== undefined)!;
-  const plan = schedule.status === "available" ? schedule.value.limit.source : null;
-  return { ...chosen, plan, receipt: { ...chosen.receipt, plan } };
 }
 type Reads = Pick<
   AppDependencies,
@@ -220,7 +229,6 @@ type Reads = Pick<
   | "readContextDrafts"
   | "getEmailWarmup"
   | "getEmailPlacement"
-  | "researchOperation"
   | "customerExclusionsOperation"
   | "crmSyncControlsOperation"
 >;
@@ -369,7 +377,7 @@ export async function getNextStep(
     return response(
       "sample_not_started",
       [
-        `${tool("sample-review", "post")} with body {} and keep its run_ref. The sample uses five people of this week's research volume; with fewer than five left it returns RESEARCH_LIMIT_REACHED and resets_at: give the founder that reset time.`,
+        `${tool("sample-review", "post")} with body {} and keep its run_ref. The sample uses five people of this week's research volume; with fewer than five left it returns RESEARCH_LIMIT_REACHED and resets_at: give the founder that reset time, unless the plan's total is what ran out (context research-schedule).`,
         "Tell the founder you are finding and researching five matching people, that it takes a few minutes, and that you will share each one as it lands.",
         `${tool("sample-review", "progress")} with run_ref, then the returned cursor and wait_seconds 25 until terminal. Keep one request open and narrate each new lead in one line.`,
         "When terminal, call next_step. This bounded initial sample does not activate weekly research or outreach.",
@@ -393,10 +401,11 @@ export async function getNextStep(
       "sample_failed",
       [
         `The sample stopped with reason ${run.error_code ?? "research_failed"}. Read ${tool("sample-review", "get")} for the saved people and explain the reason plainly.`,
+        ...deadLanes(run, run.error_code !== "targeting_matched_nobody"),
         failure.action,
         "Saved leads stay usable; outreach setup does not have to wait for the sample.",
       ],
-      [tool("sample-review", "get"), ...failure.tools],
+      [...new Set([tool("sample-review", "get"), ...laneTools(run), ...failure.tools])],
       run,
     );
   }
@@ -419,7 +428,8 @@ export async function getNextStep(
       .map(account => ({ id: account.id, sender_id: sender.id, sender: sender.name, status: account.status })))
     : [];
   // With one sender the agent assumes it; with several it reads the roster and
-  // asks which person a connection or campaign belongs to (Juan, 2026-10-06).
+  // asks which person a connection belongs to (Juan, 2026-10-06). Campaigns
+  // name no senders (LIF-1670).
   const names = (accounts: Array<{ sender: string }>) => accounts.map(account => account.sender).join(", ");
   // The founder's mailboxes, for Parts 3 and 4 (LIF-1260).
   const mailboxes = roster.status === "available"
@@ -505,6 +515,7 @@ export async function getNextStep(
       "sample_ready_for_founder_review",
       [
         "Show the researched leads from receipt.leads (sample_review_get only if you need more): your read first, then person, company, grade, LinkedIn URL, fit rationale and evidence gaps. Include lower-fit profiles and explain their mismatch.",
+        ...deadLanes(run, true),
         run.reviewed_at
           ? "The founder already confirmed this sample: do not ask for the review again. A targeting change still follows summary_context task targeting or research-criteria, its synchronous PATCH/readback, then a new sample."
           : `Ask one question: does this confirm the targeting, or what should change? A change follows summary_context task targeting or research-criteria, its synchronous PATCH/readback, then a new sample. When the founder confirms the sample or moves on without changes, record it once with ${tool("sample-review", "confirm")} and run_ref ${run.run_ref}; a new sample needs its own confirmation.`,
@@ -575,7 +586,7 @@ export async function getNextStep(
       [
         `${connectedAll.length === 1 ? `${connected.sender}'s LinkedIn is connected` : `LinkedIn is connected for ${names(connectedAll)}`}. Read ${tool("notifications", "get")}; unless Slack is already connected, ask once where alerts should go: Slack or email. Email needs no setup. Slack: ${tool("notifications", "post")}, show its link, verify that attempt, then choose a channel. Declining never blocks.`,
         `Read ${tool("commercial-voice", "get")}. If tone and rules are empty, ask how the founder writes before the first draft and save it with ${tool("commercial-voice", "patch")}; voice is shared by every channel and campaign.`,
-        `Build the LinkedIn templates: read ${tool("journeys", "get")}, create the Journey for qualified (Tier A and B) leads with ${tool("journeys", "post")} and its LinkedIn Campaign with ${tool("campaigns", "post")}, permitting ${connectedAll.length === 1 ? connected.sender : `the senders the founder chooses: read ${tool("senders", "get")} for each sender's accounts and ask which of them this campaign sends from`}. Preview real leads with ${tool("campaigns", "tests_post")} before asking for approval.`,
+        `Build the LinkedIn templates: read ${tool("journeys", "get")}, create the Journey for qualified (Tier A and B) leads with ${tool("journeys", "post")} and its LinkedIn Campaign with ${tool("campaigns", "post")}. Every person with a connected account takes part, so ask no sender question. Preview real leads with ${tool("campaigns", "tests_post")} before asking for approval.`,
         previewSteps,
         "Saving, publishing or a connected account never activates outreach. When a campaign is saved, call next_step.",
       ],
@@ -607,26 +618,12 @@ export async function getNextStep(
           tool("sending-accounts", "placement_start"), tool("sending-accounts", "reconnect"), tool("sending-accounts", "attempt"), tool("summary", "context")],
         email.receipt,
       );
-    if (email.kind === "ready" && email.plan === "free")
-      return response(
-        "paid_plan_needed",
-        [
-          `${name} is ready to send: warmup is ready and its placement test passed. Tell the founder; ${tool("sending-accounts", "warmup_status")} has the detail if they ask.`,
-          `Show the email campaign before the plan question: read ${tool("campaigns", "get")} and ${tool("journeys", "get")}, and preview real leads with ${tool("campaigns", "tests_post")}. Draft the Email Campaign first if none exists (summary_context task campaigns).`,
-          "Then ask the founder to choose a paid plan: it starts email campaigns and recurring weekly leads (100 researched people a week instead of 25). Paid plans are set up with David from LIFT for now: tell the founder David will contact them to choose one. Do not quote prices or promise a checkout link.",
-          "A paid plan, a ready mailbox or an approved campaign never activates outreach; activation stays the founder's explicit yes.",
-        ],
-        [tool("sending-accounts", "warmup_status"), tool("campaigns", "get"), tool("journeys", "get"), tool("campaigns", "tests_post"),
-          tool("research-schedule", "get"), tool("summary", "context")],
-        email.receipt,
-      );
     if (email.kind === "ready")
       return response(
         "email_ready",
         [
           `${name} is ready to send: warmup is ready and its placement test passed. Tell the founder.`,
-          ...(email.plan === null ? [`The plan could not be read; read ${tool("research-schedule", "get")} before discussing plans.`] : []),
-          `Finish the email campaign: read ${tool("campaigns", "get")} and ${tool("journeys", "get")}, add or update the Journey's Email Campaign with ${tool("campaigns", "post")} or ${tool("campaigns", "draft_patch")}, permitting ${new Set(mailboxes.map(item => item.sender_id)).size === 1 ? mailbox.sender : `the senders the founder chooses: read ${tool("senders", "get")} for each sender's mailboxes and ask which of them this campaign sends from`}, and preview real leads with ${tool("campaigns", "tests_post")}. Voice and the sender's signature come first (summary_context task commercial-voice, then senders).`,
+          `Finish the email campaign: read ${tool("campaigns", "get")} and ${tool("journeys", "get")}, add or update the Journey's Email Campaign with ${tool("campaigns", "post")} or ${tool("campaigns", "draft_patch")}, and preview real leads with ${tool("campaigns", "tests_post")}. Every person with a mailbox and a signature takes part, so ask no sender question. Voice and the sender's signature come first (summary_context task commercial-voice, then senders).`,
           "Publish only the exact revision the founder approves, and activate it only on their explicit yes. A ready mailbox never activates outreach.",
         ],
         [tool("campaigns", "get"), tool("journeys", "get"), tool("campaigns", "post"), tool("campaigns", "draft_patch"),
@@ -639,6 +636,13 @@ export async function getNextStep(
     const notice = "Tell the founder Lifty will notify them with the placement test result when it finishes. Do not request a placement test yourself for this first one.";
     const weekly = `Ask roughly how many leads they want to reach each week, unless already answered, and save it as the weekly target with ${tool("research-schedule", "patch")} (up to the plan's limit; ${tool("research-schedule", "get")} shows it).`;
     const close = "Close Part 3: tell the founder when Lifty will follow up, using recommended_go_live from warmup_status. Never compute dates yourself. Connecting or warming a mailbox never starts email outreach.";
+    // LIF-1670: a mailbox that is still preparing already takes part, so with
+    // no active campaign the founder approves one now instead of waiting.
+    const anyActive = campaigns.campaigns.some(value => value.state === "active");
+    const draftNow = anyActive ? [] : [
+      `No campaign is active yet, so do not wait for the mailbox: draft the Journey's Email Campaign now with ${tool("journeys", "post")} and ${tool("campaigns", "post")} (summary_context task campaigns), preview real leads with ${tool("campaigns", "tests_post")} and ask the founder to approve it in this conversation. Every person with a mailbox and a signature takes part, so ask no sender question; save the signature first if it is missing (summary_context task senders). Email waits until the mailbox is ready; activation stays the founder's explicit yes.`,
+    ];
+    const draftTools = anyActive ? [] : [tool("journeys", "post"), tool("campaigns", "post"), tool("campaigns", "tests_post")];
     if (email.kind === "preparing")
       return response(
         "email_preparing",
@@ -647,11 +651,11 @@ export async function getNextStep(
           notice,
           ...alerts,
           weekly,
-          "Meanwhile, offer to prepare the email campaign copy (summary_context task campaigns); it stays unapproved and inactive.",
+          ...(anyActive ? ["Meanwhile, offer to prepare the email campaign copy (summary_context task campaigns); it stays unapproved and inactive."] : draftNow),
           close,
         ],
         [tool("sending-accounts", "warmup_status"), tool("sending-accounts", "placement_status"), tool("notifications", "get"), tool("notifications", "post"),
-          tool("research-schedule", "get"), tool("research-schedule", "patch"), tool("summary", "context")],
+          tool("research-schedule", "get"), tool("research-schedule", "patch"), ...draftTools, tool("summary", "context")],
         email.receipt,
       );
     return response(
@@ -659,16 +663,16 @@ export async function getNextStep(
       [
         ...(email.unknown ? [`${name}'s warmup or placement status could not be read: read both before offering anything, because preparation may already be running.`] : []),
         `${name} is connected, but warmup and its placement test need its owner's second sign-in. Call ${tool("sending-accounts", "warmup_start")} with connection_ref ${mailbox.id} right away, whatever the mailbox's use, and show the returned setup link in the same reply. If it reports an SPF, DMARC or MX record not valid, say which one to publish first. The link asks the owner to authorize that same mailbox, Google or Microsoft, for Mailivery and covers both warmup and the placement test, so ask for no other consent.`,
-        `A dedicated sending mailbox (outreach) needs 21 active warmup days, then Lifty runs one placement test by itself; give the date from recommended_go_live.`,
-        `A mailbox they already use (personal) needs no initial period, but warmup protects inbox placement and reply rates, and Lifty tests where its email lands as soon as setup is done. If the founder declines, do not push it; say Lifty cannot warm up or test the mailbox without that setup.`,
+        `A dedicated sending mailbox (outreach) needs 21 active warmup days, then Lifty runs one placement test by itself; give the date from recommended_go_live. A mailbox they already use (personal) needs no initial period, but warmup protects inbox placement and reply rates, and Lifty tests where its email lands as soon as setup is done. If the founder declines, do not push it; say Lifty cannot warm up or test the mailbox without that setup.`,
         notice,
         ...alerts,
         weekly,
+        ...draftNow,
         close,
       ],
       [tool("sending-accounts", "warmup_status"), tool("sending-accounts", "warmup_start"), tool("sending-accounts", "placement_status"),
         tool("notifications", "get"), tool("notifications", "post"),
-        tool("research-schedule", "get"), tool("research-schedule", "patch"), tool("summary", "context")],
+        tool("research-schedule", "get"), tool("research-schedule", "patch"), ...draftTools, tool("summary", "context")],
       email.receipt,
     );
   }

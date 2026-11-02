@@ -26,7 +26,7 @@ describe("generated MCP stage operations", () => {
       const name = stage === "summary" && action === "next_step" ? "next_step" : `${listedStage.replace(/-/g, "_")}_${action}`;
       const supported = Object.keys(operation.responses).some(status => status.startsWith("2"));
       const notificationWrite = stage === "notifications" && action === "patch";
-      const names = notificationWrite ? ["notifications_destination_upsert", "notifications_route_set"]
+      const names = notificationWrite ? ["notifications_destination_upsert", "notifications_route_set", "notifications_controls_set", "notifications_preferences_set"]
         : stage === "notifications" && action === "post" ? ["notifications_connect"] : [name];
       const matches = tools.filter(tool => names.includes(tool.name));
       expect(matches.length, name).toBe(supported ? names.length : 0);
@@ -49,7 +49,10 @@ describe("generated MCP stage operations", () => {
     }
     // Every turn of a connector carries this list; keep it bounded. LIF-1622
     // added the CRM automatic sync and test sync tools (about 4,000 characters).
-    expect(JSON.stringify(tools).length).toBeLessThan(195_000);
+    // LIF-1694 publishes the industry label enum in targeting_patch (twice) and
+    // setup_patch_draft: about 9,200 characters for 147 labels. The NAICS list
+    // is never published; codes carry only a pattern.
+    expect(JSON.stringify(tools).length).toBeLessThan(205_000);
     expect(tools.find(tool => tool.name === "crm_mapping_sources")!.annotations.readOnlyHint).toBe(true);
     expect(tools.find(tool => tool.name === "sending_accounts_deliverability")!.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
     expect(tools.find(tool => tool.name === "sending_accounts_disconnect")!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: true });

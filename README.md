@@ -39,6 +39,25 @@ criteria and commit both resources atomically. The server records the source
 versions of every criteria revision. Validation failures return bounded repair
 issues; conflicts return `current_version` without overwriting another writer.
 
+Targeting writes accept only industries search can use (LIF-1694).
+`company.industries` takes the labels in `src/generated/industry-labels.ts`,
+published as the enum in the targeting and setup request schemas; labels match
+exactly, case included. `industry_codes` and `excluded_industry_codes` must
+exist in the embedded 2022 NAICS list (`src/generated/naics-2022.ts`) at any
+2–6 digit level, with the ranged sectors 31-33, 44-45 and 48-49 written as
+their two-digit parts. A targeting PATCH or setup draft save that sets another
+value, or a setup submission whose saved draft holds one, returns 422 with the
+route's validation code (`TARGETING_INVALID`, `SETUP_DRAFT_INVALID` or
+`SETUP_INVALID`) and one repair issue per value: its JSON-pointer path, the
+rejected value and up to five close options (codes with their titles). The
+check runs in memory against the embedded lists; only the industry label enum
+is published in schemas, never the NAICS list. Values a
+request does not set are not checked: targeting reads and PATCH responses list
+saved values search cannot use in `filter_warnings`. Regenerate the label list
+with `scripts/industry-labels.mjs` (its header records the evidence method and
+the free count probe) and the NAICS list with `scripts/sync-naics-2022.mjs`
+from the Census Bureau file.
+
 Setup uses a server draft with its own version. `setup_generation_context`
 returns the actual current Scout base and API-owned guidance after login.
 Submission creates targeting and criteria in one transaction; an exact retry
@@ -122,6 +141,55 @@ companies, and deals read/write; contact and company property-schema
 read/write; and the base `oauth` scope. Expanding the app contract does not
 expand existing HubSpot refresh tokens, so older connections report
 `reconnect_required` until the founder reconnects.
+
+## Analytics events (LIF-1663)
+
+With `POSTHOG_API_KEY` set, the authenticated `/v1/*` middleware sends one
+PostHog event per founder mutation in the stage catalog (POST, PATCH, DELETE
+that are not read-only, such as `crm.mapping_sources`) and per `next_step`
+read, the session heartbeat. Polling and other reads send nothing.
+
+- `api_operation_completed` / `api_operation_failed` carry `operation`
+  (`resource.action`), `surface` (`mcp`, `cli`, `dashboard`, `http`), `request_id`,
+  `duration_ms`, `http_status`, `outcome` and, on failure, the public
+  `error_code`. Never the message or a provider body.
+- `distinct_id` is the Supabase user id, as in the dashboard's `identify`.
+  Every event carries `$groups.workspace`, the workspace the database selects
+  for the request (`get_lifty_workspace_status`, read after the response and
+  cached ten minutes per user and `x-lifty-workspace` selection). A session
+  without a workspace sends the event without a group.
+- Milestones, on success only: `setup.post` → `setup_submitted`;
+  `sample-review.post` (a new run) → `sample_review_started`;
+  `sample-review.confirm` → `sample_review_confirmed`;
+  `research-schedule.activate|pause` → `research_schedule_activated|paused`;
+  `crm.sync_start` → `crm_sync_started`; `sending-accounts.warmup_start` →
+  `warmup_started`; `sending-accounts.placement_start` →
+  `placement_test_started`; `campaigns.publish|activate|pause` →
+  `campaign_published|activated|paused`. Connection milestones fire on the
+  read that reports the attempt verified, never on the consent link:
+  `crm.get?attempt_ref` → `crm_connected` (`provider`),
+  `sending-accounts.attempt` → `sending_account_connected` (`provider`,
+  `channel`), `notifications.get?attempt_ref` → `slack_connected`, once per
+  attempt per process. An attempt verified by the recovery pass that no agent
+  reads again records no milestone here.
+- The `workspace` group is identified the first time a workspace is seen in
+  the process and whenever its properties change (re-read every fifteen
+  minutes): `name` and `slug` from `lifty_member_workspaces`, `plan_key` and
+  `plan_kind` from `get_billing_state`. `analytics_class`,
+  `assignment_authority` and `created_at` have no member read yet and stay
+  absent until the database exposes one.
+- Properties are allow-listed by name and shape in `src/analytics.ts`: codes,
+  identifiers and enum values only. Free text, addresses, links, message
+  bodies and provider bodies cannot pass, and no property is read from a
+  request body.
+- Capture is fire-and-forget after the response is decided: a slow or failing
+  PostHog never changes a response. Events batch (10 events or 5 seconds) and
+  flush once on `SIGTERM`/`SIGINT`; failures log `analytics_failed` without
+  bodies. A stage adapter that forwards into its owning route counts once.
+- `surface` comes from the MCP fence first, then the user agent:
+  `lifty-cli/<version>` is `cli` and `lifty-dashboard` (the dashboard's
+  server requests) is `dashboard`. Anything else, including CLI releases
+  that send no user agent, reads as `http`.
 
 ## Local development
 
@@ -621,7 +689,9 @@ Every `email-deliverability.v1` inbox carries one member-facing `status` and a
 `next_step` (`code`, `owner`, `label`, `description`) built from the current
 account first, then the shared sender gate's reason, then campaigns. A missing
 send-time safety check (`email_safety_check_required`, the gate's last check)
-is not a blocker: such an inbox is `ready_idle` without an active campaign. New
+is not a blocker: such an inbox is `ready_idle` without an active campaign. A
+failed latest check arrives as `email_safety_check_failed` (LIF-1741) and is
+`on_hold`, with Lifty reviewing it. New
 status codes are `disconnected`, `needs_reconnect`, `on_hold` and
 `setup_needed`. A LIFT pause never changes the verdict; `account.outreach` and
 `connections[].controls` still report it. The dashboard reads status codes as
