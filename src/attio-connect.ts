@@ -7,7 +7,7 @@ import {
   type AttioConnectionStatus,
 } from "./contracts.js";
 import { PublicError } from "./errors.js";
-import { CRM_REFUSAL_CODES, recordOAuthFailure } from "./connection-attempt.js";
+import { CONNECTION_REFUSAL_CODES, recordOAuthFailure } from "./connection-attempt.js";
 import {
   exchangeAttioAuthorizationCode,
   identifyAttioToken,
@@ -163,7 +163,7 @@ export function createAttioConnectOperations(settings: AttioConnectSettings): At
         if (error instanceof AttioCallbackError && error.status < 500 && !["link_invalid", "link_used", "link_expired"].includes(error.reason)) {
           try {
             await recordOAuthFailure({ provider: "attio", intentToken: openAttioConnectIntent(input.state, settings.clientSecret),
-              status: "failed", code: CRM_REFUSAL_CODES[error.reason] ?? "callback_failed",
+              status: "failed", code: CONNECTION_REFUSAL_CODES[error.reason] ?? "callback_failed",
               supabaseUrl: settings.supabaseUrl, publishableKey: settings.publishableKey, fetchImpl });
           } catch { /* Preserve the original safe failure; reads remain unverified if persistence failed. */ }
         }
