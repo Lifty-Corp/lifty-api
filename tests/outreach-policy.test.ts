@@ -163,8 +163,11 @@ describe("supported Outreach policy boundary", () => {
     const linkedin = (text: string) => create("linkedin", { ...policy, compose_mode: "templates", steps: [{ position: 1, delay: { business_days: 0 }, template: { text } }] });
     const saved = linkedin("Hola {{first_name}}, ¿en {{ company_name }} y {company_name} tienen {pain}?");
     expect(saved).toMatchObject({ success: true, data: { policy: { steps: [{ template: { text: "Hola {first_name}, ¿en {company} y {company} tienen {pain}?" } }] } } });
-    for (const text of ["Hi {{last_name}}", "Hi {last_name}", "Hi {First Name}", "Hi {{firstName}}", "Hi {first_name}}", "Hi {sender_first_name}"])
+    for (const text of ["Hi {{last_name}}", "Hi {last_name}", "Hi {First Name}", "Hi {{firstName}}", "Hi {first_name}}"])
       expect(linkedin(text).success, text).toBe(false);
+    // LIF-1659: Jobs fills {sender_first_name} from the lead's assigned sender on LinkedIn too.
+    expect(linkedin("Hi {first_name}, I'm {{sender_first_name}}.")).toMatchObject({ success: true,
+      data: { policy: { steps: [{ template: { text: "Hi {first_name}, I'm {sender_first_name}." } }] } } });
     const mail = { ...email, compose_mode: "templates", steps: email.steps.map(step => ({ ...step,
       template: { ...(step.position === 1 ? { subject: "For {{company_name}}" } : {}), text: "Hi {{first_name}}, {sender_first_name} here." } })) };
     const mailed = create("email", mail);
