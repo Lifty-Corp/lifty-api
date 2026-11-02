@@ -88,7 +88,7 @@ jobs:
 
       - name: Verify (typecheck + tests + build)
         if: steps.reuse.outputs.verified != 'true'
-        run: npm run verify
+        run: npm run verify:full
 
       - uses: digitalocean/action-doctl@v2
         with:

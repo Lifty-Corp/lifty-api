@@ -1,4 +1,4 @@
-# Verify pull requests with the same `npm run verify` the Deploy workflow runs
+# Verify pull requests with the same `npm run verify:full` the Deploy workflow runs
 # after merge. Context drafts promoted from the ops dashboard open pull
 # requests here (LIF-1298); a context change that breaks the next_step size
 # limits or the installed-client contract fails before merge, not at deploy.
@@ -40,9 +40,7 @@ jobs:
         run: npm ci
 
       - name: Verify
-        run: |
-          npm run verify
-          python3 -m unittest discover -s scripts -p test_deploy_pilot.py
+        run: npm run verify:full
 
       # Deploy reuses this result when main's tree is identical to the tree
       # verified here (the pull request merge commit), so it records it.

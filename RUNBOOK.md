@@ -78,7 +78,7 @@ termination and per-IP/per-token rate limiting belong at the deployment ingress.
 ## Deploy and verify
 
 Merging runtime changes to `main` starts the `Deploy` GitHub Actions workflow.
-Follow that run: it runs `npm run verify` (skipped when a pull request Verify run
+Follow that run: it runs `npm run verify:full` (skipped when a pull request Verify run
 passed on the identical tree), deploys the exact main SHA, waits for
 it to become active, and probes health, readiness (including CRM), OpenAPI, v6 Business/setup public context and
 fail-closed authentication. Do not run a second deploy or repeat those public

@@ -15,7 +15,8 @@ npm run test:policy
 ```
 
 These commands work without Compass or sibling repositories. `npm run verify`
-runs the canonical checks as well as the API's runtime tests, typecheck and build.
+runs the canonical checks for every code change, with the API's typecheck and
+runtime tests; `npm run verify:full` adds the build.
 Canonical Node tests use the `.node-test.mjs` suffix because the API runtime
 suite is discovered separately by Vitest.
 
