@@ -35,8 +35,10 @@ each week, and turn weekly research on or off. Read `references.common` first.
 The schedule is `weekly_target` plus `active` or `paused`. It exists from
 workspace creation at version 0, paused, following the plan: until the founder
 chooses a number, `weekly_target` reads as the limit and moves with it when the
-plan changes. `effective_target` is the lower of `weekly_target`, the limit and
-what was left of the plan's total when the week began. A plan change applies
+plan changes. Confirming the sample (`sample_review_confirm`) turns it on at
+its current target, unless the founder already turned it on or off; their
+earlier choice is kept. `effective_target` is the lower of `weekly_target`, the
+limit and what was left of the plan's total when the week began. A plan change applies
 its new limit at once; it never rewrites a number the founder chose, so a
 chosen target below a new, higher limit stays as it is.
 
@@ -66,9 +68,11 @@ new plan's weekly limit, without a total; it activates nothing.
 - A stale `expected_version` returns `VERSION_CONFLICT` with
   `current_version` and writes nothing: read `get` again, then decide.
 
-Ask the founder before activating, pausing or changing the target. Weekly
-research costs volume every week; confirm the number and that research should
-start, in their words. Activation never sends messages or starts outreach.
+Ask the founder before pausing, changing the target or turning research on
+again after a pause; confirm the number in their words. When the sample
+confirmation turns it on, tell them it is on, its weekly number, and that they
+can pause it or change the number anytime. Weekly research never sends
+messages or starts outreach.
 
 ## Weekly status
 
