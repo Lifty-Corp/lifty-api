@@ -19,7 +19,9 @@ configured Hono app for programmatic use.
 `GET /v1/context/stages` indexes the current stages. Each
 `GET /v1/context/{stage}` returns public guidance, schemas and operation routes
 from the same catalog used by HTTP and MCP. Public context works before login
-and contains no tenant values or Scout base.
+and contains no tenant values or Scout base. With a session (the MCP adapter
+forwards it), campaigns and journeys end their writing rules reference with
+the caller workspace's own copy from commercial voice (LIF-1724).
 
 The supported client contract is `lifty-cli-context.v11` (CLI 0.1.0-next.35).
 It names the transport, not the API: API and context releases keep it
@@ -95,7 +97,7 @@ through one table in `src/rpc-errors.ts`; an unknown code is a 502
 - `GET /v1/workspace/business`, `POST …/business`, `PATCH …/business` — typed profile and explicit workspace creation
 - `GET /v1/workspace/targeting`, `PATCH …/targeting` — versioned neutral targeting lanes
 - `GET /v1/workspace/research-criteria`, `PATCH …/research-criteria` — criteria text and research fields
-- `GET /v1/workspace/commercial-voice`, `PATCH …/commercial-voice` — independently versioned tone and rules
+- `GET /v1/workspace/commercial-voice`, `PATCH …/commercial-voice` — independently versioned tone, rules and the workspace's writing rules
 - `GET /v1/workspace/setup/draft`, `PATCH …/setup/draft`, `DELETE …/setup/draft` — server draft with CAS
 - `GET /v1/workspace/setup/context` — authenticated Scout base and setup generation guidance
 - `POST /v1/workspace/setup`, `GET …/setup/status` — atomic submission and durable receipt

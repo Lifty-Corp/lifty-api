@@ -35,8 +35,9 @@ import { MemberWorkspacesResult, type MemberWorkspacesOutput } from "./member-wo
 
 import { OpenAPIHono, z } from "@hono/zod-openapi";
 import { analyticsSurface, isInternalRequest, noopAnalytics, type Analytics, type AnalyticsSurface } from "./analytics.js";
-import { CLIENT_UPGRADE_MESSAGE, STAGE_CLIENT_CONTRACT, SUPPORTED_CLIENT_CONTRACTS, AgentContextSchema, getAgentContext, isSupportedClientContract, type ContextDraft } from "./agent-context.js";
+import { CLIENT_UPGRADE_MESSAGE, STAGE_CLIENT_CONTRACT, SUPPORTED_CLIENT_CONTRACTS, AgentContextSchema, getAgentContext, isSupportedClientContract, servesWritingRules, type ContextDraft } from "./agent-context.js";
 import { readContextDrafts } from "./context-drafts.js";
+import { readWorkspaceWritingRules } from "./writing-rules.js";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { DisconnectResponseSchema, IntegrationConnectionStatusSchema, NotificationConfigSchema, NotificationDestinationSchema, NotificationTestResultSchema, SetNotificationRouteRequestSchema, SlackNotificationChannelsSchema, UpsertNotificationDestinationRequestSchema, ProviderConnectStartSchema, LegacyProviderConnectStartSchema, SlackConnectLinkSchema, type SlackConnectLink, ProviderSchema, StartCrmSyncResultSchema, CrmSyncStatusSchema, type DisconnectResult, type HubspotConnectStart, type HubspotConnectionStatus, type AttioConnectStart, type AttioConnectionStatus, type NotificationConfig, type NotificationDestination, type NotificationTestResult, type SetNotificationRouteRequest, type SlackNotificationChannels, type UpsertNotificationDestinationRequest, type Provider, type SlackConnectStart, type SlackConnectionStatus, type RunStatus, type StartRunResult, type StartCrmSyncResult, type CrmSyncStatus, WorkspaceStatusSchema, type WorkspaceStatus } from "./contracts.js";
@@ -1171,14 +1172,19 @@ export function createApp(
     const document = getAgentContext(task);
     if (!document) return errorJson(context, 404, "CONTEXT_NOT_FOUND", "No instructions are available for this task.");
     // A caller with a session (the MCP adapter forwards it) may be a marked
-    // test workspace whose drafts replace published files (LIF-1298). The
-    // installed CLI reads anonymously, and an invalid session is anonymous here.
+    // test workspace whose drafts replace published files (LIF-1298), and a
+    // drafting document carries its workspace's own writing rules (LIF-1724).
+    // The installed CLI reads anonymously, and an invalid session is anonymous here.
     const session = trustedMcpRequests.get(context.req.raw)
       ?? (context.req.header("authorization")
         ? await dependencies.authenticate(context.req.raw).then(result => result.ok ? result.session : null, () => null)
         : null);
-    const drafts = session ? await dependencies.readContextDrafts(session, session.workspaceRef ?? null).catch(() => []) : [];
-    return context.json(drafts.length ? getAgentContext(task, drafts) : document);
+    if (!session) return context.json(document);
+    const [drafts, writingRules] = await Promise.all([
+      dependencies.readContextDrafts(session, session.workspaceRef ?? null).catch(() => []),
+      servesWritingRules(task) ? readWorkspaceWritingRules(dependencies.businessOperation, session) : undefined,
+    ]);
+    return context.json(drafts.length || writingRules ? getAgentContext(task, drafts, writingRules) : document);
   });
   app.openAPIRegistry.registerPath({
     method: "get", path: "/v1/context/{task}", operationId: "getAgentTaskContext", security: [],
@@ -1187,7 +1193,7 @@ export function createApp(
       query: z.object({ client_contract: z.string().optional() }),
     },
     responses: {
-      200: { ...JsonResponse(AgentContextSchema), description: "Public task instructions and input schemas; no workspace data" },
+      200: { ...JsonResponse(AgentContextSchema), description: "Public task instructions and input schemas. With a session, campaigns and journeys also carry the caller workspace's writing rules" },
       404: { description: "Unknown task" },
       409: { description: "Unsupported client contract" },
     },

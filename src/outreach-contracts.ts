@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { WorkspaceIdentitySchema } from "./business-contracts.js";
-import { WritingRecommendationsSchema, templateRef } from "./writing-rules.js";
 import { TEST_FAILURE_CODES, TEST_FAILURE_STAGES } from "./campaign-test-failure.js";
 
 const Ref = z.uuid();
@@ -190,6 +189,10 @@ export const SlotsSpecWarningsSchema = z.object({ revision_ref: Ref,
     placeholder: z.string() }).strict()).min(1),
 }).strict();
 export type SlotsSpecWarnings = z.infer<typeof SlotsSpecWarningsSchema>;
+/** How campaign advisories name a saved template: its catalog id, else its
+ * lane/opener route, else null for a step's single template. */
+export const templateRef = (template: { id?: string | undefined; lane?: string | undefined; opener?: string | undefined }) =>
+  template.id ?? ([template.lane, template.opener].filter(Boolean).join("/") || null);
 interface SpecTemplate { id?: string | undefined; lane?: string | undefined; opener?: string | undefined;
   subject?: string | undefined; text: string; slots_spec?: string | undefined }
 /** Placeholders each template's slots_spec names that its own subject and
@@ -286,12 +289,10 @@ export const CampaignSchema = z.object({ campaign_ref: Ref, journey_ref: Ref, ch
 });
 const Workspace = { workspace: WorkspaceIdentitySchema };
 export const JourneyResultSchema = z.object({ ...Workspace, journey: JourneySchema }).strict();
-// Banned phrases in the draft's saved templates. Recommendations only: they
-// never block a save, preview or approval. Absent when the list is unknown.
 // slots_spec_warnings: the API adds it (never the database); absent when the
-// revision has none.
+// revision has none. Writing rules are drafting context, so saves report no
+// phrases from them (LIF-1724).
 export const CampaignResultSchema = z.object({ ...Workspace, campaign: CampaignSchema,
-  writing_recommendations: WritingRecommendationsSchema.optional(),
   slots_spec_warnings: SlotsSpecWarningsSchema.optional().describe("Placeholders a template's slots_spec names that its own subject and text do not use, in the published revision for publish and the draft otherwise. Warnings only; absent when there are none."),
 }).strict();
 export const JourneySummarySchema = z.object({ journey_ref: Ref, version: Version, name: Name, active_revision: RevisionSummarySchema.nullable(),

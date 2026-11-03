@@ -8,7 +8,7 @@ import {
   stageOperations,
   type StageOperation,
 } from "./stage-contracts.js";
-import { liveAntiSlopSection } from "./writing-rules.js";
+import { writingRulesSection, type WorkspaceWritingRules } from "./writing-rules.js";
 
 // The transport an installed client implements: authentication, the request
 // envelope, the context document and the operation catalog format. It is not
@@ -233,16 +233,26 @@ function compactOperations(operations: Record<string, StageOperation>) {
   };
 }
 
-// Files whose served text ends with live data. The banned-phrase list is the
-// database rulebook Jobs uses, so no copy of it is checked in here.
-const LIVE_SECTIONS: Readonly<Record<string, () => string>> = { "anti-slop": liveAntiSlopSection };
+// The file whose served text ends with the caller workspace's own writing
+// rules (LIF-1724). Each workspace saves its copy in commercial voice, so no
+// list is checked in here and a public read carries none.
+const WRITING_RULES_FILE = "anti-slop";
+const NO_SESSION: WorkspaceWritingRules = { state: "no_session" };
+
+/** Whether a document, or a step guide with these references, serves the
+ * writing rules file, so its caller reads the workspace's copy for it. */
+export function servesWritingRules(task: string, references?: readonly string[]) {
+  const source = sourceFor(task);
+  if (!source) return false;
+  return source.instructions === WRITING_RULES_FILE
+    || (references ?? Object.keys(source.references)).some((name) => source.references[name] === WRITING_RULES_FILE);
+}
 
 // Reads a document's files, the caller's draft winning over the published
 // file. Drafts for files this document does not use are ignored.
-function fileReader(drafts: readonly ContextDraft[]) {
+function fileReader(drafts: readonly ContextDraft[], writingRules: WorkspaceWritingRules) {
   const served = new Map<string, ContextDraft>();
   const read = (file: string) => {
-    const live = LIVE_SECTIONS[file];
     const draft = drafts.find((item) => item.file === file);
     let content: string;
     if (draft) {
@@ -253,7 +263,7 @@ function fileReader(drafts: readonly ContextDraft[]) {
       if (published === undefined) throw new Error(`Missing context file ${file}`);
       content = published;
     }
-    return live ? `${content.trimEnd()}\n\n${live()}\n` : content;
+    return file === WRITING_RULES_FILE ? `${content.trimEnd()}\n\n${writingRulesSection(writingRules)}\n` : content;
   };
   const marker = () =>
     served.size
@@ -272,10 +282,10 @@ const withRevision = <T extends object>(content: T) =>
     revision: `sha256:${createHash("sha256").update(JSON.stringify(content)).digest("hex")}`,
   });
 
-export function getAgentContext(task: string, drafts: readonly ContextDraft[] = []) {
+export function getAgentContext(task: string, drafts: readonly ContextDraft[] = [], writingRules = NO_SESSION) {
   const source = sourceFor(task);
   if (!source) return null;
-  const { read, marker } = fileReader(drafts);
+  const { read, marker } = fileReader(drafts, writingRules);
   const instructions = read(source.instructions);
   const references = Object.fromEntries(
     Object.entries(source.references).map(([name, file]) => [name, read(file)]),
@@ -311,7 +321,7 @@ export function getAgentContext(task: string, drafts: readonly ContextDraft[] = 
 // references that step needs. Operation schemas stay in the full stage guide,
 // one summary_context call away, so every response stays small enough for
 // chat connectors (LIF-1149, LIF-1295).
-export function getStepGuide(task: string, references: readonly string[], drafts: readonly ContextDraft[] = []) {
+export function getStepGuide(task: string, references: readonly string[], drafts: readonly ContextDraft[] = [], writingRules = NO_SESSION) {
   const source = sourceFor(task);
   if (!source) return null;
   const used = drafts.filter(
@@ -319,7 +329,7 @@ export function getStepGuide(task: string, references: readonly string[], drafts
       draft.file === source.instructions ||
       references.some((name) => source.references[name] === draft.file),
   );
-  const stage = getAgentContext(task, used)!;
+  const stage = getAgentContext(task, used, writingRules)!;
   const content = {
     format: stage.format,
     task: stage.task,

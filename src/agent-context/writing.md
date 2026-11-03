@@ -1,6 +1,6 @@
 # LIFT outreach writing guide
 
-Version: lifty-writing.v21
+Version: lifty-writing.v22
 
 Use this guide to recommend or edit outreach with the founder. These are LIFT's
 writing defaults, not claims about response rates. Preserve founder-approved
@@ -12,6 +12,11 @@ not add a question, pitch or follow-up to satisfy the examples below. In generat
 mode review the reusable policy and saved per-lead examples; no fixed text array
 is required. In templates mode use the saved step templates.
 The multi-step examples below apply only when those steps exist in the graph.
+
+Before writing any Campaign copy, confirm with the founder whether the Campaign
+uses templates or generated copy. With templates you write the exact text Lifty
+sends, with placeholders for what it fills per lead. With generated copy you
+write instructions and examples, and Lifty writes each message.
 
 ## Use the saved context
 
@@ -105,8 +110,9 @@ name is missing, ask for it before drafting. Do not send unnamed copy.
   name", "I named them because...", and "If this landed with the wrong person,
   that is useful." Say the fact. Do not narrate why you are allowed to say it.
   If a line would make a founder ask "how is that useful?", rewrite it.
-- Read `references.anti_slop`, the list LIFT checks composed copy against,
-  and avoid those phrases. Empty nudges and guilt closes are banned,
+- Follow `references.anti_slop`, the workspace's own writing rules, unless
+  the founder says otherwise. Never rewrite the founder's fixed template text
+  because of one. Empty nudges and guilt closes are banned,
   including "just checking in", "circling back", "I don't want to keep
   asking you", and "I'll leave it here". Do not guilt someone into replying.
   "I'll keep this short" is fine as a spoken opener. Never write "sit with", "sits with", or "sit
@@ -174,12 +180,13 @@ Every recommended email uses these six fields, in this order.
    The recipient's first name belongs in this greeting on every email.
 3. Opener. One spoken line that humanizes the outreach. It sits on the
    next line after the greeting. It is a person starting a note, not a
-   caption for the proof that follows. Email 1 may omit the opener.
+   caption for the proof that follows. Email 1 may omit the opener, and
+   so may the exit email.
    Start with the greeting, then main focus. Never write "Figured an
    email might be the easier place to start." That sounds off when
    email is the first or only channel. Later emails still use a spoken
    opener: "Checking back in case this got buried.", "I'll keep this
-   short.", "Coming back one more time.", "Last note from me." Do not
+   short.", "Coming back one more time." Do not
    claim an earlier LinkedIn send unless that history is confirmed for
    every recipient. Do not open with a label for the pain ("The
    after-hours stretch is the one that still lands on a founder.").
@@ -244,7 +251,7 @@ emails: Email 1, 3 and 5; two: Email 1 and 5).
 
 Subject on every email: When an issue changes owners
 
-Email 1 has no opener.
+Email 1 and Email 5 have no opener.
 
 Email 1
 
@@ -294,8 +301,6 @@ Email 5
 
 Hi {first_name},
 
-Last note from me.
-
 I'm assuming the timing is off, or this belongs to someone else at {company}.
 
 If someone there owns the queue or the handoffs, would you mind pointing me in their direction?
@@ -339,7 +344,7 @@ with no I. Every later email still has an I from Alex.
 Before showing copy, check the named author in every LinkedIn message and
 every email, the first-name greeting, factual support, the founder's voice,
 connected sentences,
-inbox spacing, anti-slop, one ask per message, and whether each follow-up
+inbox spacing, the workspace's writing rules, one ask per message, and whether each follow-up
 reframes the last note instead of repeating it. Also check permitted
 placeholders. This review is writing guidance, not a claim that the
 draft is proven to perform. Preserve the founder's chosen wording while

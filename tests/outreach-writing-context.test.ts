@@ -13,7 +13,7 @@ describe("outreach writing context", () => {
       expect(response.status).toBe(200);
       const context = await response.json();
       expect(context.references.writing).toEqual(expect.any(String));
-      expect(context.references.writing).toMatch(/^# LIFT outreach writing guide\n\nVersion: lifty-writing\.v21\n/);
+      expect(context.references.writing).toMatch(/^# LIFT outreach writing guide\n\nVersion: lifty-writing\.v22\n/);
       expect(context.references.writing).toContain("Email shape");
       expect(context.references.writing).toContain("Subject line");
       expect(context.references.writing).toContain("Use a consistent subject so follow-ups read as one thread");
@@ -50,9 +50,9 @@ describe("outreach writing context", () => {
       expect(context.references.writing).toContain("Do not find-replace");
       expect(context.references.writing).toContain("Email 1 may omit the opener");
       expect(context.references.anti_slop).toEqual(expect.any(String));
-      expect(context.references.anti_slop).toMatch(/^# LIFT outreach anti-slop list\n\nVersion: lifty-anti-slop\.v12\n/);
-      // The phrases themselves are the live shared rulebook (tests/writing-rules.test.ts).
-      expect(context.references.anti_slop).toContain("They are recommendations, not blocks.");
+      expect(context.references.anti_slop).toMatch(/^# Workspace writing rules\n\nVersion: lifty-anti-slop\.v13\n/);
+      // The phrases are each workspace's own copy (tests/workspace-writing-rules.test.ts).
+      expect(context.references.anti_slop).toContain("Never rewrite the founder's fixed template text because of a rule.");
       playbooks.push(context.references.writing);
       antiSlopLists.push(context.references.anti_slop);
     }

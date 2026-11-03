@@ -3,7 +3,6 @@ import { serve } from "@hono/node-server";
 import { createAccountConnection, startConnectionRecovery } from "./account-connection.js";
 import type { ServiceConfig } from "./config.js";
 import { createProductionApp } from "./service.js";
-import { startWritingRulesRefresh } from "./writing-rules.js";
 
 interface ServeOptions {
   fetch(request: Request, environment?: unknown): Promise<unknown> | unknown;
@@ -23,7 +22,6 @@ export function startService<Server>(
   serveImplementation?: ServeImplementation<Server>,
 ): Server {
   const app = createProductionApp(config);
-  startWritingRulesRefresh(config.supabase);
   // LIF-1629: received authorizations finish here even with every page closed.
   if (config.accounts) {
     startConnectionRecovery(createAccountConnection(config.accounts), event =>
