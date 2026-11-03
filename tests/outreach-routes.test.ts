@@ -82,9 +82,10 @@ describe("canonical Outreach member transport", () => {
       template: { id: "pain-1", arms: ["pain"], subject: "{company} and month-end", text: "Hi {first_name}, {pain}", slots_spec } }] });
     const email = { ...campaign, channel: "email" };
     const draft = { ...revision(templated(consistent)), revision_ref: senderId };
-    const h = harness(name => ({ workspace, campaign: name === "create_lifty_campaign" ? { ...email, draft_revision: revision(templated(stale)), revisions: [revision(templated(stale))] }
-      : name === "publish_lifty_campaign" ? { ...email, draft_revision: draft, revisions: [draft, revision(templated(stale), true)] }
-        : { ...email, draft_revision: draft, revisions: [draft] } }));
+    const h = harness(name => name === "get_lifty_senders" ? { workspace, senders: [] }
+      : ({ workspace, campaign: name === "create_lifty_campaign" ? { ...email, draft_revision: revision(templated(stale)), revisions: [revision(templated(stale))] }
+        : name === "publish_lifty_campaign" ? { ...email, draft_revision: draft, revisions: [draft, revision(templated(stale), true)] }
+          : { ...email, draft_revision: draft, revisions: [draft] } }));
     const warning = { revision_ref: revisionRef, unused_placeholders: [{ position: 1, template: "pain-1", placeholder: "{main_focus}" }] };
 
     const saved = await h.request("POST", "/v1/workspace/campaigns", { name: "Email", journey_ref: journeyRef, channel: "email", policy: templated(stale) });
@@ -98,6 +99,65 @@ describe("canonical Outreach member transport", () => {
     const fixed = await h.request("PATCH", `/v1/workspace/campaigns/${campaignRef}/draft`, { expected_version: 2, revision_ref: revisionRef, changes: { steps: templated(consistent).steps } });
     expect(fixed.status).toBe(200);
     expect(await fixed.json()).not.toHaveProperty("slots_spec_warnings");
+  });
+  it("LIF-1659: refuses a template that types a saved sender's name, on both channels, before saving", async () => {
+    // get_lifty_senders lists the workspace's senders that were not deleted;
+    // Jeff was deleted, so only Anna and A.J. are listed.
+    const anna = { id: senderId, version: 1, name: "Anna Easton", signature: null, booking_url: null, accounts: [] };
+    const h = harness(name => name === "get_lifty_senders" ? { workspace, senders: [anna, { ...anna, id: revisionRef, name: "A.J. Brown" }] }
+      : { workspace, campaign });
+    const templated = (steps: unknown[], extra: object = {}) => ({ ...policy, compose_mode: "templates", ...extra, steps });
+    const one = (template: object) => templated([{ position: 1, delay: { days: 0 }, template }]);
+    const create = (channel: "email" | "linkedin", value: unknown) =>
+      h.request("POST", "/v1/workspace/campaigns", { name: "Campaign", journey_ref: journeyRef, channel, policy: value });
+    const draft = (steps: unknown[]) => h.request("PATCH", `/v1/workspace/campaigns/${campaignRef}/draft`,
+      { expected_version: 1, revision_ref: revisionRef, changes: { steps } });
+    const refused = async (response: Response, path: string, name: string) => {
+      expect(response.status, path).toBe(422);
+      expect((await response.json()).error).toEqual({ code: "OUTREACH_INVALID", message: "Repair these fields using the current operation schema.",
+        issues: [{ code: "invalid_value", path, message: "This field does not match the current operation contract.",
+          suggestion: `"${name}" is a saved sender's name. Write {sender_first_name} instead: Lifty fills it with the first name of the sender each lead is assigned to.` }] });
+    };
+    const writes = () => h.rpc.mock.calls.map(call => call[0]).filter(name => name !== "get_lifty_senders");
+
+    await refused(await create("email", one({ subject: "I'm Anna", text: "Hi {first_name}, a quick question." })), "/policy/steps/0/template/subject", "Anna");
+    await refused(await create("email", one({ subject: "A quick question", text: "Hi {first_name}, Anna Easton here." })), "/policy/steps/0/template/text", "Anna");
+    await refused(await create("linkedin", one({ text: "Hi {first_name}, I'm Anna, I run Example." })), "/policy/steps/0/template/text", "Anna");
+    await refused(await create("linkedin", one({ text: "Hi {first_name}, A.J. here." })), "/policy/steps/0/template/text", "A.J.");
+    await refused(await draft([{ position: 1, delay: { days: 0 }, variants: [{ lane: "ops", text: "Hi {first_name}, I'm {sender_first_name}." },
+      { lane: "transform", text: "Hi {first_name}, I'm Anna." }] }]), "/changes/steps/0/variants/1/text", "Anna");
+    await refused(await draft([{ position: 1, delay: { days: 0 }, template: { subject: "Hello {first_name}", text: "Hi {first_name}, I'm {sender_first_name}." } },
+      { position: 2, delay: { days: 3 }, template: { subject: "From Anna Easton", text: "Following up." } }]), "/changes/steps/1/template/subject", "Anna");
+    expect(writes()).toEqual([]);
+    expect(h.rpc).toHaveBeenCalledWith("get_lifty_senders", { p_workspace_id: null });
+
+    const accepted = [
+      ["linkedin", one({ text: "Hi {first_name}, I'm {sender_first_name} from Example." })],
+      ["linkedin", one({ text: "Hi {{first_name}}, {{sender_first_name}} here." })],
+      // Instructions may name several senders; only template subjects and text are checked.
+      ["linkedin", templated([{ position: 1, delay: { days: 0 }, writing_instructions: "Anna Easton prefers short notes.",
+        template: { text: "Hi {first_name}, I'm {sender_first_name}." } }], { instructions: "Anna and Jeff both send for Example." })],
+      ["email", one({ subject: "Annapolis and {company}", text: "Hi {first_name}, the Savannah and Annapolis teams, ANNA reviews." })],
+      ["linkedin", one({ text: "Hi {first_name}, I'm Jeff, I run Example." })],
+    ] as const;
+    for (const [channel, value] of accepted) expect((await create(channel, value)).status, JSON.stringify(value.steps)).toBe(201);
+    expect((await draft([{ position: 1, delay: { days: 0 }, template: { text: "Hi {first_name}, I'm {sender_first_name}." } }])).status).toBe(200);
+    expect(writes()).toEqual([...accepted.map(() => "create_lifty_campaign"), "patch_lifty_campaign_draft"]);
+    expect(h.rpc).toHaveBeenLastCalledWith("patch_lifty_campaign_draft", expect.objectContaining({ p_payload: expect.objectContaining({
+      changes: { steps: [{ position: 1, delay: { days: 0 }, template: { text: "Hi {first_name}, I'm {sender_first_name}." } }] } }) }));
+
+    // MCP tools save through the same route.
+    const settings = { resourceUrl: "https://api.lifty.test/mcp", authorizationServer: "https://project.supabase.test/auth/v1", allowedOrigins: [] };
+    const authenticate = async () => ({ ok: true as const, session: { userId: "founder", client: { rpc: h.rpc } } });
+    const mcp = createApp({ mcp: { ...settings, authenticate }, authenticate, log: () => {} });
+    const tool = await (await mcp.request(new Request(settings.resourceUrl, { method: "POST",
+      headers: { authorization: "Bearer founder", "content-type": "application/json", accept: "application/json, text/event-stream" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "campaigns_post", arguments: { workspace: "example",
+        body: { name: "Campaign", journey_ref: journeyRef, channel: "linkedin", policy: one({ text: "I'm Anna Easton, I run Example." }) } } } }),
+    }))).json();
+    expect(tool.result).toMatchObject({ isError: true, structuredContent: { status: 422, data: { error: { code: "OUTREACH_INVALID",
+      issues: [{ path: "/policy/steps/0/template/text", suggestion: expect.stringContaining("{sender_first_name}") }] } } } });
+    expect(writes()).toHaveLength(accepted.length + 1);
   });
   it("LIF-1128: refuses activation while the CRM customer list is not current and says where to read why", async () => {
     const h = harness(() => { throw { code: "PT409", message: "OUTREACH_CUSTOMER_LIST_NOT_CURRENT" }; });

@@ -44,7 +44,7 @@ feedback before saving it with `lifty post campaigns` or
 
 ## Name the author
 
-Identify the author from saved founder or sender name plus the saved company
+The author is the sender each lead is assigned to, with the saved company
 name. That person is speaking. Cold copy must make this obvious in a natural
 way. Do not invent a sender, title, or biography.
 
@@ -56,8 +56,12 @@ it. If the saved voice likes we, we can sit next to I. We cannot replace
 the author. LinkedIn message 2 still needs an I. A lead who never accepted
 LinkedIn still has to know who wrote the email.
 
-Name yourself with the saved founder first name and company. If the founder
-name is missing, ask for it before drafting. Do not send unnamed copy.
+Name yourself with `{sender_first_name}` and the saved company, in LinkedIn
+and email templates alike: Lifty fills it with the first name of the sender
+each lead is assigned to. Never type a sender's name into a template; Lifty
+refuses a template subject or text that names a saved sender. In generate
+mode the composer already knows the assigned sender. If no sender is saved
+yet, ask for one before drafting. Do not send unnamed copy.
 
 ## Write like a person
 
@@ -155,7 +159,8 @@ Use sample evidence to choose an angle that fits the selected audience. A fact
 about one sample company does not become true for every current or future lead.
 Templates take placeholders in single braces. Lifty fills `{first_name}` and
 `{company}` (the company's spoken name) from each lead, and `{sender_first_name}`
-from the mailbox in email only; there is no last-name placeholder. Any other
+from the lead's assigned sender on LinkedIn and email; there is no last-name
+placeholder. Any other
 lower-case slot, such as `{pain}`, is written for each lead from the campaign
 instructions. In shared template banks the text also defines the slots; a
 template's `slots_spec` only guides the writer. Generate mode composes using
@@ -250,7 +255,7 @@ Email 1
 
 Hi {first_name},
 
-I'm Alex at Harborline. When a customer issue changes owners, the next person often has to rebuild the story. I started the company to help support teams keep that context with the ticket, so the new owner is not guessing.
+I'm {sender_first_name} at Harborline. When a customer issue changes owners, the next person often has to rebuild the story. I started the company to help support teams keep that context with the ticket, so the new owner is not guessing.
 
 That is the window where they either inherit something usable or start over.
 
@@ -306,13 +311,14 @@ If things change, or you think of someone else who needs this, I am easy to find
 
 These examples assume a fictional business that helps support teams hand off
 customer issues. Use them to understand the writing choices, not as facts or
-approved copy for the current workspace. The sender is "Alex".
+approved copy for the current workspace. The sender is "Alex", written
+as `{sender_first_name}`.
 
 LinkedIn, fragmented (do not write this): "Hi {first_name}, before the ticket
 is overdue at {company}, how does the next person pick up the context?"
 The overdue-ticket clause and the handoff question are two jobs.
 
-LinkedIn, connected: "Hi {first_name}, I'm Alex at Harborline. When a
+LinkedIn, connected: "Hi {first_name}, I'm {sender_first_name} at Harborline. When a
 customer issue changes owners at {company}, how does the next person
 pick up the context?"
 

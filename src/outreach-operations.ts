@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { AuthSession } from "./app.js";
 import { PublicError } from "./errors.js";
 import { rpcFailure } from "./rpc-errors.js";
-import { validateIdentityInput, type IdentityDefinition, type IdentityInput } from "./identity-operations.js";
+import { identityOperationDefinitions, validateIdentityInput, type IdentityDefinition, type IdentityInput } from "./identity-operations.js";
 import * as c from "./outreach-contracts.js";
 import { memberReviewOperationDefinitions, memberReviewReceiptMatches } from "./member-review-operations.js";
 import { writingRecommendations } from "./writing-rules.js";
@@ -102,17 +102,37 @@ export const outreachOperationDefinitions = {
 export const outreachEntries = () => Object.entries(outreachOperationDefinitions).flatMap(([resource, operations]) =>
   Object.entries(operations).map(([action, definition]) => ({ key: `${resource}.${action}`, resource, action, definition })));
 export const validateOutreachInput = validateIdentityInput;
+type RpcClient = { rpc(name: string, args: Record<string, unknown>): Promise<{ data: unknown; error: unknown }> };
+async function call(session: AuthSession, rpc: string, args: Record<string, unknown>) {
+  let result: { data: unknown; error: unknown };
+  try { result = await (session.client as RpcClient).rpc(rpc, { p_workspace_id: session.workspaceRef ?? null, ...args }); }
+  catch (cause) { throw rpcFailure(cause, { operation: rpc, ...unavailable }); }
+  if (result.error) throw rpcFailure(result.error, { operation: rpc, ...unavailable });
+  return result.data;
+}
+// LIF-1659: every authoring client (CLI, MCP and the dashboard) saves a
+// Campaign through this operation. Before a create or draft edit with saved
+// templates, read the workspace's senders with the caller's own session
+// (deleted senders are not listed) and refuse a template that types one's
+// name. An unverified roster refuses the save.
+async function refuseTypedSenderNames(session: AuthSession, key: string, body: unknown) {
+  const [steps, path] = key === "campaigns.post" ? [(body as z.output<typeof c.CampaignCreateSchema>).policy.steps, ["policy", "steps"]]
+    : key === "campaigns.draft_patch" ? [(body as z.output<typeof c.CampaignDraftSchema>).changes.steps, ["changes", "steps"]] : [undefined, []];
+  if (!steps?.some(step => step.template || step.variants)) return;
+  const read = identityOperationDefinitions.senders.get;
+  const roster = read.response.safeParse(await call(session, read.rpc, read.args()));
+  if (!roster.success) throw new PublicError({ status: 502, ...unavailable });
+  const names = roster.data.senders.map(sender => sender.name);
+  validateOutreachInput(z.unknown().superRefine((_, context) => c.typedSenderNameIssues(steps, names, context, path)), body, invalid);
+}
 
 export async function executeOutreachOperation(session: AuthSession, key: string, input: OutreachInput): Promise<unknown> {
   const entry = outreachEntries().find(item => item.key === key);
   if (!entry) throw new Error("Unknown Outreach operation");
   const { definition } = entry;
-  let result: { data: unknown; error: unknown };
-  try { result = await (session.client as { rpc(name: string, args: Record<string, unknown>): Promise<{ data: unknown; error: unknown }> })
-    .rpc(definition.rpc, { p_workspace_id: session.workspaceRef ?? null, ...definition.args(input) }); }
-  catch (cause) { throw rpcFailure(cause, { operation: definition.rpc, ...unavailable }); }
-  if (result.error) throw rpcFailure(result.error, { operation: definition.rpc, ...unavailable });
-  const parsed = definition.response.safeParse(result.data);
+  await refuseTypedSenderNames(session, key, input.body);
+  const data = await call(session, definition.rpc, definition.args(input));
+  const parsed = definition.response.safeParse(data);
   if (!parsed.success) throw new PublicError({ status: 502, ...unavailable });
   const reviewMatch = memberReviewReceiptMatches(entry.action, input, parsed.data);
   if (reviewMatch !== undefined) {
