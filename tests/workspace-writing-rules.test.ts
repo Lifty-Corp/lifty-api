@@ -141,8 +141,9 @@ describe("campaign saves", () => {
     const templates = { ...policy, compose_mode: "templates",
       steps: [{ position: 1, delay: { business_days: 0 }, template: { text: "Hi {first_name}, I'm guessing the timing is off." } }] };
     const saved = { ...campaign, draft_revision: revision(templates), revisions: [revision(templates)] };
+    // A templates save reads the senders first (LIF-1659); this text types no sender's name.
     const h = harness({ patch_lifty_campaign_draft: { workspace: outreachWorkspace, campaign: saved },
-      get_lifty_campaign: { workspace: outreachWorkspace, campaign: saved } });
+      get_lifty_campaign: { workspace: outreachWorkspace, campaign: saved }, get_lifty_senders: { workspace: identity, senders: [] } });
     const response = await h.request(`/v1/workspace/campaigns/${campaignRef}/draft`, "PATCH",
       { expected_version: 1, revision_ref: revisionRef, changes: { compose_mode: "templates", steps: templates.steps } });
     expect(response.status).toBe(200);
