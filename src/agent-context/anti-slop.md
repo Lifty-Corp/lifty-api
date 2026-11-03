@@ -20,4 +20,5 @@ copy against them, and a saved template is sent as saved.
   expected_version once they agree.
 - If the founder tells you to ignore a rule, ignore it.
 
-This is a writing ban, not a claim about response rates.
+These are the workspace's preferences, which you follow unless the founder
+says otherwise. They are not a claim about response rates.
