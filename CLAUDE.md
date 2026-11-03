@@ -65,7 +65,11 @@ the policy or distributing it to other repositories.
 
 ## Release
 
-Feature PRs target `develop`, which only verifies. A batched release promotes
+Feature PRs target `develop`, which deploys nothing. The Verify workflow runs
+the fast tier (`npm run verify -- --base origin/<base>`) on pull requests to
+`develop` and hotfix pull requests to `main`, and the full tier
+(`npm run verify:full`) on the release pull request `develop` → `main` and on
+manual runs; a push to `develop` runs nothing. A batched release promotes
 `develop` to `main` (Compass `CLAUDE.md`). `staging` holds `main`
 plus the isolated pilot: every push to `main` merges into it automatically
 ([Sync staging](.github/workflows/sync-staging.yml)), and each `staging` push
@@ -73,10 +77,11 @@ deploys the pilot without running the test suite; its workflow can migrate the
 existing pilot app source from `develop` to `staging` in its single deployment,
 preserving the app identity and encrypted settings.
 
-Merging to `main` starts the `Deploy` workflow. It runs `npm run verify:full` (or
-reuses a passing pull request Verify run on the identical tree), deploys that
-exact commit to `lifty-api-staging`, checks the active commit and runs the
-public smoke suite. Follow that run; do not also call `do:deploy` or repeat its
+Merging to `main` starts the `Deploy` workflow. It runs `npm run verify:full`
+(or reuses the release pull request's passing full-tier Verify run on the
+identical tree; a fast-tier run never counts, so a hotfix is verified there),
+deploys that exact commit to `lifty-api-staging`, checks the active commit and
+runs the public smoke suite. Follow that run; do not also call `do:deploy` or repeat its
 smoke checks. Add a focused authenticated or compatibility probe only when the
 changed behavior needs one.
 

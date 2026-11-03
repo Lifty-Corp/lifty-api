@@ -1,10 +1,11 @@
 # Deploy lifty-api to the DigitalOcean App Platform app (lifty-api-staging).
 #
-# On push to main: verify (typecheck + tests + build), then run
-# scripts/digitalocean.sh deploy <sha>. Verify is skipped only when a
-# same-repository pull request run of verify.yml passed on this exact tree
-# (no branch protection requires up-to-date branches, so a merge can produce
-# a tree no pull request run tested; that tree is verified here). The script is the safety net: it
+# On push to main: run the full verify tier (npm run verify:full), then run
+# scripts/digitalocean.sh deploy <sha>. Verify is skipped only when the full
+# tier of verify.yml passed on this exact tree in a same-repository release
+# pull request (develop -> main). Fast-tier runs (feature and hotfix pull
+# requests) never count, and no branch protection requires up-to-date
+# branches, so any other tree is verified here (LIF-1653). The script is the safety net: it
 # validates the app spec still points at this repo#main, confirms remote main
 # is exactly this commit, creates the deployment, waits for it to go ACTIVE,
 # verifies the active deployment's source commit, and runs the smoke checks.
@@ -54,27 +55,29 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Reuse a passing pull request Verify run for this tree
+      # Only the full tier records verified-tree-full-<tree>, and only the
+      # release pull request (head develop) runs the full tier on pull_request.
+      - name: Reuse a passing full-tier release pull request Verify run for this tree
         id: reuse
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           tree=$(git rev-parse 'HEAD^{tree}')
-          runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=verified-tree-$tree" \
+          runs=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=verified-tree-full-$tree" \
             --jq '[.artifacts[] | select(.expired | not)
                    | select(.workflow_run.head_repository_id == .workflow_run.repository_id)
                    | .workflow_run.id] | unique | .[]')
           for run in $runs; do
             passed=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" \
               --jq 'select(.path == ".github/workflows/verify.yml" and .event == "pull_request"
-                           and .conclusion == "success") | .html_url')
+                           and .head_branch == "develop" and .conclusion == "success") | .html_url')
             if [ -n "$passed" ]; then
-              echo "Tree $tree already passed Verify: $passed"
+              echo "Tree $tree already passed the full Verify tier: $passed"
               echo "verified=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
           done
-          echo "No passing pull request Verify run for tree $tree; verifying here."
+          echo "No passing full-tier release pull request Verify run for tree $tree; verifying here."
 
       - uses: actions/setup-node@v4
         if: steps.reuse.outputs.verified != 'true'
@@ -86,7 +89,7 @@ jobs:
         if: steps.reuse.outputs.verified != 'true'
         run: npm ci
 
-      - name: Verify (typecheck + tests + build)
+      - name: Verify (full tier)
         if: steps.reuse.outputs.verified != 'true'
         run: npm run verify:full
 
