@@ -257,11 +257,8 @@ export const JourneyRevisionSchema = revision(JourneyPolicySchema);
 // Stored history remains readable when a newer authoring/readiness rule rejects
 // it. Writes and exact publication are validated authoritatively in Functions;
 // response parsing checks source shape without reinterpreting saved policy.
-// LIF-1670: persons follow the workspace's Journeys, so new revisions name no
-// senders. Historical revisions may still carry the persons they permitted.
-export const CampaignRevisionSchema = revision(CampaignPolicyFields.extend({
-  sender_ids: uniqueRefs.optional().describe("Historical revisions only: the persons the Campaign permitted before persons followed Journeys."),
-}).strict());
+// Persons follow the workspace's Journeys, so no revision names senders (LIF-1670).
+export const CampaignRevisionSchema = revision(CampaignPolicyFields.strict());
 export const RevisionSummarySchema = ExactRevisionSchema.extend({ approval: Approval.nullable() }).strict();
 // One executable Journey version: the exact sources selected for new Journey
 // starts and whether its automatically derived graph is installed.

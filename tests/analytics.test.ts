@@ -76,10 +76,10 @@ describe("operation analytics", () => {
       error_code: "RATE_LIMITED", outcome: "ok", surface: "mcp" });
     expect(JSON.stringify(safe)).not.toMatch(/Ana|example\.com|Acme|v2\./);
     expect(safeGroupProperties({ name: "Tom Foolery & Co.", slug: "tom-foolery", analytics_class: "customer", plan_key: "growth",
-      plan_kind: "managed", assignment_authority: "lift", created_at: "2026-10-01T00:00:00Z",
+      plan_kind: "paid", assignment_authority: "lift", created_at: "2026-10-01T00:00:00Z",
       ...({ owner_email: "tom@example.com", name_with_mail: "x" } as object) }))
       .toEqual({ name: "Tom Foolery & Co.", slug: "tom-foolery", analytics_class: "customer", plan_key: "growth",
-        plan_kind: "managed", assignment_authority: "lift", created_at: "2026-10-01T00:00:00Z" });
+        plan_kind: "paid", assignment_authority: "lift", created_at: "2026-10-01T00:00:00Z" });
     expect(safeGroupProperties({ name: "ana@example.com", slug: "https://evil.example" })).toEqual({});
   });
 
@@ -111,7 +111,7 @@ describe("operation analytics", () => {
     await settled(); await settled();
     expect(facts).toHaveBeenCalledTimes(2);
     expect(groups).toHaveLength(1);
-    facts.mockResolvedValueOnce({ name: "Example", slug: "example", plan_key: "growth", plan_kind: "managed" });
+    facts.mockResolvedValueOnce({ name: "Example", slug: "example", plan_key: "growth", plan_kind: "paid" });
     now += 16 * 60_000;
     analytics.observe(observation());
     await settled(); await settled();

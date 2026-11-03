@@ -318,10 +318,6 @@
                 5
               ]
             },
-            "sender_ids": [
-              "5b806359-8a17-4106-abfb-1104332817d8",
-              "6bd2a6b4-8187-4395-94cb-019138ad7cf4"
-            ],
             "compose_mode": "templates",
             "instructions": "Fill only the declared slots.",
             "voice_version": 0,
@@ -462,10 +458,6 @@
                 5
               ]
             },
-            "sender_ids": [
-              "5b806359-8a17-4106-abfb-1104332817d8",
-              "6bd2a6b4-8187-4395-94cb-019138ad7cf4"
-            ],
             "compose_mode": "templates",
             "instructions": "Fill only the declared slots.",
             "voice_version": 0,
@@ -625,10 +617,6 @@
               5
             ]
           },
-          "sender_ids": [
-            "5b806359-8a17-4106-abfb-1104332817d8",
-            "6bd2a6b4-8187-4395-94cb-019138ad7cf4"
-          ],
           "compose_mode": "templates",
           "instructions": "Fill only the declared slots.",
           "voice_version": 0,
@@ -785,10 +773,6 @@
               5
             ]
           },
-          "sender_ids": [
-            "5b806359-8a17-4106-abfb-1104332817d8",
-            "6bd2a6b4-8187-4395-94cb-019138ad7cf4"
-          ],
           "compose_mode": "templates",
           "instructions": "Fill only the declared slots.",
           "voice_version": 0,
@@ -1169,10 +1153,6 @@
                 5
               ]
             },
-            "sender_ids": [
-              "5b806359-8a17-4106-abfb-1104332817d8",
-              "6bd2a6b4-8187-4395-94cb-019138ad7cf4"
-            ],
             "compose_mode": "generate",
             "instructions": "Race A",
             "voice_version": 0,
@@ -1216,10 +1196,6 @@
                 5
               ]
             },
-            "sender_ids": [
-              "5b806359-8a17-4106-abfb-1104332817d8",
-              "6bd2a6b4-8187-4395-94cb-019138ad7cf4"
-            ],
             "compose_mode": "generate",
             "instructions": "Unapproved successor.",
             "voice_version": 0,
@@ -1266,10 +1242,6 @@
                 5
               ]
             },
-            "sender_ids": [
-              "5b806359-8a17-4106-abfb-1104332817d8",
-              "6bd2a6b4-8187-4395-94cb-019138ad7cf4"
-            ],
             "compose_mode": "generate",
             "instructions": "Use confirmed evidence only.",
             "voice_version": 0,
@@ -1319,10 +1291,6 @@
               5
             ]
           },
-          "sender_ids": [
-            "5b806359-8a17-4106-abfb-1104332817d8",
-            "6bd2a6b4-8187-4395-94cb-019138ad7cf4"
-          ],
           "compose_mode": "generate",
           "instructions": "Race A",
           "voice_version": 0,
@@ -1366,10 +1334,6 @@
               5
             ]
           },
-          "sender_ids": [
-            "5b806359-8a17-4106-abfb-1104332817d8",
-            "6bd2a6b4-8187-4395-94cb-019138ad7cf4"
-          ],
           "compose_mode": "generate",
           "instructions": "Unapproved successor.",
           "voice_version": 0,

@@ -83,8 +83,7 @@ export const AccountSchema = z.object({
   declaration: Declaration.nullable(),
   // Connection-only deployments have no receipt metrics; null is unavailable.
   sends: z.object({ today: Count, last_7_days: Count }).strict().nullable(),
-  // Optional so this API deploys before the database reports it.
-  participation: ParticipationSchema.optional(),
+  participation: ParticipationSchema,
 }).strict();
 export type Account = z.infer<typeof AccountSchema>;
 /** Disconnected with provider access still to remove (a retired provider's account has none). */

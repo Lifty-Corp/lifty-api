@@ -39,8 +39,8 @@ describe("service configuration", () => {
     }
   });
   it("requires both Google credentials to enable OAuth setup, with no separate Mailivery attestation", () => {
-    const env = {...validEnvironment, LIFTY_EMAIL_SERVER_KEY:"e".repeat(32), UNIPILE_DSN:"https://api.unipile.test",
-      UNIPILE_ACCESS_TOKEN:"unipile-key", MAILIVERY_API_KEY:"mailivery-token-12345", LIFTY_WARMUP_SETUP_ENABLED:"true"};
+    const env = {...validEnvironment, LIFTY_EMAIL_SERVER_KEY:"e".repeat(32),
+      MAILIVERY_API_KEY:"mailivery-token-12345", LIFTY_WARMUP_SETUP_ENABLED:"true"};
     expect(() => loadConfig(env)).toThrow(/warmup/i);
     const clientId = "123-lifty.apps.googleusercontent.com";
     expect(() => loadConfig({...env, LIFTY_WARMUP_GOOGLE_CLIENT_ID:clientId})).toThrow(/warmup/i);
@@ -188,17 +188,16 @@ it.each(["DASHBOARD_READ_ONLY_MODE","CONSUMER_READ_ONLY_MODE"])("preserves compa
 });
 
 describe("staged V2 configuration",()=>{
-  const baseline={...validEnvironment,UNIPILE_DSN:"https://api1.unipile.com:13111",UNIPILE_ACCESS_TOKEN:"v1-test",
-    LIFTY_EMAIL_SERVER_KEY:"e".repeat(40),LIFTY_LINKEDIN_SERVER_KEY:"l".repeat(40)};
-  it("configures per-channel keys and the legacy credential scope for access removal and warmup identity",()=>{
+  const baseline={...validEnvironment,LIFTY_EMAIL_SERVER_KEY:"e".repeat(40),LIFTY_LINKEDIN_SERVER_KEY:"l".repeat(40)};
+  it("configures per-channel keys and the V2 application, and never reads the retired V1 credentials",()=>{
     const config=loadConfig({...baseline,UNIPILE_V2_ACCESS_TOKEN:"v2-test",UNIPILE_V2_APPLICATION_ID:"app_test",
-      UNIPILE_PROVIDER_NAMESPACE:" legacy-fixture ",
+      UNIPILE_DSN:"https://api1.unipile.com:13111",UNIPILE_ACCESS_TOKEN:"v1-test",UNIPILE_PROVIDER_NAMESPACE:"legacy-fixture",
       UNIPILE_V2_HOSTED_AUTH_ORIGINS:"https://connect-v2.lifty.test,https://previous-v2.lifty.test"});
     expect(config.accounts).toMatchObject({serverKeys:{email:"e".repeat(40),linkedin:"l".repeat(40)},
-      provider:{v1:{dsn:baseline.UNIPILE_DSN,accessToken:"v1-test",providerNamespace:"legacy-fixture"},v2:{accessToken:"v2-test",applicationId:"app_test",
+      provider:{v2:{accessToken:"v2-test",applicationId:"app_test",
         hostedAuthOrigins:["https://connect-v2.lifty.test","https://previous-v2.lifty.test"]}}});
+    expect(config.accounts?.provider).not.toHaveProperty("v1");
     expect(loadConfig(baseline).accounts).toBeNull();
-    expect(()=>loadConfig({...baseline,UNIPILE_ACCESS_TOKEN:""})).toThrow(/UNIPILE_DSN and UNIPILE_ACCESS_TOKEN/);
   });
   it.each([
     {UNIPILE_V2_ACCESS_TOKEN:"token"},{UNIPILE_V2_APPLICATION_ID:"app_test"},

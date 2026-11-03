@@ -175,9 +175,6 @@
               7
             ]
           },
-          "sender_ids": [
-            "62658775-2075-4a4f-869e-f98f6f64cd47"
-          ],
           "compose_mode": "templates",
           "instructions": "Approved evidence only.",
           "voice_version": 0,
@@ -360,9 +357,6 @@
             7
           ]
         },
-        "sender_ids": [
-          "62658775-2075-4a4f-869e-f98f6f64cd47"
-        ],
         "compose_mode": "templates",
         "instructions": "Approved evidence only.",
         "voice_version": 0,

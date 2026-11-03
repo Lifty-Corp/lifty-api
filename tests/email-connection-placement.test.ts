@@ -6,7 +6,7 @@ const workspace = "10630000-0000-4000-8000-0000000000a1";
 const connection = "10630000-0000-4000-8000-0000000000b1";
 const stored = (test: Record<string, unknown> | null = null, extra: Record<string, unknown> = {}) => ({
   workspace_ref: workspace, connection_ref: connection, email: "david@liftygtm.com", provider: "mailivery", method: "connected_mailbox",
-  can_request: test === null, blocked_reason: test === null ? null : "email_placement_in_progress", gates_sending: true,
+  can_request: test === null, blocked_reason: test === null ? null : "email_placement_in_progress",
   last_passed_at: null, passing_until: null, test, ...extra });
 const test = (extra: Record<string, unknown>) => ({ placement_ref: "10630000-0000-4000-8000-000000000001", status: "queued", origin: "member", test_ref: null,
   total_seeds: null, requested_at: "2026-10-17T12:00:00.000000+00:00", completed_at: null, passed: null, failure_code: null,
@@ -28,7 +28,6 @@ describe("connection placement presentation", () => {
     expect(presentConnectionPlacement(stored(test({ status: "ambiguous" })) as never).test?.state).toBe("uncertain");
     const failed = presentConnectionPlacement(stored(test({ status: "failed", failure_code: "insufficient_credits" })) as never);
     expect(failed.test).toMatchObject({ state: "did_not_run", failure: { code: "insufficient_credits" } });
-    expect(presentConnectionPlacement(stored(null, { gates_sending: false }) as never).rule).toMatch(/advisory/);
   });
 
   it("says when Lifty started the test after warmup and when it tries again", () => {
