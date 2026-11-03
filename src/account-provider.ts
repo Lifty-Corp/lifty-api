@@ -1,6 +1,5 @@
 import type { EmailProvider } from "./connect-state.js";
 import { z } from "zod";
-import { connectionFetch } from "./connection-confirmation.js";
 import { PublicError } from "./errors.js";
 import { ProviderIdentifier, type UnipileTransport } from "./unipile-transport.js";
 import { createUnipileV2Provider, type UnipileV2Settings } from "./unipile-v2-provider.js";
@@ -28,8 +27,6 @@ export class IdentityMismatch extends Error {}
 
 export interface AccountProviderSettings {
   v2: UnipileV2Settings;
-  /** Legacy revocation and authenticated warmup mailbox identification. */
-  v1?: { dsn: string; accessToken: string; providerNamespace?: string } | null;
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
 }
@@ -37,11 +34,6 @@ export interface AccountProviderSettings {
 export function createAccountProvider(settings: AccountProviderSettings) {
   const v2 = createUnipileV2Provider({ ...settings.v2, ...(settings.fetchImpl ? { fetchImpl: settings.fetchImpl } : {}),
     ...(settings.timeoutMs ? { timeoutMs: settings.timeoutMs } : {}) });
-  const fetchImpl = connectionFetch(settings.fetchImpl ?? fetch);
-  const v1Base = settings.v1 ? new URL(settings.v1.dsn) : null;
-  if (v1Base && (v1Base.protocol !== "https:" || !/^[a-z0-9-]+\.unipile\.com$/.test(v1Base.hostname)
-    || v1Base.username || v1Base.password || v1Base.search || v1Base.hash || v1Base.pathname !== "/"
-    || !settings.v1!.accessToken.trim())) throw new Error("Invalid Unipile V1 configuration.");
 
   // Only database-returned transports reach the provider; unknown fields stay null.
   function transport(value: ProviderTransport, origin?: string | null): UnipileTransport {
@@ -88,19 +80,11 @@ export function createAccountProvider(settings: AccountProviderSettings) {
         throw error;
       }
     },
-    /** Remove Lifty's access to exactly this provider account within the caller's deadline. */
+    /** Remove Lifty's access to exactly this provider account within the caller's deadline.
+     * Only Unipile V2 accounts can be removed; the V1 API is retired (LIF-1617). */
     async revoke(input: { transport: ProviderTransport; providerAccountId: string; signal: AbortSignal }): Promise<"deleted" | "not_found"> {
-      if (input.transport.api_version === "v2") return v2.deleteAccount(input.providerAccountId, input.signal);
-      if (!v1Base) throw new PublicError({ status: 503, code: "REVOCATION_UNAVAILABLE", message: "Access removal is not configured." });
-      const id = ProviderIdentifier.parse(input.providerAccountId);
-      const response = await fetchImpl(new URL(`/api/v1/accounts/${encodeURIComponent(id)}`, v1Base), {
-        method: "DELETE", redirect: "error", signal: input.signal,
-        headers: { "X-API-KEY": settings.v1!.accessToken, accept: "application/json" },
-      });
-      void response.body?.cancel().catch(() => {});
-      if (response.status === 404) return "not_found";
-      if (!response.ok) throw new PublicError({ status: 502, code: "REVOCATION_UNAVAILABLE", message: "Access removal could not be confirmed." });
-      return "deleted";
+      if (input.transport.api_version !== "v2") throw new PublicError({ status: 503, code: "REVOCATION_UNAVAILABLE", message: "Access removal is not configured." });
+      return v2.deleteAccount(input.providerAccountId, input.signal);
     },
   };
 }

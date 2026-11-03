@@ -262,12 +262,12 @@ the same request finishes it. Providers without a removal operation stay 202.
 
 Configuration: `UNIPILE_V2_ACCESS_TOKEN`, `UNIPILE_V2_APPLICATION_ID`,
 `UNIPILE_V2_HOSTED_AUTH_ORIGINS` (Lifty's verified hosted sign-in origins only)
-and the existing `LIFTY_EMAIL_SERVER_KEY` / `LIFTY_LINKEDIN_SERVER_KEY`. The
-optional `UNIPILE_DSN` + `UNIPILE_ACCESS_TOKEN` pair removes access for accounts
-still bound through the earlier provider API. Warmup identification for those
-accounts also requires `UNIPILE_PROVIDER_NAMESPACE` to match their stored
-credential scope. It verifies the authenticated primary mailbox before choosing
-Google or Microsoft; it never infers the provider from the email domain. The Functions
+and the existing `LIFTY_EMAIL_SERVER_KEY` / `LIFTY_LINKEDIN_SERVER_KEY`. Unipile
+V2 is the only provider API (LIF-1617): an account still bound through the
+retired V1 API is neither removed at the provider nor identified for warmup
+(warmup asks for the email connection again). Warmup identification verifies the
+authenticated primary mailbox before choosing Google or Microsoft; it never
+infers the provider from the email domain. The Functions
 migration providing these RPCs must be released before this API.
 
 `LIFTY_LINKEDIN_SERVER_KEY` is the dedicated capability for LinkedIn account
@@ -576,23 +576,19 @@ Release order: apply Functions migration
 API. Without it both operations return the 502 unavailable error and change
 nothing.
 
-## Staged Unipile V2 connections (LIF-916)
+## Unipile V2 connections (LIF-916, LIF-1617)
 
-V2 is an additive, database-selected transport. Keep the V1 DSN, credentials,
-namespace and hosted domain intact. Set `UNIPILE_V2_ACCESS_TOKEN` and
-`UNIPILE_V2_APPLICATION_ID` together, with an application-scoped key. The API
-uses `https://api.unipile.com/v2` for V2 only. Credentials alone do not select a
-workspace or change an existing connection.
+Unipile V2 (`https://api.unipile.com/v2`) is the only provider API. Set
+`UNIPILE_V2_ACCESS_TOKEN` and `UNIPILE_V2_APPLICATION_ID` together, with an
+application-scoped key. Credentials alone do not select a workspace or change an
+existing connection.
 
-Apply the reviewed Functions LIF-916 migration and signed V2 lifecycle endpoint
-before selecting pilot workspace/channel routing. The existing email/LinkedIn
-RPCs return an immutable `transport` snapshot per intent and the active transport
-per connection. Copied accounts preserve canonical V1 connection IDs, mailbox
-budgets and LinkedIn history; provider calls use only the verified V2 alias.
-Administrative prebinding must verify the provider's `metadata.v1_account_id`,
-application, scope and owner against the existing canonical connection. New
-V2-only accounts retain their real V2 ID and `unipile:v2:<application_id>`
-namespace. They cannot be rolled back onto a fictitious V1 account.
+The email/LinkedIn RPCs return an immutable `transport` snapshot per intent and
+the active transport per connection. Accounts copied from the retired V1 API
+keep their canonical connection IDs, mailbox budgets and LinkedIn history;
+provider calls use only the verified V2 alias (`metadata.v1_account_id`). New
+accounts retain their real V2 ID and `unipile:v2:<application_id>` namespace. A
+transport the database still reports as V1 is never used.
 
 `UNIPILE_V2_HOSTED_AUTH_ORIGINS` is a comma-separated allowlist of Lifty's
 verified HTTPS hosted sign-in origins; the provider's default pages are rejected.
@@ -612,15 +608,13 @@ Currently V2 accepts Google mailbox connections with exactly one verified primar
 email sender, and LinkedIn with an exact self-profile match. V2 deliberately
 rejects other mailbox providers until equivalent vendor identity evidence exists.
 
-Rollback disables new V2 routing and uses the retained mapping's generation CAS
-for copied accounts. Keep V2 credentials, endpoint and domains available while
-V2 attempts or retained operations need reconciliation; do not erase mappings or
-change the V1 namespace. Jobs must retain each operation's transport separately
-so a successful or ambiguous send is never retried against the other version.
+Keep V2 credentials, endpoint and domains available while V2 attempts or
+retained operations need reconciliation; do not erase mappings. Jobs retains
+each operation's transport, so a successful or ambiguous send is never retried
+through another binding.
 
 Local contract tests prove fail-closed API behavior, not vendor production
-readiness. Release still requires independent review, actual signed webhook
-validation, copied-account prebinding and a permitted live pilot. Sources:
+readiness. Sources:
 [Hosted auth](https://developer.unipile.com/v2.0/docs/authenticate-with-hosted-auth),
 [provider features](https://developer.unipile.com/v2.0/docs/list-provider-features),
 and the official [Unipile SDK](https://github.com/unipile/unipile-node) schemas at

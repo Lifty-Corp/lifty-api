@@ -209,9 +209,8 @@ the database so several servers or a restart never lose or repeat one.
 Warmup (Email deliverability): never repeat an uncertain Microsoft link
 request, replay Google tokens or infer warmup success from consent alone. A
 failed `lifty-email-warmup-verify` trigger never fails the handoff; the
-scheduled reconcile covers it. Legacy V1 warmup identity reads need
-`UNIPILE_PROVIDER_NAMESPACE`, matching the stored connection namespace; do not
-derive it from the DSN.
+scheduled reconcile covers it. Warmup identity reads only the bound Unipile V2
+account; a transport still on the retired V1 API asks for the connection again.
 
 ### Sending accounts
 
