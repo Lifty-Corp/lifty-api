@@ -32,23 +32,44 @@ Headless workers (`claudex -p`, `codex exec`) implement their brief directly: no
 
 ## Build and verify
 
-Node `>=22.11.0`. Run `npm ci`, then `npm run dev` with the variables from
-`.env.example` exported in the shell; the service does not load `.env` itself.
-`npm run verify` checks the API-owned HubSpot policy source and generation,
-then runs the typecheck, the vitest suite and the build. See
-[shared contract maintenance](contracts/hubspot-grant-policy.md) before changing
-the policy or distributing it to other repositories. The Verify
-workflow also runs `python3 -m unittest discover -s scripts -p test_deploy_pilot.py`.
+Node `>=22.11.0` on CI's major (22). Run `npm ci`, then `npm run dev` with the
+variables from `.env.example` exported in the shell; the service does not load
+`.env` itself.
 
-- Code, deploy tooling and Markdown under `src/` (packaged agent context) need
-  `npm run verify`. Reuse a passing result for unchanged inputs instead of
-  rerunning it before each commit.
-- Human documentation (this file, README, RUNBOOK, `docs/`) needs prose, link
-  and diff checks only. The Deploy workflow ignores those paths.
+`npm run verify` (`scripts/verify.mjs`) is the one check command. It selects
+steps from the files that differ from the merge-base with `origin/develop`
+(`-- --base <ref>` or `VERIFY_BASE` for another base), plus staged, unstaged
+and untracked files:
+
+- Code, deploy tooling and Markdown under `src/` (packaged agent context) run
+  the HubSpot policy check and tests, the typecheck and the whole vitest suite.
+  The build runs when its inputs change (`scripts/copy-context-assets.mjs`,
+  context assets, `Dockerfile`), the deploy-pilot Python tests when the pilot
+  files change.
+- Dependencies, a `tsconfig`, the vitest config, CI, the verify script, an
+  unmapped path or a missing merge-base run the full tier. `npm run verify:full`
+  (`--full`) runs it on request: every step above, the build and the
+  deploy-pilot tests.
+- Human documentation alone (this file, README, RUNBOOK, `docs/`, other `*.md`
+  outside `src/`) needs prose, link and diff checks. The Deploy workflow
+  ignores the first four.
+- The connection inventory and conformance suite
+  (`tests/connection-confirmation.test.ts`) runs on every invocation.
+
+It refuses a Node major other than CI's (`fnm exec --using 22 npm run verify`),
+never starts Docker, Supabase, a browser or a server, and ends with the CI-only
+proofs the diff still needs. Reuse a passing result for unchanged inputs
+instead of rerunning it before each commit. See
+[shared contract maintenance](contracts/hubspot-grant-policy.md) before changing
+the policy or distributing it to other repositories.
 
 ## Release
 
-Feature PRs target `develop`, which only verifies. A batched release promotes
+Feature PRs target `develop`, which deploys nothing. The Verify workflow runs
+the fast tier (`npm run verify -- --base origin/<base>`) on pull requests to
+`develop` and hotfix pull requests to `main`, and the full tier
+(`npm run verify:full`) on the release pull request `develop` → `main` and on
+manual runs; a push to `develop` runs nothing. A batched release promotes
 `develop` to `main` (Compass `CLAUDE.md`). `staging` holds `main`
 plus the isolated pilot: every push to `main` merges into it automatically
 ([Sync staging](.github/workflows/sync-staging.yml)), and each `staging` push
@@ -56,10 +77,11 @@ deploys the pilot without running the test suite; its workflow can migrate the
 existing pilot app source from `develop` to `staging` in its single deployment,
 preserving the app identity and encrypted settings.
 
-Merging to `main` starts the `Deploy` workflow. It runs `npm run verify` (or
-reuses a passing pull request Verify run on the identical tree), deploys that
-exact commit to `lifty-api-staging`, checks the active commit and runs the
-public smoke suite. Follow that run; do not also call `do:deploy` or repeat its
+Merging to `main` starts the `Deploy` workflow. It runs `npm run verify:full`
+(or reuses the release pull request's passing full-tier Verify run on the
+identical tree; a fast-tier run never counts, so a hotfix is verified there),
+deploys that exact commit to `lifty-api-staging`, checks the active commit and
+runs the public smoke suite. Follow that run; do not also call `do:deploy` or repeat its
 smoke checks. Add a focused authenticated or compatibility probe only when the
 changed behavior needs one.
 
@@ -198,8 +220,9 @@ unknown code fails the response with 502.
 
 The contract is on [Connections](https://linear.app/lifty-corp/document/lead-gen-system-connections-2f15a8ae4cc6).
 Every browser integration callback uses `src/connection-confirmation.ts` and
-its typed flow inventory, and must pass the shared conformance suite in
-`npm run verify`. HubSpot and Slack fail closed before exchanging a code if the
+its typed flow inventory, and must pass the shared conformance suite
+(`tests/connection-confirmation.test.ts`), which every `npm run verify` runs
+whatever changed. HubSpot and Slack fail closed before exchanging a code if the
 claim RPC is unavailable. Mailivery tokens stay ephemeral.
 
 `startConnectionRecovery` runs a pass every 15 seconds, but the database claims

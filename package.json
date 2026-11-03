@@ -22,7 +22,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run policy:check && npm run test:policy && npm run typecheck && npm test && npm run build"
+    "verify": "node scripts/verify.mjs",
+    "verify:full": "node scripts/verify.mjs --full"
   },
   "dependencies": {
     "@hono/node-server": "2.1.1",
