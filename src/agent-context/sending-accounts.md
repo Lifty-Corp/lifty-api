@@ -24,7 +24,7 @@ behind Lifty’s connection pages.
   waits for a fresh check.
 - `declaration`: what the person confirmed on Lifty's connect page.
 - `sends`: sends today and over the last seven days.
-- `participation` (absent until Lifty reports it): whether the account takes
+- `participation`: whether the account takes
   part in new Journeys now, as `status` and its `cause`: `sending`;
   `waiting_for_first_lead` (no lead has reached its channel yet);
   `no_active_campaign` (it sends once a campaign on its channel is active);
@@ -65,6 +65,9 @@ never report an account as disconnected or missing from a failed read.
    connection, sign in again with the same account.
 6. A connected account's attempt carries `next_step`: for a mailbox its warmup
    setup and then next_step, for LinkedIn next_step. Follow it in the same reply.
+   For LinkedIn that means building the campaign with the founder, previewing
+   it and asking them to turn it on now; a connected account alone contacts
+   nobody.
 
 Connecting never activates a campaign or sends anything.
 
@@ -237,10 +240,9 @@ yourself. `uncertain` means Lifty is checking whether Mailivery created the
 test and will not create a second one. `did_not_run` is not a placement
 result.
 
-When `gates_sending` is true (LIFT client mailboxes), the mailbox can send
-campaign email only with a passing test from the last 10 days, after 21 active
-warmup days and an explicit operator release. A passing test never releases the
-mailbox or starts campaigns by itself. For founders it is advisory.
+A mailbox can send campaign email only with a passing test from the last 10
+days, after 21 active warmup days and an explicit release. A passing test never
+releases the mailbox or starts campaigns by itself.
 
 ## Inbox health
 

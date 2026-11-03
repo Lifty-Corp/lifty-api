@@ -79,15 +79,19 @@ export const NEXT_STEP_CATALOG: Record<string, NextStepEntry> = {
   // founder's confirmation of the sample opens Parts 2-4 (LIF-1303).
   sample_ready_for_founder_review: { step: "sample-review", state: "review", section: "leads",
     when: ["The first research run succeeded", "The founder has not confirmed the sample, or no campaign, LinkedIn account or mailbox exists yet"],
-    guide: { task: "step-review" }, context: "sample-review", related: ["targeting", "research-criteria", "crm", "customer-exclusions", "senders", "sending-accounts"] },
-  // Part 2: alerts once, then voice before the first draft, then templates.
+    guide: { task: "step-review" }, context: "sample-review", related: ["targeting", "research-criteria", "research-schedule", "crm", "customer-exclusions", "senders", "sending-accounts"] },
+  // Part 2: alerts once, then voice before the first draft, then templates,
+  // then the founder is asked to turn the campaign on in the same
+  // conversation (LIF-1776). A mailbox whose warmup never started gets its
+  // start here too, since Part 3 waits for LinkedIn.
   linkedin_connected: { step: "campaign", state: "action_required", section: "outreach",
     when: ["The founder confirmed the first sample", "A LinkedIn account is connected", "No campaign is saved"],
     guide: { task: "campaigns", references: ["common", "writing", "anti_slop"] }, context: "campaigns",
-    related: ["notifications", "commercial-voice", "journeys", "senders"] },
+    related: ["notifications", "commercial-voice", "journeys", "senders", "sending-accounts"] },
   campaigns_saved: { step: "campaign", state: "action_required", section: "outreach",
     when: ["The founder confirmed the first sample", "At least one campaign is saved", "No LinkedIn campaign is active"],
-    guide: { task: "campaigns", references: ["common", "writing", "anti_slop"] }, context: "campaigns", related: ["journeys", "commercial-voice", "linkedin"] },
+    guide: { task: "campaigns", references: ["common", "writing", "anti_slop"] }, context: "campaigns",
+    related: ["journeys", "commercial-voice", "linkedin", "sending-accounts"] },
   linkedin_outreach_active: { step: "linkedin", state: "complete", section: "outreach",
     when: ["The founder confirmed the first sample", "A LinkedIn campaign is active"],
     guide: { task: "linkedin", references: ["common"] }, context: "linkedin", related: ["campaigns", "leads", "senders", "sending-accounts"] },
@@ -197,12 +201,8 @@ async function emailPosition(deps: Reads, session: AuthSession, workspace: strin
   }));
   const positions = checked.map(({ mailbox, warmup, placement }) => {
     const test = placement?.test?.state ?? null;
-    // A client mailbox needs a pass inside its validity window. A founder
-    // workspace has no passing_until (placement is advisory there), so its
-    // latest completed test decides (LIF-1223).
-    const passing = placement?.gates_sending === false
-      ? !!placement.last_passed_at && test !== "failed"
-      : !!placement?.passing_until && Date.parse(placement.passing_until) > now;
+    // Every mailbox needs a pass inside its validity window.
+    const passing = !!placement?.passing_until && Date.parse(placement.passing_until) > now;
     let kind: EmailKind = "connected";
     let cause: "reconnect" | "spam" | "problem" | "placement" | null = null;
     if (mailbox.status === "needs_reconnect") [kind, cause] = ["held", "reconnect"];
@@ -525,16 +525,17 @@ export async function getNextStep(
         ...deadLanes(run, true),
         run.reviewed_at
           ? "The founder already confirmed this sample: do not ask for the review again. A targeting change still follows summary_context task targeting or research-criteria, its synchronous PATCH/readback, then a new sample."
-          : `Ask one question: does this confirm the targeting, or what should change? A change follows summary_context task targeting or research-criteria, its synchronous PATCH/readback, then a new sample. When the founder confirms the sample or moves on without changes, record it once with ${tool("sample-review", "confirm")} and run_ref ${run.run_ref}; a new sample needs its own confirmation.`,
+          : `Ask one question: does this confirm the targeting, or what should change? A change follows summary_context task targeting or research-criteria, its synchronous PATCH/readback, then a new sample. When the founder confirms the sample or moves on without changes, record it once with ${tool("sample-review", "confirm")} and run_ref ${run.run_ref}; a new sample needs its own confirmation. When you ask, say that confirming also turns on weekly research, so Lifty keeps finding and researching people like these every week, unless the founder already turned it on or off. After confirming, read ${tool("research-schedule", "get")} and tell them its state and weekly number, and that they can pause it or change the number anytime (summary_context task research-schedule).`,
         crmAction,
         ...(roster.status === "unavailable" ? ["The sender roster could not be read: read senders_get before offering LinkedIn, because an account may already be connected."] : []),
         started.length
-          ? `Close Section 1 in at most six lines: target, leads and grade mix, and CRM result. The founder already set up ${started.join(" and ")} while the sample ran: do not offer it again. After the confirmation, call next_step; it continues from there.`
-          : `Close Section 1 in at most six lines: target, leads and grade mix, and CRM result. Then ask whether to set up LinkedIn outreach for these leads now. Yes: read ${tool("senders", "get")} for who the senders are and which accounts each has connected. With one sender, use it; with several, ask whose LinkedIn to connect (senders_post only when that person is absent). Then ${tool("sending-accounts", "connect")} with that sender_id and channel linkedin. Show the returned connection_url right away and confirm it with sending_accounts_attempt; the templates follow once it connects. A founder who would rather start with email connects a mailbox the same way, with channel email: with one sender use it, with several ask whose mailbox it is. A leads-only founder can stop here. If not now, accept it and do not ask again this session.`,
+          ? `Close Section 1 in at most six lines: target, leads and grade mix, CRM result, and whether weekly research is on. The founder already set up ${started.join(" and ")} while the sample ran: do not offer it again. After the confirmation, call next_step; it continues from there.`
+          : `Close Section 1 in at most six lines: target, leads and grade mix, CRM result, and whether weekly research is on. Then ask whether to set up LinkedIn outreach for these leads now. Yes: read ${tool("senders", "get")} for who the senders are and which accounts each has connected. With one sender, use it; with several, ask whose LinkedIn to connect (senders_post only when that person is absent). Then ${tool("sending-accounts", "connect")} with that sender_id and channel linkedin. Show the returned connection_url right away and confirm it with sending_accounts_attempt; the templates follow once it connects. A founder who would rather start with email connects a mailbox the same way, with channel email: with one sender use it, with several ask whose mailbox it is. A leads-only founder can stop here. If not now, accept it and do not ask again this session.`,
       ],
       [
         tool("sample-review", "get"),
         ...(run.reviewed_at ? [] : [tool("sample-review", "confirm")]),
+        tool("research-schedule", "get"),
         tool("crm", "get"),
         tool("crm", "post"),
         tool("crm", "mapping_context"),
@@ -573,21 +574,40 @@ export async function getNextStep(
   const linkedinActive = campaigns.campaigns.some(value => value.channel === "linkedin" && value.state === "active");
   // How a preview is shown before the approval question, wherever it runs.
   const previewSteps = `While ${tool("campaigns", "tests_post")} runs, tell the founder it takes a few minutes and report progress from ${tool("campaigns", "test_detail")} as "3 of 5 ready", never how you check. Show every step for at least one lead, explain differences from each sample's changes instead of guessing, and flag research that leaves a lead's company or fit unverified. Describe sending as ${tool("campaigns", "review_settings_get")} says: with approve_each, every message waits for the founder's approval. If an operation refuses the founder's choice, say so before saving; never call it changeable later.`;
-  const campaignsSaved = () => response(
+  // LIF-1776: a saved or previewed campaign contacts nobody, so the founder is
+  // asked to turn it on in the same conversation instead of leaving it staged.
+  const activationAsk = `After the preview, ask one question in the same reply: approve these messages and turn the LinkedIn campaign on now? First say who starts: the Journey's audience (in qualified mode every eligible qualified lead not yet contacted, now and later), never only the tested leads, and that Lifty contacts nobody until it is on. Yes: ${tool("campaigns", "publish")} with that exact revision, then ${tool("campaigns", "activate")}. Changes: save them, preview again and ask again. Not now: accept it and say plainly that nothing is sent until they turn it on.`;
+  const activationTools = [tool("campaigns", "publish"), tool("campaigns", "activate")];
+  // Part 3 waits for LinkedIn, so a mailbox connected meanwhile would never
+  // reach its warmup start; Part 2 starts it (LIF-1776).
+  const pendingWarmup = async (): Promise<{ actions: string[]; tools: string[] }> => {
+    if (!mailboxes.length) return { actions: [], tools: [] };
+    const { kind, unknown, mailbox } = await emailPosition(deps, session, ref!, mailboxes);
+    if (kind !== "connected" || unknown) return { actions: [], tools: [] };
+    return {
+      actions: [`${mailbox.email ?? `${mailbox.sender}'s mailbox`} is connected, but its warmup has not started, so it cannot get ready to send. Call ${tool("sending-accounts", "warmup_start")} with connection_ref ${mailbox.id} and show the returned setup link in the same reply: its owner signs in once more to authorize warmup and the placement test. Its email campaign comes after LinkedIn.`],
+      tools: [tool("sending-accounts", "warmup_start")],
+    };
+  };
+  const campaignsSaved = (warmup: { actions: string[]; tools: string[] } = { actions: [], tools: [] }) => response(
     "campaigns_saved",
     [
-      "Read campaigns_get and journeys_get for the exact saved drafts, approvals, selected revisions, executable version and intent. Publish only the chosen exact revision; activate separately with explicit founder authorization. Before asking, say who starts: the Journey's audience (in qualified mode every eligible qualified lead not yet contacted, now and later), never only the tested leads. Paused intent and account/readiness/incident holds remain independent.",
-      previewSteps,
+      "No LinkedIn campaign is on, so Lifty contacts nobody on LinkedIn yet: tell the founder plainly before anything else. Read campaigns_get and journeys_get for the exact saved drafts, approvals, selected revisions, executable version and intent. Paused intent and account/readiness/incident holds remain independent.",
+      `Unless this conversation already previewed the current draft, preview it first. ${previewSteps}`,
+      `${activationAsk} A campaign the founder paused on purpose stays paused until they say otherwise: ask once, not again this session.`,
+      ...warmup.actions,
       "When a LinkedIn campaign is active, call next_step.",
     ],
-    [tool("campaigns", "get"), tool("journeys", "get"), tool("campaigns", "tests_post"), tool("campaigns", "test_detail"), tool("campaigns", "review_settings_get"), tool("summary", "context")],
+    [tool("campaigns", "get"), tool("journeys", "get"), tool("campaigns", "tests_post"), tool("campaigns", "test_detail"), tool("campaigns", "review_settings_get"),
+      ...activationTools, ...warmup.tools, tool("summary", "context")],
     outreach,
   );
   const connectedAll = linkedin.filter(account => account.status === "connected");
   const connected = connectedAll[0];
   // Part 2 comes first while a connected LinkedIn account has no active campaign.
   if (connected && !linkedinActive) {
-    if (campaigns.campaigns.length) return campaignsSaved();
+    const warmup = await pendingWarmup();
+    if (campaigns.campaigns.length) return campaignsSaved(warmup);
     return response(
       "linkedin_connected",
       [
@@ -595,11 +615,13 @@ export async function getNextStep(
         `Read ${tool("commercial-voice", "get")}. If tone and rules are empty, ask how the founder writes before the first draft and save it with ${tool("commercial-voice", "patch")}; voice is shared by every channel and campaign.`,
         `Build the LinkedIn templates: read ${tool("journeys", "get")}, create the Journey for qualified (Tier A and B) leads with ${tool("journeys", "post")} and its LinkedIn Campaign with ${tool("campaigns", "post")}. Every person with a connected account takes part, so ask no sender question. Preview real leads with ${tool("campaigns", "tests_post")} before asking for approval.`,
         previewSteps,
-        "Saving, publishing or a connected account never activates outreach. When a campaign is saved, call next_step.",
+        activationAsk,
+        ...warmup.actions,
+        "Saving, publishing or a connected account never activates outreach; only the founder's yes does. When the founder has answered, call next_step.",
       ],
       [tool("notifications", "get"), tool("notifications", "post"), tool("commercial-voice", "get"), tool("commercial-voice", "patch"), tool("senders", "get"),
         tool("journeys", "get"), tool("journeys", "post"), tool("campaigns", "post"), tool("campaigns", "tests_post"), tool("campaigns", "test_detail"),
-        tool("campaigns", "review_settings_get"), tool("summary", "context")],
+        tool("campaigns", "review_settings_get"), ...activationTools, ...warmup.tools, tool("summary", "context")],
       { account: connected },
     );
   }

@@ -1042,7 +1042,7 @@ const sendersFixture = {
     checked_at: profileFixture.updated_at, observation: { state: "verified" as const },
     connected_at: profileFixture.updated_at, disconnected_at: null, access_revoked_at: null, access_removal: null,
     declaration: { mailbox_use: "habitual" as const, declared_by: null, declared_at: profileFixture.updated_at },
-    sends: { today: 1, last_7_days: 3 } }] }],
+    sends: { today: 1, last_7_days: 3 }, participation: { status: "sending" as const, cause: "active_journeys" as const } }] }],
 };
 const summaryReads: Partial<AppDependencies> = {
   getWorkspace: async () => ({
@@ -1120,7 +1120,7 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
     },
   );
   it.each([
-    ["paused", { step: "campaign", state: "action_required", reason: "campaigns_saved" }, "activate separately"],
+    ["paused", { step: "campaign", state: "action_required", reason: "campaigns_saved" }, "stays paused until they say otherwise"],
     ["active", { step: "linkedin", state: "complete", reason: "linkedin_outreach_active" }, "only when the founder asks"],
   ] as const)("resumes canonical campaign %s without activating or inferring readiness", async (state, position, guidance) => {
     const campaign = vi.fn(async () => ({ ...emptyOutreach("campaigns.get"), campaigns: [{ ...canonicalCampaign, state }] }));
@@ -1148,6 +1148,11 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
       identityOperation: async () => ({ status: 200, body: linkedinRoster(status) }) });
     const result = await (await h.request("/v1/workspace/next-step")).json();
     expect(result.reason).toBe(reason);
+    // LIF-1776: a staged campaign contacts nobody, so Part 2 asks to turn it on now.
+    if (reason === "linkedin_connected" || reason === "campaigns_saved") {
+      expect(result.actions.join(" ")).toContain("approve these messages and turn the LinkedIn campaign on now?");
+      expect(result.recommended_tools).toEqual(expect.arrayContaining(["campaigns_publish", "campaigns_activate"]));
+    }
     // The agent acts on the exact account: a reconnect needs its id.
     if (reason === "linkedin_connected" || reason === "linkedin_reconnect_needed") {
       const account = sendersFixture.senders[0]!.accounts[0]!;
@@ -1186,12 +1191,9 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
     [{ warmup: warmupRead("warming"), placement: { passing_until: null, test: { state: "failed" } } }, "email_held", "email"],
     [{ accounts: [{ ...mailbox, status: "needs_reconnect" }] }, "email_held", "email"],
     [{ warmup: warmupRead("warming", { warmup_ready: true }), placement: passing }, "email_ready", "kickoff"],
-    // A founder workspace has no passing_until (placement is advisory there):
-    // its latest completed test decides (LIF-1223).
-    [{ warmup: warmupRead("warming", { warmup_ready: true }), placement: { gates_sending: false, last_passed_at: "2026-10-07T12:00:00Z",
-      passing_until: null, test: { state: "passed" } } }, "email_ready", "kickoff"],
-    [{ warmup: warmupRead("warming", { warmup_ready: true }), placement: { gates_sending: false, last_passed_at: "2026-10-07T12:00:00Z",
-      passing_until: null, test: { state: "failed" } } }, "email_held", "email"],
+    // A pass outside its validity window is not ready, whatever the latest test says.
+    [{ warmup: warmupRead("warming", { warmup_ready: true }), placement: { last_passed_at: "2026-10-07T12:00:00Z",
+      passing_until: null, test: { state: "passed" } } }, "email_preparing", "email"],
     // Ready needs a passing placement test, not warmup alone.
     [{ warmup: warmupRead("warming", { warmup_ready: true }) }, "email_preparing", "email"],
     // Part 2 comes first while a connected LinkedIn account has no active campaign.
@@ -1202,6 +1204,19 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
   ] as const)("resumes Parts 3 and 4 from %j at %s", async (state, reason, section) => {
     const result = await (await emailHarness(state as never).request("/v1/workspace/next-step")).json();
     expect(result).toMatchObject({ reason, section });
+  });
+  // LIF-1776: Part 3 waits for LinkedIn, so Part 2 starts a mailbox's warmup
+  // that never started, and only that one.
+  it.each([
+    [{ accounts: [linkedinAccount, mailbox] }, "linkedin_connected", true],
+    [{ accounts: [linkedinAccount, mailbox], campaigns: ["inactive"] }, "campaigns_saved", true],
+    [{ accounts: [linkedinAccount, mailbox], warmup: warmupRead("warming") }, "linkedin_connected", false],
+    [{ accounts: [linkedinAccount, mailbox], warmup: "unavailable" }, "linkedin_connected", false],
+  ] as const)("starts a not-started mailbox warmup in Part 2 from %j", async (state, reason, start) => {
+    const result = await (await emailHarness(state as never).request("/v1/workspace/next-step")).json();
+    expect(result.reason).toBe(reason);
+    expect(result.actions.join(" ").includes(`connection_ref ${mailbox.id}`)).toBe(start);
+    expect(result.recommended_tools.includes("sending_accounts_warmup_start")).toBe(start);
   });
   // LIF-1223: the first placement test is automatic and its result is a notice,
   // so Part 3 offers Slack whenever it is not connected, after LinkedIn too.
@@ -1276,6 +1291,9 @@ describe("resource resumption preserves research, campaign and CRM decisions", (
     expect(review).toMatchObject({ reason: "sample_ready_for_founder_review", section: "leads" });
     expect(review.recommended_tools).toContain("sample_review_confirm");
     expect(review.actions.join(" ")).toContain("sample_review_confirm and run_ref run-1");
+    // LIF-1776: the confirmation turns weekly research on, so the founder hears it first.
+    expect(review.actions.join(" ")).toContain("confirming also turns on weekly research");
+    expect(review.recommended_tools).toContain("research_schedule_get");
     // What the founder already set up is not offered again.
     expect(review.actions.join(" ")).toContain("do not offer it again");
     expect(review.actions.join(" ")).not.toContain("set up LinkedIn outreach");

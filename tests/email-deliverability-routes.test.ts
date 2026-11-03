@@ -67,7 +67,8 @@ describe("deliverability read operation", () => {
     const account: Account = { id: current.connection_ref, sender_id: current.sender_ref!, channel: "email", identity: mailbox.email,
       status: "connected", state: "active", sending: { allowed: true, reason: null, scope: null }, limits: { emails_per_day: 10 },
       checked_at: now.toISOString(), observation: { state: "verified" }, connected_at: now.toISOString(), disconnected_at: null,
-      access_revoked_at: null, access_removal: null, declaration: null, sends: { today: 5, last_7_days: 20 } };
+      access_revoked_at: null, access_removal: null, declaration: null, sends: { today: 5, last_7_days: 20 },
+      participation: { status: "sending", cause: "active_journeys" } };
     const accounts = { workspace: { workspace_ref: mailbox.workspace_ref, name: "Fixture", state: "ready" }, accounts: [account] };
     const h = harness({ data, accounts });
     const response = await h.ops.read(h.session, { workspace: "fixture-a" });

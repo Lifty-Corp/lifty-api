@@ -46,7 +46,8 @@ const senderId = "22222222-2222-4222-8222-222222222222";
 const linkedinAccount = (status: string) => ({ id: "11111111-1111-4111-8111-111111111111", sender_id: senderId, channel: "linkedin",
   identity: "https://www.linkedin.com/in/ada", status, state: "active", sending: { allowed: true, reason: null, scope: null }, limits: null,
   checked_at: at, observation: { state: "verified" }, connected_at: at, disconnected_at: null, access_revoked_at: null, access_removal: null,
-  declaration: null, sends: { today: 0, last_7_days: 0 } });
+  declaration: null, sends: { today: 0, last_7_days: 0 },
+  participation: status === "connected" ? { status: "sending", cause: "active_journeys" } : { status: "not_connected", cause: status } });
 const founder = (status: string) => ({ id: senderId, version: 1, name: "Ada Founder", signature: null, booking_url: null,
   accounts: [linkedinAccount(status)] });
 const activeLinkedin = { ...campaignSummary, state: "active" };

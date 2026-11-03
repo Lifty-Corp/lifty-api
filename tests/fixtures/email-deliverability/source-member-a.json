@@ -204,7 +204,6 @@
    "warmup": {
     "mailivery": []
    },
-   "workspace_managed_by": "lift",
    "workspace_ref": "10391000-0000-4000-8000-000000000001",
    "sending": {
     "limit": 10,
@@ -306,7 +305,6 @@
    "warmup": {
     "mailivery": []
    },
-   "workspace_managed_by": "lift",
    "workspace_ref": "10391000-0000-4000-8000-000000000001",
    "sending": {
     "limit": null,
@@ -446,7 +444,6 @@
    "warmup": {
     "mailivery": []
    },
-   "workspace_managed_by": "lift",
    "workspace_ref": "10391000-0000-4000-8000-000000000001",
    "sending": {
     "limit": null,
@@ -485,7 +482,6 @@
    "warmup": {
     "mailivery": []
    },
-   "workspace_managed_by": "lift",
    "workspace_ref": "10391000-0000-4000-8000-000000000001",
    "sending": {
     "limit": null,
@@ -696,7 +692,6 @@
      }
     ]
    },
-   "workspace_managed_by": "lift",
    "workspace_ref": "10391000-0000-4000-8000-000000000001",
    "sending": {
     "limit": 10,

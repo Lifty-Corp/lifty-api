@@ -77,7 +77,8 @@ CLI and dashboard alongside this API cutover; v7 is deliberately retired.
 
 Weekly research (LIF-1174) is one schedule per workspace: `weekly_target` plus
 active or paused, with CAS `expected_version`. A `null` target follows the
-plan's full limit (LIF-1247). The plan's explicit weekly research allowance is read-only;
+plan's full limit (LIF-1247). It starts paused; confirming the sample turns it
+on unless the founder already activated or paused it (LIF-1776). The plan's explicit weekly research allowance is read-only;
 LIFT admins assign entitlements independently of payment arrangements. a Monday 00:00 UTC week counts
 each person once, when their first research completes, and includes the
 five-person sample. Weekly status, the calibration sample and the lead list
@@ -264,12 +265,12 @@ the same request finishes it. Providers without a removal operation stay 202.
 
 Configuration: `UNIPILE_V2_ACCESS_TOKEN`, `UNIPILE_V2_APPLICATION_ID`,
 `UNIPILE_V2_HOSTED_AUTH_ORIGINS` (Lifty's verified hosted sign-in origins only)
-and the existing `LIFTY_EMAIL_SERVER_KEY` / `LIFTY_LINKEDIN_SERVER_KEY`. The
-optional `UNIPILE_DSN` + `UNIPILE_ACCESS_TOKEN` pair removes access for accounts
-still bound through the earlier provider API. Warmup identification for those
-accounts also requires `UNIPILE_PROVIDER_NAMESPACE` to match their stored
-credential scope. It verifies the authenticated primary mailbox before choosing
-Google or Microsoft; it never infers the provider from the email domain. The Functions
+and the existing `LIFTY_EMAIL_SERVER_KEY` / `LIFTY_LINKEDIN_SERVER_KEY`. Unipile
+V2 is the only provider API (LIF-1617): an account still bound through the
+retired V1 API is neither removed at the provider nor identified for warmup
+(warmup asks for the email connection again). Warmup identification verifies the
+authenticated primary mailbox before choosing Google or Microsoft; it never
+infers the provider from the email domain. The Functions
 migration providing these RPCs must be released before this API.
 
 `LIFTY_LINKEDIN_SERVER_KEY` is the dedicated capability for LinkedIn account
@@ -527,7 +528,7 @@ Rollout: apply `20260916115048_lif858_company_api_capability.sql`, provision a c
 1. Set `CONSUMER_READ_ONLY_MODE=true` in the API deployment to stop new company apply operations. Context remains available; already accepted HubSpot changes require a fresh readback.
 2. Keep the additive CRM migration and the previously deployed Edge Function. Do not roll back the entire API once new receipt/config Jobs are live: older API schemas cannot read their contracts.
 3. Prepare a forward rollback on a branch from **current main**: revert only the native company migration commit (`11cf448`, excluding later receipt/config changes), resolve integrations with the current tree, and restore the previous caller-scoped Edge adapter. Keep company apply frozen while validating. The rollback restores the old single-workspace behavior; explicit multi-workspace requests must fail clearly instead of selecting another workspace.
-4. Run `npm run verify`, verify the restored Edge with an authenticated nonproduction context/apply/readback canary, and merge the reviewed rollback. Deploy its **new main SHA** by following the automatically triggered `Deploy` workflow. Use `bash scripts/digitalocean.sh deploy <full-new-main-sha>` only for an intentional manual redeploy, not alongside CI. The deployment script deliberately rejects old/non-head commits; do not bypass that protection. The company-only revert restores the previous smoke script (health, readiness, OpenAPI and failed-closed authentication); use the Edge canary as the company capability proof for this rollback, since that API revision has no native `/readyz/crm` route.
+4. Run `npm run verify:full`, verify the restored Edge with an authenticated nonproduction context/apply/readback canary, and merge the reviewed rollback. Deploy its **new main SHA** by following the automatically triggered `Deploy` workflow. Use `bash scripts/digitalocean.sh deploy <full-new-main-sha>` only for an intentional manual redeploy, not alongside CI. The deployment script deliberately rejects old/non-head commits; do not bypass that protection. The company-only revert restores the previous smoke script (health, readiness, OpenAPI and failed-closed authentication); use the Edge canary as the company capability proof for this rollback, since that API revision has no native `/readyz/crm` route.
 5. Remove the maintenance flag only after readback verifies the intended workspace/portal. Existing DB mappings and provider properties remain intact. Never delete additive provider fields to simulate a rollback.
 
 Company setup guidance is served through the current v6 CRM stage context.
@@ -578,23 +579,19 @@ Release order: apply Functions migration
 API. Without it both operations return the 502 unavailable error and change
 nothing.
 
-## Staged Unipile V2 connections (LIF-916)
+## Unipile V2 connections (LIF-916, LIF-1617)
 
-V2 is an additive, database-selected transport. Keep the V1 DSN, credentials,
-namespace and hosted domain intact. Set `UNIPILE_V2_ACCESS_TOKEN` and
-`UNIPILE_V2_APPLICATION_ID` together, with an application-scoped key. The API
-uses `https://api.unipile.com/v2` for V2 only. Credentials alone do not select a
-workspace or change an existing connection.
+Unipile V2 (`https://api.unipile.com/v2`) is the only provider API. Set
+`UNIPILE_V2_ACCESS_TOKEN` and `UNIPILE_V2_APPLICATION_ID` together, with an
+application-scoped key. Credentials alone do not select a workspace or change an
+existing connection.
 
-Apply the reviewed Functions LIF-916 migration and signed V2 lifecycle endpoint
-before selecting pilot workspace/channel routing. The existing email/LinkedIn
-RPCs return an immutable `transport` snapshot per intent and the active transport
-per connection. Copied accounts preserve canonical V1 connection IDs, mailbox
-budgets and LinkedIn history; provider calls use only the verified V2 alias.
-Administrative prebinding must verify the provider's `metadata.v1_account_id`,
-application, scope and owner against the existing canonical connection. New
-V2-only accounts retain their real V2 ID and `unipile:v2:<application_id>`
-namespace. They cannot be rolled back onto a fictitious V1 account.
+The email/LinkedIn RPCs return an immutable `transport` snapshot per intent and
+the active transport per connection. Accounts copied from the retired V1 API
+keep their canonical connection IDs, mailbox budgets and LinkedIn history;
+provider calls use only the verified V2 alias (`metadata.v1_account_id`). New
+accounts retain their real V2 ID and `unipile:v2:<application_id>` namespace. A
+transport the database still reports as V1 is never used.
 
 `UNIPILE_V2_HOSTED_AUTH_ORIGINS` is a comma-separated allowlist of Lifty's
 verified HTTPS hosted sign-in origins; the provider's default pages are rejected.
@@ -614,15 +611,13 @@ Currently V2 accepts Google mailbox connections with exactly one verified primar
 email sender, and LinkedIn with an exact self-profile match. V2 deliberately
 rejects other mailbox providers until equivalent vendor identity evidence exists.
 
-Rollback disables new V2 routing and uses the retained mapping's generation CAS
-for copied accounts. Keep V2 credentials, endpoint and domains available while
-V2 attempts or retained operations need reconciliation; do not erase mappings or
-change the V1 namespace. Jobs must retain each operation's transport separately
-so a successful or ambiguous send is never retried against the other version.
+Keep V2 credentials, endpoint and domains available while V2 attempts or
+retained operations need reconciliation; do not erase mappings. Jobs retains
+each operation's transport, so a successful or ambiguous send is never retried
+through another binding.
 
 Local contract tests prove fail-closed API behavior, not vendor production
-readiness. Release still requires independent review, actual signed webhook
-validation, copied-account prebinding and a permitted live pilot. Sources:
+readiness. Sources:
 [Hosted auth](https://developer.unipile.com/v2.0/docs/authenticate-with-hosted-auth),
 [provider features](https://developer.unipile.com/v2.0/docs/list-provider-features),
 and the official [Unipile SDK](https://github.com/unipile/unipile-node) schemas at

@@ -201,7 +201,6 @@
    "warmup": {
     "mailivery": []
    },
-   "workspace_managed_by": "lift",
    "workspace_ref": "10391000-0000-4000-8000-000000000001"
   },
   {
@@ -291,7 +290,6 @@
    "warmup": {
     "mailivery": []
    },
-   "workspace_managed_by": "lift",
    "workspace_ref": "10391000-0000-4000-8000-000000000001"
   }
  ],

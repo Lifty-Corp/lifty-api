@@ -424,8 +424,7 @@ describe("shared confirmation for sending accounts", () => {
 describe("access removal", () => {
   const settings = (fetchImpl: typeof fetch) => createAccountConnection({ publicBaseUrl: "https://api.lifty.test", supabaseUrl: "https://project.supabase.co",
     publishableKey: "sb_public", serverKeys: { email: emailKey, linkedin: linkedinKey }, fetchImpl,
-    provider: { v2: { accessToken: "v2-secret", applicationId: "app_test", hostedAuthOrigins: ["https://connect.lifty.test"] },
-      v1: { dsn: "https://api1.unipile.com:13111", accessToken: "v1-secret" }, fetchImpl } });
+    provider: { v2: { accessToken: "v2-secret", applicationId: "app_test", hostedAuthOrigins: ["https://connect.lifty.test"] }, fetchImpl } });
   const blocked = (id: string, channel = "email") => ({ id, sender_id: "33333333-3333-4333-8333-333333333333", channel, identity: null,
     status: "disconnected", state: "paused", checked_at: null, observation: { state: "verified" }, connected_at: null,
     disconnected_at: "2026-10-02T12:00:00Z", access_revoked_at: null, declaration: null, sends: { today: 0, last_7_days: 0 } }) as const;
@@ -457,10 +456,11 @@ describe("access removal", () => {
     expect(confirmed).toEqual([{ account_id: "a0000000-0000-4000-8000-000000000001", provider_account_id: "acc_gone", evidence: "not_found" }]);
     expect(fetchImpl).toHaveBeenCalledTimes(3);
 
+    // A retired V1 account cannot be removed: nothing is sent and nothing is confirmed.
     provider.length = 0; confirmed.length = 0;
     await settings(fetchImpl).revoke([blocked("a0000000-0000-4000-8000-000000000003")] as never, new AbortController().signal);
-    expect(provider).toEqual(["DELETE https://api1.unipile.com:13111/api/v1/accounts/v1_account"]);
-    expect(confirmed).toEqual([{ account_id: "a0000000-0000-4000-8000-000000000003", provider_account_id: "v1_account", evidence: "deleted" }]);
+    expect(provider).toEqual([]);
+    expect(confirmed).toEqual([]);
 
     const none = vi.fn() as unknown as typeof fetch;
     await settings(none).revoke([blocked("a0000000-0000-4000-8000-000000000001")] as never, AbortSignal.abort());

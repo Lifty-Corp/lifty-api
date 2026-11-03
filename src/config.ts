@@ -190,12 +190,7 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
   const attioClientSecret = environment.ATTIO_CLIENT_SECRET?.trim();
   if (Boolean(attioClientId) !== Boolean(attioClientSecret)) throw new Error("Attio connection requires both ATTIO_CLIENT_ID and ATTIO_CLIENT_SECRET.");
 
-  // Earlier accounts retain access removal and authenticated warmup identity.
-  const v1Values = [environment.UNIPILE_DSN?.trim(), environment.UNIPILE_ACCESS_TOKEN?.trim()];
-  if (v1Values.some(Boolean) && !v1Values.every(Boolean)) throw new Error("Unipile access removal requires both UNIPILE_DSN and UNIPILE_ACCESS_TOKEN.");
-  const providerNamespace=environment.UNIPILE_PROVIDER_NAMESPACE?.trim();
-  const v1 = v1Values.every(Boolean) ? { dsn: v1Values[0]!, accessToken: v1Values[1]!,
-    ...(providerNamespace?{providerNamespace}:{}) } : null;
+  // Unipile V2 is the only provider API (LIF-1617); the V1 DSN credentials are not read.
   const v2Token=environment.UNIPILE_V2_ACCESS_TOKEN?.trim(), v2Application=environment.UNIPILE_V2_APPLICATION_ID?.trim();
   const v2Origins=environment.UNIPILE_V2_HOSTED_AUTH_ORIGINS?.trim();
   if(Boolean(v2Token)!==Boolean(v2Application) || (v2Origins && !v2Token))throw new Error("Unipile V2 requires UNIPILE_V2_ACCESS_TOKEN and UNIPILE_V2_APPLICATION_ID.");
@@ -211,7 +206,7 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
   const linkedinKey = environment.LIFTY_LINKEDIN_SERVER_KEY?.trim();
   const emailEnabled = Boolean(emailKey);
   const linkedinEnabled = Boolean(linkedinKey);
-  if((v2 || v1) && !emailEnabled && !linkedinEnabled)throw new Error("Unipile requires a dedicated email or LinkedIn service key.");
+  if(v2 && !emailEnabled && !linkedinEnabled)throw new Error("Unipile requires a dedicated email or LinkedIn service key.");
   if (emailKey && emailKey.length < 32) throw new Error("LIFTY_EMAIL_SERVER_KEY must contain at least 32 characters.");
   if (linkedinKey && linkedinKey.length < 32) throw new Error("LIFTY_LINKEDIN_SERVER_KEY must contain at least 32 characters.");
   if (linkedinKey && linkedinKey === emailKey) throw new Error("LinkedIn requires a server key distinct from email.");
@@ -263,7 +258,7 @@ export function loadConfig(environment: Environment = process.env): ServiceConfi
       publicBaseUrl: publicBaseUrl.toString().replace(/\/$/, ""),
       supabaseUrl: supabaseUrl.toString().replace(/\/$/, ""), publishableKey,
       serverKeys: { ...(emailKey ? { email: emailKey } : {}), ...(linkedinKey ? { linkedin: linkedinKey } : {}) },
-      provider: { v2, v1 },
+      provider: { v2 },
     } : null,
     host: environment.HOST?.trim() || "0.0.0.0",
     port: parsePort(environment.PORT),

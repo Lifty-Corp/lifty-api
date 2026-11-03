@@ -31,6 +31,12 @@ record it once with `sample_review_confirm` and the sample's `run_ref`.
 `next_step` returns this review until you do. A new sample after a targeting
 change needs its own confirmation.
 
+Confirming also turns on weekly research, unless the founder already turned it
+on or off: Lifty keeps finding and researching people like these every week,
+up to the plan's weekly volume. Say so when you ask. After confirming, read
+`research_schedule_get` and tell the founder its state and weekly number, and
+that they can pause it or change the number anytime.
+
 ## 3. CRM and existing customers (optional)
 
 Follow the CRM action in `actions`; ask about it once. HubSpot and Attio
@@ -66,8 +72,8 @@ excluded. Saved exclusions and do-not-contact rules remain active in every mode.
 
 Once the founder is happy with the leads (and the CRM question is answered),
 close the section in at most six lines: who Lifty targets and why, the five
-leads and their grade mix, what reached their CRM, and that Lifty can keep
-finding leads like these. If the founder already connected LinkedIn or a
+leads and their grade mix, what reached their CRM, and whether weekly research
+is on. If the founder already connected LinkedIn or a
 mailbox, or saved a campaign, while the sample ran, `actions` says so: do not
 offer it again, and call `next_step` after the confirmation to continue there.
 Otherwise ask one question: set up LinkedIn outreach for
@@ -81,5 +87,5 @@ with channel `email`; `next_step` then guides its preparation.
 If "not now", accept it and do not ask again this session.
 
 Section 1 never sends messages or activates outreach. The confirmation records
-only that the founder accepted this sample; it does not approve a campaign or
-authorize sending.
+that the founder accepted this sample and turns on weekly research as above; it
+does not approve a campaign or authorize sending.

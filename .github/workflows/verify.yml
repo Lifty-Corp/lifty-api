@@ -1,7 +1,14 @@
-# Verify pull requests with the same `npm run verify` the Deploy workflow runs
-# after merge. Context drafts promoted from the ops dashboard open pull
-# requests here (LIF-1298); a context change that breaks the next_step size
-# limits or the installed-client contract fails before merge, not at deploy.
+# Verify pull requests in two tiers (LIF-1653):
+# - fast: pull requests to develop and hotfix pull requests to main run
+#   `npm run verify` against their base branch. It selects checks from the diff
+#   and always runs the connection inventory.
+# - full: the release pull request (develop -> main) and manual runs run
+#   `npm run verify:full`, the command Deploy runs after merge, and record the
+#   verified tree. Deploy reuses only that full-tier record.
+# A push to develop runs nothing; a push to staging only deploys the pilot.
+# Context drafts promoted from the ops dashboard open pull requests here
+# (LIF-1298); a context change that breaks the next_step size limits or the
+# installed-client contract fails before merge, not at deploy.
 
 name: Verify
 
@@ -9,7 +16,7 @@ on:
   pull_request:
     branches: [main, develop]
   push:
-    branches: [develop, staging]
+    branches: [staging]
   workflow_dispatch:
 
 permissions:
@@ -23,13 +30,17 @@ jobs:
   # staging only deploys (LIF-1651); it runs no test suite.
   verify:
     if: github.ref != 'refs/heads/staging'
-    name: Verify (typecheck + tests + build)
+    name: Verify
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      TIER: ${{ (github.event_name == 'workflow_dispatch' || (github.base_ref == 'main' && github.head_ref == 'develop')) && 'full' || 'fast' }}
     steps:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+          # The fast tier diffs against the merge-base with the base branch.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -39,22 +50,30 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify
+      - name: Verify (${{ env.TIER }} tier)
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          npm run verify
-          python3 -m unittest discover -s scripts -p test_deploy_pilot.py
+          if [ "$TIER" = full ]; then
+            npm run verify:full -- --base "origin/${BASE_REF:-develop}"
+          else
+            npm run verify -- --base "origin/$BASE_REF"
+          fi
 
-      # Deploy reuses this result when main's tree is identical to the tree
-      # verified here (the pull request merge commit), so it records it.
+      # Deploy reuses only a full-tier result whose tree equals main's: the
+      # release pull request merge commit has develop's tree, and main is
+      # fast-forwarded to develop. Fast-tier runs record nothing.
       - name: Record the verified tree
+        if: env.TIER == 'full'
         id: tree
         run: |
           git rev-parse 'HEAD^{tree}' | tee "$RUNNER_TEMP/verified-tree"
           echo "sha=$(cat "$RUNNER_TEMP/verified-tree")" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v4
+        if: env.TIER == 'full'
         with:
-          name: verified-tree-${{ steps.tree.outputs.sha }}
+          name: verified-tree-full-${{ steps.tree.outputs.sha }}
           path: ${{ runner.temp }}/verified-tree
           retention-days: 7
           overwrite: true

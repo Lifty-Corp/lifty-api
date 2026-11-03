@@ -17,8 +17,10 @@ const account = (id = accountId, overrides: Record<string, unknown> = {}) => ({
   id, sender_id: senderId, channel: "email", identity: "ana@example.test", status: "connected", state: "active",
   sending: { allowed: true, reason: null, scope: null }, limits: { emails_per_day: 10 },
   checked_at: now, observation: { state: "verified" }, connected_at: now, disconnected_at: null, access_revoked_at: null, access_removal: null,
-  declaration: { mailbox_use: "habitual", declared_by: null, declared_at: now }, sends: { today: 0, last_7_days: 2 }, ...overrides });
-const blocked = (id = accountId) => account(id, { status: "disconnected", state: "paused", disconnected_at: now });
+  declaration: { mailbox_use: "habitual", declared_by: null, declared_at: now }, sends: { today: 0, last_7_days: 2 },
+  participation: { status: "sending", cause: "active_journeys" }, ...overrides });
+const blocked = (id = accountId) => account(id, { status: "disconnected", state: "paused", disconnected_at: now,
+  participation: { status: "not_connected", cause: "disconnected" } });
 const sender = { id: senderId, version: 2, name: "Ana Pérez", signature: null, booking_url: null, accounts: [account()] };
 const attempt = (state: string, extra: Record<string, unknown> = {}) => ({ workspace, id: attemptId, sender_id: senderId, channel: "email",
   state, reason: null, account_id: null, declaration: null, expires_at: "2099-01-01T00:00:00Z",
@@ -146,10 +148,11 @@ describe("Identity member routes", () => {
     const response = await h.request("GET", "/v1/workspace/sending-accounts");
     expect(response.status).toBe(200);
     expect((await response.json()).accounts).toEqual([held, linkedin]);
-    // A missing sending state, an unknown reason, a mixed limit shape or a participation cause
-    // of another status is not the published contract (LIF-1672: participation stays optional).
+    // A missing sending state or participation, an unknown reason, a mixed limit shape or a
+    // participation cause of another status is not the published contract.
     const { sending: _sending, ...unpublished } = account();
-    for (const invalid of [unpublished, account(accountId, { sending: { allowed: false, reason: "lift_hold", scope: null } }),
+    const { participation: _participation, ...unreported } = account();
+    for (const invalid of [unpublished, unreported, account(accountId, { sending: { allowed: false, reason: "lift_hold", scope: null } }),
       account(accountId, { limits: { emails_per_day: 10, messages_per_day: 5 } }),
       account(accountId, { participation: { status: "sending", cause: "no_lead_yet" } }),
       account(accountId, { participation: { status: "sending", cause: "active_journeys", waiting_journeys: 1 } })]) {

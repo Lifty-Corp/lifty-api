@@ -15,7 +15,7 @@ const broken = "1297000c-0000-4000-a000-00000000000c";
 const listed = [confirming, sampling, reviewing, broken].map((workspace_ref, index) => ({
   workspace_ref, name: `Workspace ${index}`, slug: `workspace-${index}`, active: true,
   provisioned_by: index === 1 ? null : "lifty", created_at: "2026-10-01T00:00:00Z",
-  members: [{ user_ref: "u", email: "founder@example.invalid" }], plan: { plan_key: "free", kind: index === 1 ? "managed" : "free", allowances: { weekly_research: 25 } },
+  members: [{ user_ref: "u", email: "founder@example.invalid" }], plan: { plan_key: "free", kind: index === 1 ? "paid" : "free", allowances: { weekly_research: 25 } },
 }));
 const identity = (ref: string) => ({ workspace_ref: ref, name: "Workspace", state: "ready_for_connections" });
 
@@ -86,10 +86,10 @@ describe("admin onboarding read", () => {
       [reviewing, "sample_ready_for_founder_review", null],
       [broken, null, "BUSINESS_UNAVAILABLE"],
     ]);
-    expect(body.workspaces[1]).toMatchObject({ slug: "workspace-1", plan: { kind: "managed" } });
+    expect(body.workspaces[1]).toMatchObject({ slug: "workspace-1", plan: { kind: "paid" } });
     // LIF-1198: provisioning origin never reaches the operator view, whatever the database sends.
     expect(body.workspaces.some((item: object) => "provisioned_by" in item)).toBe(false);
-    expect(body.workspaces[1].plan).toEqual({ kind: "managed" });
+    expect(body.workspaces[1].plan).toEqual({ kind: "paid" });
     expect(JSON.stringify(body)).not.toContain("founder@example.invalid");
     expect(JSON.stringify(body)).not.toContain("private failure");
     // Every read after the list names its workspace; none falls back to the caller's selection.

@@ -19,7 +19,7 @@ project JWKS, creates a user-scoped Supabase client, and delegates to:
 - `public.get_lifty_commercial_voice()` / `patch_lifty_commercial_voice()`
 - `public.get_lifty_setup_draft()` / `save_lifty_setup_draft()` / `discard_lifty_setup_draft()`
 - `public.get_lifty_setup_context()` / `submit_lifty_setup(p_workspace_id,p_expected_draft_version)` / `get_lifty_setup_status()`
-- `public.retire_lifty_workspace(p_payload)` — LIFT-admin-only delete of a workspace without history, identity-confirmed, with consumed budgets preserved
+- `public.retire_lifty_workspace(p_payload)` — member or LIFT admin delete of a workspace without history and with integrations disconnected, identity-confirmed, with consumed budgets preserved
 - `public.start_lifty_run()` / `get_lifty_run_status()`
 - `public.create_lifty_hubspot_connect_intent()` / `get_lifty_hubspot_connection()`
 
@@ -78,9 +78,9 @@ termination and per-IP/per-token rate limiting belong at the deployment ingress.
 ## Deploy and verify
 
 Merging runtime changes to `main` starts the `Deploy` GitHub Actions workflow.
-Follow that run: it runs `npm run verify` (skipped when a pull request Verify run
-passed on the identical tree), deploys the exact main SHA, waits for
-it to become active, and probes health, readiness (including CRM), OpenAPI, v6 Business/setup public context and
+Follow that run: it runs `npm run verify:full` (skipped when the release pull
+request's full-tier Verify run passed on the identical tree), deploys the exact
+main SHA, waits for it to become active, and probes health, readiness (including CRM), OpenAPI, v6 Business/setup public context and
 fail-closed authentication. Do not run a second deploy or repeat those public
 probes after the workflow passes. Human documentation-only pushes are excluded;
 Markdown shipped under `src/agent-context/` still triggers deployment.

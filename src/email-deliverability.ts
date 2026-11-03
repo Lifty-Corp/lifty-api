@@ -615,21 +615,20 @@ function presentVerdict(parts: {
   if (warmup.status.code === "problem") return verdict("warmup_problem", warmup.status.label, "warn", warmup.status.description,
     dnsStep(warmup) ?? LIFTY_REVIEW, warmup.status.reasons);
   // LIF-1672: persons follow the workspace's Journeys, so the account's
-  // participation decides once nothing above blocks it. Without it (older
-  // database), the campaigns this connection reports decide.
+  // participation decides once nothing above blocks it.
   const participation = account.participation;
-  if (participation?.cause === "signature_missing") return verdict("not_ready", "Needs a signature", "warn",
+  if (participation.cause === "signature_missing") return verdict("not_ready", "Needs a signature", "warn",
     "Add a signature to this person in Senders to send email.",
     step("add_signature", "member", "Add a signature", "Add it in Senders. New Journeys use it from then on."));
-  if (participation?.status === "sending" || (!participation && active)) return verdict("in_campaign", "In campaign", "ok",
+  if (participation.status === "sending") return verdict("in_campaign", "In campaign", "ok",
     active ? `Ready and used by ${plural(active, "active campaign")}. It sends on the campaign's schedule, up to its daily limit.`
       : "Ready and sending in active Journeys, on their campaigns' schedule and up to its daily limit.", NOTHING);
-  if (participation?.cause === "campaign_paused" || (!participation && mine.some(item => item.status.code === "paused")))
+  if (participation.cause === "campaign_paused")
     return verdict("ready_idle", "Ready · campaign paused", "watch", "This inbox passed its checks, but every campaign using it is paused.",
       step("resume_campaign", "member", "Resume the campaign", "Resume it in Campaigns when you want this inbox to send."));
-  if (participation?.status === "waiting_for_first_lead") return verdict("ready_idle", "Ready", "watch",
+  if (participation.status === "waiting_for_first_lead") return verdict("ready_idle", "Ready", "watch",
     "It takes part and sends once a lead reaches this channel.", NOTHING);
-  if (participation && participation.status !== "no_active_campaign")
+  if (participation.status !== "no_active_campaign")
     return blocking(PARTICIPATION_GATE[participation.cause] ?? participation.cause, []);
   return verdict("ready_idle", "Connected", "watch", "Sends once a campaign is active.", NOTHING);
 }
