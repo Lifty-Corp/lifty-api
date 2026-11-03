@@ -30,7 +30,8 @@ const linkedinRoster = { workspace: identity, senders: [{ id: laneFixture.id, ve
   accounts: [{ id: laneFixture.personas[0]!.id, sender_id: laneFixture.id, channel: "linkedin" as const, identity: "https://www.linkedin.com/in/ana",
     status: "connected" as const, state: "active" as const, sending: { allowed: true, reason: null, scope: null }, limits: null,
     checked_at: profileFixture.updated_at, observation: { state: "verified" as const }, connected_at: profileFixture.updated_at,
-    disconnected_at: null, access_revoked_at: null, access_removal: null, declaration: null, sends: { today: 0, last_7_days: 0 } }] }] };
+    disconnected_at: null, access_revoked_at: null, access_removal: null, declaration: null, sends: { today: 0, last_7_days: 0 },
+    participation: { status: "sending" as const, cause: "active_journeys" as const } }] }] };
 
 type Reply = { data: unknown; error: unknown };
 function harness(replies: Record<string, Reply | unknown>, options: Partial<AppDependencies> = {}) {
