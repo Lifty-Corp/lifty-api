@@ -1,9 +1,0 @@
-[
-  {
-    "source_commit": "481315d29b9861b0d679a44dc7270e77a8b830d4",
-    "source": "src/lib/outreach-rulebook/anti-slop.ts",
-    "target": "src/generated/anti-slop.ts",
-    "source_sha256": "a52260856d3dc0d4437a78f441faa2e18deaaba28d7c4487e5e9556ec1c18a56",
-    "generated_sha256": "fe8ffe24d0a77590bb12b58f7efc64eabac70aeed8782c944dccd1dbdf1e1a0d"
-  }
-]

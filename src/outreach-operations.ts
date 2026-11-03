@@ -5,7 +5,6 @@ import { rpcFailure } from "./rpc-errors.js";
 import { identityOperationDefinitions, validateIdentityInput, type IdentityDefinition, type IdentityInput } from "./identity-operations.js";
 import * as c from "./outreach-contracts.js";
 import { memberReviewOperationDefinitions, memberReviewReceiptMatches } from "./member-review-operations.js";
-import { writingRecommendations } from "./writing-rules.js";
 import { testFailureMessage, type TestFailure } from "./campaign-test-failure.js";
 
 const Empty = z.object({}).strict();
@@ -225,12 +224,10 @@ export async function executeOutreachOperation(session: AuthSession, key: string
   if (entry.resource === "campaigns" && value.campaign) {
     // The response schema already validated this Campaign (activation adds its Journey).
     const { campaign } = parsed.data as { campaign: z.infer<typeof c.CampaignSchema> };
-    const recommendations = writingRecommendations(campaign.draft_revision, campaign.channel);
     // Publish may approve an older revision; warn about the one it approved.
     const published = entry.action === "publish" ? campaign.revisions.find(revision => revision.revision_ref === body?.revision_ref) : undefined;
     const slots = c.slotsSpecWarnings(published ?? campaign.draft_revision);
-    if (recommendations || slots) return { ...(parsed.data as object),
-      ...(recommendations ? { writing_recommendations: recommendations } : {}), ...(slots ? { slots_spec_warnings: slots } : {}) };
+    if (slots) return { ...(parsed.data as object), slots_spec_warnings: slots };
   }
   return parsed.data;
 }

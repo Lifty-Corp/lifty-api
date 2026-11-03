@@ -91,7 +91,7 @@ export const businessOperationDefinitions = {
       rpc: "get_lifty_commercial_voice",
       code: "VOICE_INVALID",
       description:
-        "Read general commercial tone and do/avoid rules. Empty voice exists at version 0.",
+        "Read general commercial tone, do/avoid rules and writing rules. Empty voice exists at version 0.",
     },
     patch: {
       method: "PATCH",
@@ -101,7 +101,7 @@ export const businessOperationDefinitions = {
       rpc: "patch_lifty_commercial_voice",
       code: "VOICE_INVALID",
       description:
-        "Synchronously edit general voice with expected_version (0 for the first edit). Arrays replace; null clears tone. New drafts use it, approved campaign pins remain, and Scout never receives voice.",
+        "Synchronously edit general voice with expected_version (0 for the first edit). Arrays and writing_rules replace; null clears tone. New drafts use it, approved campaign pins remain, and Scout never receives voice.",
     },
   },
   setup: {
