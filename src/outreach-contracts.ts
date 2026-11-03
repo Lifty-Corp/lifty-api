@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { WorkspaceIdentitySchema } from "./business-contracts.js";
-import { WritingRecommendationsSchema, templateRef } from "./writing-rules.js";
 import { TEST_FAILURE_CODES, TEST_FAILURE_STAGES } from "./campaign-test-failure.js";
 
 const Ref = z.uuid();
@@ -169,10 +168,11 @@ export function campaignChannelIssues(policy: z.infer<typeof CampaignPolicySchem
   return [...new Set(issues)];
 }
 // Jobs renders single-brace slots: {first_name} and {company} from the lead,
-// {sender_first_name} from the email mailbox, and any other lower-case slot
-// from the writer. A request's mail-merge spelling of those fields is saved in
-// that syntax; any other brace would reach the composer unrendered and fail
-// every preview (LIF-1333). Saved revisions are read as stored.
+// {sender_first_name} from the lead's assigned sender on both channels, and
+// any other lower-case slot from the writer. A request's mail-merge spelling
+// of those fields is saved in that syntax; any other brace would reach the
+// composer unrendered and fail every preview (LIF-1333). Saved revisions are
+// read as stored.
 const MERGE_FIELDS: Record<string, string> = { first_name: "first_name", company: "company", company_name: "company", sender_first_name: "sender_first_name" };
 export function canonicalTemplateText(value: string): string {
   return value.replace(/\{\{\s*([A-Za-z_]+)\s*\}\}|\{(company_name)\}/g, (match, double?: string, single?: string) => {
@@ -190,6 +190,10 @@ export const SlotsSpecWarningsSchema = z.object({ revision_ref: Ref,
     placeholder: z.string() }).strict()).min(1),
 }).strict();
 export type SlotsSpecWarnings = z.infer<typeof SlotsSpecWarningsSchema>;
+/** How campaign advisories name a saved template: its catalog id, else its
+ * lane/opener route, else null for a step's single template. */
+export const templateRef = (template: { id?: string | undefined; lane?: string | undefined; opener?: string | undefined }) =>
+  template.id ?? ([template.lane, template.opener].filter(Boolean).join("/") || null);
 interface SpecTemplate { id?: string | undefined; lane?: string | undefined; opener?: string | undefined;
   subject?: string | undefined; text: string; slots_spec?: string | undefined }
 /** Placeholders each template's slots_spec names that its own subject and
@@ -209,26 +213,47 @@ const canonicalTemplate = <T extends { text: string; subject?: string | undefine
   ({ ...template, text: canonicalTemplateText(template.text), ...(template.subject === undefined ? {} : { subject: canonicalTemplateText(template.subject) }) });
 const canonicalSteps = (steps: z.infer<typeof Step>[]) => steps.map(step => ({ ...step,
   ...(step.template ? { template: canonicalTemplate(step.template) } : {}), ...(step.variants ? { variants: step.variants.map(canonicalTemplate) } : {}) }));
-function placeholderIssues(steps: z.infer<typeof Step>[] | undefined, context: z.RefinementCtx, path: Array<string | number>, channel?: "email" | "linkedin") {
-  steps?.forEach((step, index) => {
+/** Every saved template subject and text of these steps, with its field path. */
+function templateFields(steps: z.infer<typeof Step>[] | undefined) {
+  return (steps ?? []).flatMap((step, index) => {
     const choices = step.template ? [{ template: step.template, path: ["template"] as Array<string | number> }]
       : (step.variants ?? []).map((template, variantIndex) => ({ template, path: ["variants", variantIndex] as Array<string | number> }));
-    choices.forEach(({ template, path: templatePath }) => {
-      for (const field of ["subject", "text"] as const) {
-        const saved = template[field];
-        if (saved === undefined) continue;
-        const value = canonicalTemplateText(saved);
-        const message = /\{\{?\s*last_name\s*\}?\}/.test(value)
-          ? "Lifty fills only {first_name} and {company} from the lead; leave the last name out."
-          : /[{}]/.test(value.replace(/\{[a-z][a-z0-9_]*\}/g, ""))
-            ? "Write placeholders with single braces and a lower-case name: {first_name}, {company}, or a writer slot such as {pain}."
-            : channel === "linkedin" && value.includes("{sender_first_name}")
-              ? "{sender_first_name} is filled only in email; a LinkedIn message already comes from its sender."
-              : undefined;
-        if (message) context.addIssue({ code: "custom", path: [...path, index, ...templatePath, field], message });
-      }
-    });
+    return choices.flatMap(({ template, path }) => (["subject", "text"] as const).flatMap(field => {
+      const value = template[field];
+      return value === undefined ? [] : [{ path: [index, ...path, field], value }];
+    }));
   });
+}
+function placeholderIssues(steps: z.infer<typeof Step>[] | undefined, context: z.RefinementCtx, path: Array<string | number>) {
+  for (const field of templateFields(steps)) {
+    const value = canonicalTemplateText(field.value);
+    const message = /\{\{?\s*last_name\s*\}?\}/.test(value)
+      ? "Lifty fills only {first_name} and {company} from the lead; leave the last name out."
+      : /[{}]/.test(value.replace(/\{[a-z][a-z0-9_]*\}/g, ""))
+        ? "Write placeholders with single braces and a lower-case name: {first_name}, {company}, or a writer slot such as {pain}."
+        : undefined;
+    if (message) context.addIssue({ code: "custom", path: [...path, ...field.path], message });
+  }
+}
+// LIF-1659: a template names its sender with {sender_first_name}, which Jobs
+// fills from each lead's assigned sender. A saved sender's name typed into a
+// template subject or text would name the wrong person for every lead
+// assigned to someone else. A first name (the first word of the saved name)
+// matches as a whole, case-sensitive word, outside placeholders: "I'm Anna",
+// not "Annapolis" or "anna". A full name starts with its first name, so it
+// matches too. Campaign and step instructions may name several people and are
+// not checked.
+const NAME_BOUNDARY = "[\\p{L}\\p{M}\\p{N}_]";
+export function typedSenderNameIssues(steps: z.infer<typeof Step>[] | undefined, senderNames: readonly string[],
+  context: z.RefinementCtx, path: Array<string | number>) {
+  const firstNames = [...new Set(senderNames.map(name => name.trim().split(/\s+/u)[0] ?? "").filter(Boolean))];
+  if (!firstNames.length) return;
+  const typed = new RegExp(`(?<!${NAME_BOUNDARY})(?:${firstNames.map(name => name.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")).join("|")})(?!${NAME_BOUNDARY})`, "u");
+  for (const field of templateFields(steps)) {
+    const name = canonicalTemplateText(field.value).replace(PLACEHOLDER, " ").match(typed)?.[0];
+    if (name) context.addIssue({ code: "custom", path: [...path, ...field.path],
+      message: `"${name}" is a saved sender's name. Write {sender_first_name} instead: Lifty fills it with the first name of the sender each lead is assigned to.` });
+  }
 }
 export const JourneyPathSchema = z.object({ journey_ref: Ref }).strict();
 export const CampaignPathSchema = z.object({ campaign_ref: Ref }).strict();
@@ -238,7 +263,7 @@ export const JourneyCreateSchema = z.object({ name: Name, policy: JourneyPolicyS
 export const CampaignCreateSchema = z.object({ name: Name, journey_ref: Ref, channel: z.enum(["linkedin", "email"]), policy: CampaignPolicySchema }).strict()
   .superRefine((value, context) => {
     campaignChannelIssues(value.policy, value.channel).forEach(message => context.addIssue({ code: "custom", path: ["policy"], message }));
-    placeholderIssues(value.policy.steps, context, ["policy", "steps"], value.channel);
+    placeholderIssues(value.policy.steps, context, ["policy", "steps"]);
   }).transform(value => ({ ...value, policy: { ...value.policy, steps: canonicalSteps(value.policy.steps) } }));
 export const JourneyDraftSchema = z.object({ expected_version: Version, revision_ref: Ref,
   changes: JourneyPolicySchema.partial().strict().refine(value => Object.keys(value).length > 0),
@@ -283,12 +308,10 @@ export const CampaignSchema = z.object({ campaign_ref: Ref, journey_ref: Ref, ch
 });
 const Workspace = { workspace: WorkspaceIdentitySchema };
 export const JourneyResultSchema = z.object({ ...Workspace, journey: JourneySchema }).strict();
-// Banned phrases in the draft's saved templates. Recommendations only: they
-// never block a save, preview or approval. Absent when the list is unknown.
 // slots_spec_warnings: the API adds it (never the database); absent when the
-// revision has none.
+// revision has none. Writing rules are drafting context, so saves report no
+// phrases from them (LIF-1724).
 export const CampaignResultSchema = z.object({ ...Workspace, campaign: CampaignSchema,
-  writing_recommendations: WritingRecommendationsSchema.optional(),
   slots_spec_warnings: SlotsSpecWarningsSchema.optional().describe("Placeholders a template's slots_spec names that its own subject and text do not use, in the published revision for publish and the draft otherwise. Warnings only; absent when there are none."),
 }).strict();
 export const JourneySummarySchema = z.object({ journey_ref: Ref, version: Version, name: Name, active_revision: RevisionSummarySchema.nullable(),

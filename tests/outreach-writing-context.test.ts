@@ -13,7 +13,7 @@ describe("outreach writing context", () => {
       expect(response.status).toBe(200);
       const context = await response.json();
       expect(context.references.writing).toEqual(expect.any(String));
-      expect(context.references.writing).toMatch(/^# LIFT outreach writing guide\n\nVersion: lifty-writing\.v21\n/);
+      expect(context.references.writing).toMatch(/^# LIFT outreach writing guide\n\nVersion: lifty-writing\.v22\n/);
       expect(context.references.writing).toContain("Email shape");
       expect(context.references.writing).toContain("Subject line");
       expect(context.references.writing).toContain("Use a consistent subject so follow-ups read as one thread");
@@ -33,26 +33,26 @@ describe("outreach writing context", () => {
       expect(context.references.writing).toContain("already has that number");
       expect(context.references.writing).toContain("not mandatory sequence lengths or mandatory questions");
       expect(context.references.writing).toContain("single greeting stays a single greeting");
-      expect(context.references.writing).toContain("so I need to know");
+      expect(context.references.writing).toContain("require information from them");
       expect(context.references.writing).toContain("ties the main focus to the CTA");
-      expect(context.references.writing).toContain("Want a short conversation");
+      expect(context.references.writing).toContain("may ask in the founder's own words");
       expect(context.references.writing).toContain("hypothetical");
       expect(context.references.writing).toContain("Do not comment");
       expect(context.references.writing).toContain("need more before you can draft");
       expect(context.references.writing).toContain("We cannot replace");
-      expect(context.references.writing).toContain("reply yes");
+      expect(context.references.writing).toContain("yes or no answer");
       expect(context.references.writing).toContain("humanizes the outreach");
       expect(context.references.writing).toContain("what they solve");
       expect(context.references.writing).toContain("Email quality bar");
-      expect(context.references.writing).toContain("Should I take that");
+      expect(context.references.writing).toContain("its object implied");
       expect(context.references.writing).toContain("15min intro call later this week or next");
       expect(context.references.writing).toContain("Checking back in case this got buried");
       expect(context.references.writing).toContain("Do not find-replace");
       expect(context.references.writing).toContain("Email 1 may omit the opener");
       expect(context.references.anti_slop).toEqual(expect.any(String));
-      expect(context.references.anti_slop).toMatch(/^# LIFT outreach anti-slop list\n\nVersion: lifty-anti-slop\.v12\n/);
-      // The phrases themselves are the live shared rulebook (tests/writing-rules.test.ts).
-      expect(context.references.anti_slop).toContain("They are recommendations, not blocks.");
+      expect(context.references.anti_slop).toMatch(/^# Workspace writing rules\n\nVersion: lifty-anti-slop\.v13\n/);
+      // The phrases are each workspace's own copy (tests/workspace-writing-rules.test.ts).
+      expect(context.references.anti_slop).toContain("Never rewrite the founder's fixed template text because of a rule.");
       playbooks.push(context.references.writing);
       antiSlopLists.push(context.references.anti_slop);
     }

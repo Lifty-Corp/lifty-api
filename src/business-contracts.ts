@@ -117,21 +117,35 @@ export const VoiceRuleSchema = z
     source: z.enum(["founder", "founder_feedback", "migration"]),
   })
   .strict();
-export const VoiceValuesSchema = z
-  .object({
-    tone: text(300).nullable(),
-    rules: unique(
-      VoiceRuleSchema,
-      20,
-      (value) => `${value.kind}:${value.text}`,
-    ),
-  })
-  .strict();
+// LIF-1724: the workspace's own copy of its writing rules (anti-slop Markdown),
+// context for drafting and never a check on copy. Writes mirror the database:
+// at most 20,000 characters (code points), empty allowed, and no control
+// characters except newline, carriage return and tab (Postgres text cannot
+// hold U+0000 either). Reads accept any string, and its absence, so the API
+// works before and after the column ships.
+const WRITING_RULES_MAX = 20_000;
+export const WritingRulesWriteSchema = z
+  .string()
+  .refine((value) => [...value].length <= WRITING_RULES_MAX, `Keep writing_rules to ${WRITING_RULES_MAX} characters or fewer.`)
+  .refine((value) => !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/.test(value),
+    "Remove control characters; newlines, carriage returns and tabs are allowed.")
+  .meta({ maxLength: WRITING_RULES_MAX });
+const VoiceShape = {
+  tone: text(300).nullable(),
+  rules: unique(
+    VoiceRuleSchema,
+    20,
+    (value) => `${value.kind}:${value.text}`,
+  ),
+};
 export const VoicePatchSchema = changed({
   expected_version: z.number().int().nonnegative(),
-  ...VoiceValuesSchema.partial().shape,
+  ...z.object(VoiceShape).partial().shape,
+  writing_rules: WritingRulesWriteSchema.optional(),
 });
-export const VoiceSchema = VoiceValuesSchema.extend({
+export const VoiceSchema = z.object({
+  ...VoiceShape,
+  writing_rules: z.string().optional(),
   version: z.number().int().nonnegative(),
   updated_at: z.iso.datetime({ offset: true }),
 }).strict();

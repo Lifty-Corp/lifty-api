@@ -196,14 +196,16 @@ earlier still load and appear in `filter_warnings` (README).
 
 ### Writing rules
 
-The banned-phrase list is the database rulebook Jobs composes against
-(`outreach_rulebooks` key `anti_slop`). `src/writing-rules.ts` reads it through
-`get_lifty_writing_rules` at startup and every five minutes and keeps the last
-list on a failed read. Edit phrases in the ops dashboard rulebook, never here.
-Campaign `writing_recommendations` never block a save, preview, approval or
-activation. `src/generated/anti-slop.ts` is the Jobs matcher; regenerate it
-with `node scripts/sync-writing-rules.mjs <lift-gtm-jobs-checkout>` when Jobs
-changes it.
+Each workspace owns one copy of its writing rules (anti-slop Markdown) in its
+commercial voice, `writing_rules`; every workspace starts from LIFT's default
+and the founder edits it freely (LIF-1724). The copy is drafting context,
+never enforcement: nothing in this API checks copy against it, and campaign
+saves report no phrases. Drafting documents (`references.anti_slop` in
+campaigns and journeys, and next_step's drafting guides) end with the caller
+workspace's copy, read through `commercial-voice.get` with the caller's
+session (`src/writing-rules.ts`). A public read carries no copy and points the
+agent to commercial voice; a failed read says so and is never shown as empty.
+The PATCH schema mirrors the database limits for `writing_rules`.
 
 ### Campaigns
 

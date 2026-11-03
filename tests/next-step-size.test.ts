@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getAgentContext } from "../src/agent-context.js";
+import { AgentContextSchema, getAgentContext } from "../src/agent-context.js";
 import { BASE_CONTEXTS, NEXT_STEP_CATALOG, ON_REQUEST_CONTEXTS, getNextStep } from "../src/next-step.js";
 import { operationToolNames } from "../src/operation-names.js";
 import { stageOperations } from "../src/stage-contracts.js";
@@ -99,10 +99,15 @@ const states: Partial<typeof base>[] = [
   { run, senders: [mailboxOwner("connected")], warmup: warmup("warming", { warmup_ready: true }), placement: passed },
 ];
 
+// Drafting steps inline the workspace's writing rules (LIF-1724): measure
+// them with the largest copy commercial voice accepts.
+const largestRules = "## Global\n\n" + "- a phrase to avoid // why it reads as a template\n".repeat(400);
+const voice = { workspace_ref: workspaceRef, voice: { version: 1, updated_at: at, tone: null, rules: [], writing_rules: largestRules.slice(0, 20_000) } };
 async function nextStep(state: Partial<typeof base>) {
   const current = { ...base, ...state };
   const reads: Record<string, unknown> = { "business.get": current.business, "targeting.get": current.targeting,
-    "research-criteria.get": current.criteria, "setup.status": current.setup, "setup.get_draft": current.draft };
+    "research-criteria.get": current.criteria, "setup.status": current.setup, "setup.get_draft": current.draft,
+    "commercial-voice.get": voice };
   return getNextStep({
     businessOperation: async (_session, key) => reads[key],
     getRunStatus: async () => current.run,
@@ -129,6 +134,8 @@ describe("next_step response size", () => {
       const result = await nextStep(state);
       seen.add(result.reason);
       const size = JSON.stringify(result).length;
+      const { references } = AgentContextSchema.parse(result.guide);
+      if (references.anti_slop) expect(references.anti_slop, result.reason).toContain(voice.voice.writing_rules.trim());
       expect(size, `${result.reason} is ${size} characters`).toBeLessThan(limits[result.reason]!);
       expect(getAgentContext(result.context_task!), result.reason).not.toBeNull();
     }

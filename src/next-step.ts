@@ -1,5 +1,6 @@
 import type { AppDependencies, AuthSession } from "./app.js";
-import { getAgentContext, getStepGuide, type ContextDraft } from "./agent-context.js";
+import { getAgentContext, getStepGuide, servesWritingRules, type ContextDraft } from "./agent-context.js";
+import { readWorkspaceWritingRules, type WorkspaceWritingRules } from "./writing-rules.js";
 import {
   BusinessGetSchema,
   TargetingGetSchema,
@@ -132,13 +133,14 @@ export const BASE_CONTEXTS: Record<string, string> = {
 export const ON_REQUEST_CONTEXTS: Record<string, string> = {
   account: "Deleting the signed-in login, only when the founder asks.",
 };
-// A marked test workspace's drafts replace the published files they name (LIF-1298).
-export function nextStepGuide(reason: string, drafts: readonly ContextDraft[] = []) {
+// A marked test workspace's drafts replace the published files they name
+// (LIF-1298); a drafting guide carries the workspace's writing rules (LIF-1724).
+export function nextStepGuide(reason: string, drafts: readonly ContextDraft[] = [], writingRules?: WorkspaceWritingRules) {
   const entry = NEXT_STEP_CATALOG[reason];
   if (!entry) return null;
   return entry.guide.references
-    ? getStepGuide(entry.guide.task, entry.guide.references, drafts)
-    : getAgentContext(entry.guide.task, drafts);
+    ? getStepGuide(entry.guide.task, entry.guide.references, drafts, writingRules)
+    : getAgentContext(entry.guide.task, drafts, writingRules);
 }
 // Customer reasons for a failed sample and the one next move for each.
 const sampleFailures: Record<z.infer<typeof RunErrorCodeSchema>, { action: string; tools: string[] }> = {
@@ -254,8 +256,13 @@ export async function getNextStep(
     gates: z.infer<typeof SetupGatesSchema> | null = null,
   ) => {
     const entry = NEXT_STEP_CATALOG[reason];
-    const guide = nextStepGuide(reason, await drafts);
-    if (!entry || !guide) throw new Error("Missing next-step guide");
+    if (!entry) throw new Error("Missing next-step guide");
+    // Only a guide that serves the writing rules reads the workspace's copy.
+    const writingRules = servesWritingRules(entry.guide.task, entry.guide.references)
+      ? await readWorkspaceWritingRules(deps.businessOperation, session, ref)
+      : undefined;
+    const guide = nextStepGuide(reason, await drafts, writingRules);
+    if (!guide) throw new Error("Missing next-step guide");
     return NextStepSchema.parse({
       state: entry.state,
       step: entry.step,
