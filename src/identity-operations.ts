@@ -238,7 +238,7 @@ export function presentAttempt(attempt: contracts.Attempt, connector: AccountCon
     // (LIF-1670). The connection profile has neither.
     if (profile !== "full" || !attempt.account_id) return view("none", []);
     if (attempt.channel === "linkedin") return view("agent", [], { next_step: { operation: "next_step",
-      message: "The LinkedIn account is connected. Call next_step now and follow it in this same reply." } });
+      message: "The LinkedIn account is connected. Call next_step now and follow it in this same reply: it builds the LinkedIn campaign with the founder, previews it and asks them to turn it on before the conversation ends." } });
     return view("agent", [], { next_step: {
       operation: "sending_accounts_warmup_start",
       body: { workspace: attempt.workspace.workspace_ref, connection_ref: attempt.account_id },

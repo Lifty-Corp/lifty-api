@@ -65,6 +65,9 @@ never report an account as disconnected or missing from a failed read.
    connection, sign in again with the same account.
 6. A connected account's attempt carries `next_step`: for a mailbox its warmup
    setup and then next_step, for LinkedIn next_step. Follow it in the same reply.
+   For LinkedIn that means building the campaign with the founder, previewing
+   it and asking them to turn it on now; a connected account alone contacts
+   nobody.
 
 Connecting never activates a campaign or sends anything.
 
