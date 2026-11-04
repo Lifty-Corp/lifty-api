@@ -2,8 +2,9 @@
 
 Apply this workflow after the initial lead run and after every targeting or
 research-criteria change. The review sample is five researched candidates
-under the current confirmed ICP, each with its actual LinkedIn profile URL
-and a concrete fit rationale. **Every recorded tier, including C, counts for
+under the current confirmed ICP, each with current research and a concrete
+fit rationale. LinkedIn profile URLs are optional contact enrichment.
+**Every recorded tier, including C, counts for
 review.** A sample with three A, one B and one C is complete; even five C
 candidates are valid evidence for reviewing the targeting. Preserve grades
 and explain the distribution. Completion means the evidence is ready, not
@@ -62,12 +63,13 @@ leads, invent fit, or acquire repeated waves to satisfy the objective.
    cohort. Then present it as a table with person, company, actual grade,
    **LinkedIn profile URL**, fit rationale, and evidence gaps. Include C leads
    with their mismatch reasons; they are part of the review. Distinguish
-   profiles missing a valid LinkedIn URL or rationale as incomplete evidence.
-   Use only returned profile URLs. Optional research/dashboard
-   links never replace them. Preserve discovery and research counts and show
+   missing rationale from optional enrichment gaps. Show a missing LinkedIn
+   URL as "Not available"; it does not block sample completion. Use only returned
+   profile URLs and never infer one from a person's name. Preserve discovery and research counts and show
    how many of the required five sample places are filled.
 3. Separate sample completeness from targeting quality. Missing current
-   research, a valid profile or a rationale calls for a retry. A C
+   research or a rationale calls for a retry. Missing LinkedIn or phone data
+   does not require another sample or another research run. A C
    verdict is a completed evaluation, not missing research. Wrong industries,
    geography, or company sizes suggest a discovery problem. Positive-fit
    companies downgraded only for unavailable evidence suggest a rubric
@@ -86,8 +88,10 @@ leads, invent fit, or acquire repeated waves to satisfy the objective.
 4. A historical `calibration_review_required` result can be retried explicitly
    through `lifty post sample-review` to evaluate its saved cohort under the
    current policy. This is not permission for another acquisition wave.
-   A current `calibration_sample_incomplete` result means some profile or
-   research evidence is still missing; identify the missing input before retrying.
+   A current `calibration_sample_incomplete` result means research or a fit
+   rationale is still missing; identify the missing input before retrying.
+   An older failure caused only by a missing LinkedIn URL can be retried once
+   to complete the same saved cohort under the current rule.
    For `research_limit_reached`, report the reset time, or offer the paid
    plans when the plan's total ran out (`context research-schedule`). A `research_failed`
    sample may be retried once against the saved candidates, preserving

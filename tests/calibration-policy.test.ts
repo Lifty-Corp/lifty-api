@@ -28,7 +28,7 @@ describe("calibration policy rollout", () => {
     expect(enqueueFirstRun).toHaveBeenCalledWith(checkpoint.run_ref, 1);
   });
 
-  it("returns the complete 3 A, 1 B, 1 C review sample", async () => {
+  it("returns all five researched candidates, including C and a missing LinkedIn profile", async () => {
     const path = "/v1/workspace/sample-review";
     const status = {
       state: "succeeded" as const, run_ref: checkpoint.run_ref, requested_leads: 5,
@@ -36,7 +36,7 @@ describe("calibration policy rollout", () => {
       error_code: null, started_at: "2026-09-17T00:00:00Z", completed_at: "2026-09-17T00:01:00Z", reviewed_at: null,
       workspace: checkpoint.workspace, leads: ["A", "A", "A", "B", "C"].map((tier, i) => ({
         name: `Candidate ${i}`, title: "CEO", company: `Company ${i}`,
-        linkedin_url: `https://linkedin.com/in/candidate-${i}`, tier,
+        linkedin_url: i === 4 ? null : `https://linkedin.com/in/candidate-${i}`, tier,
         fit_rationale: tier === "C" ? "Confirmed mismatch with the target." : "Evidence supports this fit.", stage: "researched",
       })),
     };
