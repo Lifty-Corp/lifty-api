@@ -85,12 +85,12 @@ describe("deliverability read operation", () => {
     account.state = "active";
     expect(response.mailboxes[0]!.warmup.current).toMatchObject({ provider: "mailivery", required_days: null, metrics: { ramp_target: 22 } });
     expect(response.mailboxes[0]!.warmup.status.label).toBe("Warming");
-    // Loss of verification is distinct from an explicit provider disconnection.
+    // An aging observation remains visible, but does not override the canonical connection and send gate.
     current.controls = []; current.holds = []; current.send_block_reason = null;
     account.observation.state = "unverified";
     const stale = harness({ data, accounts });
     expect((await stale.ops.read(stale.session, { workspace: "fixture-a" })).mailboxes[0]!.account).toMatchObject({
-      status: "connected", observation: "unverified", outreach: { code: "unknown" },
+      status: "connected", observation: "unverified", outreach: { code: "idle" },
     });
     account.observation.state = "verified";
     current.holds = [{ reason: "operator_hold" }];

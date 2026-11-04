@@ -299,6 +299,18 @@ describe("member verdict and next step (LIF-1603)", () => {
     expect(sending.next_step.code).toBe("none");
   });
 
+  it("keeps connected participation between health checks without hiding actual blockers", () => {
+    const observation = { observation: { state: "unverified" as const }, checked_at: "2026-09-28T12:00:00Z" };
+    const ready = verdict("email_safety_check_required", noCampaigns, observation);
+    expect(ready).toMatchObject({ status: { code: "ready_idle" }, next_step: { code: "none" },
+      account: { status: "connected", observation: "unverified", checked_at: observation.checked_at, outreach: { code: "idle" } } });
+    expect(verdict("email_safety_check_failed", noCampaigns, observation).status.code).toBe("on_hold");
+    expect(verdict(null, item => { item.connections[0]!.holds = [{ reason: "operator_hold" }]; }, observation).status.code).toBe("on_hold");
+    expect(verdict(null, noCampaigns, { ...observation, status: "needs_reconnect" }).status.code).toBe("needs_reconnect");
+    expect(verdict(null, noCampaigns, { ...observation, state: "paused" }).status.code).toBe("paused");
+    expect(verdict(null, item => { item.connections[0]!.send_gate_known = false; }, observation).status.code).toBe("not_ready");
+  });
+
   // LIF-1741: a failed safety check stops sends, so the inbox is not ready.
   it("stops an inbox whose latest safety check failed", () => {
     const failed = verdict("email_safety_check_failed", item => { item.campaigns[0]!.states = { active: 1 }; });

@@ -547,7 +547,8 @@ function presentVerdict(parts: {
   if (account.state === "paused") return verdict("paused", "Sending off", "warn",
     "Sending is switched off for this inbox, so campaigns don't send from it. Warmup keeps running.",
     step("turn_on", "member", "Turn sending on", "Switch sending on in Senders when you want campaigns to use this inbox."));
-  if (account.observation.state === "unverified" || source.send_gate_known !== true) return verdict("not_ready", "Checking the connection", "warn",
+  // Connection status survives between scheduled health checks; send eligibility comes from the canonical gate.
+  if (source.send_gate_known !== true) return verdict("not_ready", "Checking the connection", "warn",
     "A current connection check isn't confirmed yet, so Lifty can't say whether this inbox can send.",
     step("wait", "lifty", "Wait for the next check", "Lifty checks the connection again automatically."));
   if (source.holds.length) return verdict("on_hold", "On hold", "bad",
@@ -688,7 +689,7 @@ function presentAccount(account: Account | undefined, connections: Connection[],
     connection.holds.map(item => reason("hold", `A safety hold is active (${item.reason}).`)));
   else if (connection?.send_gate.code === "blocked") outreach = make("blocked", "Blocked", "bad",
     connection.send_gate.description, connection.send_gate.reasons);
-  else if (account.observation.state === "unverified" || !connection || connection.send_gate.code === "unknown") outreach = make("unknown", "Unverified", "warn", "A current connection check is needed to confirm whether outreach can send.");
+  else if (!connection || connection.send_gate.code === "unknown") outreach = make("unknown", "Unverified", "warn", "A current connection check is needed to confirm whether outreach can send.");
   else {
     const active = campaigns.items.filter(item => item.status.code === "active" &&
       item.connection_ref === account.id);
