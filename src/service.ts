@@ -1,3 +1,4 @@
+import { getNotificationTiming, setNotificationTiming } from "./workspace-operations.js";
 import { createAcquisitionRecoveryOperations } from "./acquisition-recovery.js";
 import { createOAuthConfirmation } from "./oauth-confirmation.js";
 import { openHubspotConnectIntent } from "./hubspot-state.js";
@@ -140,6 +141,8 @@ export function createProductionApp(config: ServiceConfig) {
     disconnectIntegration,
     enqueueIntegrationRevocation: createIntegrationRevocationTrigger(config.trigger),
     getNotificationConfig,
+    getNotificationTiming,
+    setNotificationTiming,
     listSlackNotificationChannels,
     companyMapping: createCompanyMapping(config.crm ?? null),
     runCrmMapping: createCrmMapping(config.crm ? { ...config.crm, enqueue: createCrmMappingTrigger(config.trigger) } : null),

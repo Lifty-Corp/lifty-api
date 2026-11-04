@@ -1,3 +1,5 @@
+import { NotificationTimingConfigurationSchema, SetNotificationTimingRequestSchema, type NotificationTimingConfiguration, type SetNotificationTimingRequest } from "./notification-timing.js";
+import { NotificationTypeCodeSchema } from "./contracts.js";
 import { connectionProfileAllows } from "./runtime-profile.js";
 import { SetNotificationControlsRequestSchema, SetNotificationPreferencesRequestSchema, type SetNotificationControlsRequest, type SetNotificationPreferencesRequest } from "./contracts.js";
 import { historicalEmailResult, historicalOperation, HistoricalEmailResultSchema } from "./historical-outreach.js";
@@ -152,6 +154,8 @@ export interface AppDependencies {
   enqueueIntegrationRevocation: EnqueueIntegrationRevocation;
   /** Notification configuration in the notifications schema (LIF-1464). */
   getNotificationConfig(session: AuthSession): Promise<NotificationConfig>;
+  getNotificationTiming(session: AuthSession, typeCode: string): Promise<NotificationTimingConfiguration>;
+  setNotificationTiming(session: AuthSession, input: SetNotificationTimingRequest): Promise<NotificationTimingConfiguration>;
   setNotificationControls(session: AuthSession, input: SetNotificationControlsRequest): Promise<NotificationConfig>;
   setNotificationPreferences(session: AuthSession, input: SetNotificationPreferencesRequest): Promise<NotificationConfig>;
   companyMapping: CompanyMappingOperation;
@@ -165,7 +169,7 @@ export interface AppDependencies {
     session: AuthSession,
     input: SetNotificationRouteRequest,
   ): Promise<NotificationDestination>;
-  /** Queues one test message to a saved Slack destination. */
+  /** Queues one test message to a saved Slack or current-owner email destination. */
   sendNotificationTest(
     session: AuthSession,
     destinationRef: string,
@@ -779,6 +783,8 @@ const defaultDependencies: AppDependencies = {
   enqueueIntegrationRevocation: async () => {
     throw new Error("enqueueIntegrationRevocation is not configured");
   },
+  getNotificationTiming: async () => { throw new Error("getNotificationTiming is not configured"); },
+  setNotificationTiming: async () => { throw new Error("setNotificationTiming is not configured"); },
   setNotificationControls: async () => { throw new Error("setNotificationControls is not configured"); },
   setNotificationPreferences: async () => { throw new Error("setNotificationPreferences is not configured"); },
   getNotificationConfig: async () => {
@@ -1372,14 +1378,26 @@ export function createApp(
     return context.json(NotificationDestinationSchema.parse(result));
   });
 
-  for (const [path, schema, operation] of [
-    ["controls", SetNotificationControlsRequestSchema, (session: AuthSession, input: unknown) => dependencies.setNotificationControls(session, SetNotificationControlsRequestSchema.parse(input))],
-    ["preferences", SetNotificationPreferencesRequestSchema, (session: AuthSession, input: unknown) => dependencies.setNotificationPreferences(session, SetNotificationPreferencesRequestSchema.parse(input))],
+  app.openAPIRegistry.registerPath({ method: "get", path: "/v1/notifications/timing/{type_code}",
+    operationId: "getNotificationTiming", security: [{ bearerAuth: [] }],
+    request: { params: z.object({ type_code: NotificationTypeCodeSchema }) },
+    responses: { 200: JsonResponse(NotificationTimingConfigurationSchema), 400: JsonResponse(ErrorResponseSchema), 401: JsonResponse(ErrorResponseSchema), 403: JsonResponse(ErrorResponseSchema) },
+  });
+  app.get("/v1/notifications/timing/:type_code", async context => {
+    const code = NotificationTypeCodeSchema.safeParse(context.req.param("type_code"));
+    if (!code.success) return errorJson(context, 400, "INVALID_REQUEST", "Choose a notification type.");
+    return context.json(NotificationTimingConfigurationSchema.parse(await dependencies.getNotificationTiming(context.get("authSession"), code.data)));
+  });
+
+  for (const [path, schema, response, operation] of [
+    ["controls", SetNotificationControlsRequestSchema, NotificationConfigSchema, (session: AuthSession, input: unknown) => dependencies.setNotificationControls(session, SetNotificationControlsRequestSchema.parse(input))],
+    ["preferences", SetNotificationPreferencesRequestSchema, NotificationConfigSchema, (session: AuthSession, input: unknown) => dependencies.setNotificationPreferences(session, SetNotificationPreferencesRequestSchema.parse(input))],
+    ["timing", SetNotificationTimingRequestSchema, NotificationTimingConfigurationSchema, (session: AuthSession, input: unknown) => dependencies.setNotificationTiming(session, SetNotificationTimingRequestSchema.parse(input))],
   ] as const) {
     app.openAPIRegistry.registerPath({ method: "put", path: `/v1/notifications/${path}`,
-      operationId: path === "controls" ? "setNotificationControls" : "setNotificationPreferences", security: [{ bearerAuth: [] }],
+      operationId: path === "controls" ? "setNotificationControls" : path === "timing" ? "setNotificationTiming" : "setNotificationPreferences", security: [{ bearerAuth: [] }],
       request: { body: { required: true, content: { "application/json": { schema } } } },
-      responses: { 200: JsonResponse(NotificationConfigSchema), 400: JsonResponse(ErrorResponseSchema),
+      responses: { 200: JsonResponse(response), 400: JsonResponse(ErrorResponseSchema),
         401: JsonResponse(ErrorResponseSchema), 403: JsonResponse(ErrorResponseSchema), 409: JsonResponse(ErrorResponseSchema) },
     });
     app.put(`/v1/notifications/${path}`, async context => {
@@ -1389,7 +1407,7 @@ export function createApp(
       try { value = JSON.parse(body.text); } catch { value = null; }
       const parsed = schema.safeParse(value);
       if (!parsed.success) return errorJson(context, 400, "INVALID_REQUEST", "Notification settings are invalid.");
-      return context.json(NotificationConfigSchema.parse(await operation(context.get("authSession"), parsed.data)));
+      return context.json(response.parse(await operation(context.get("authSession"), parsed.data)));
     });
   }
 

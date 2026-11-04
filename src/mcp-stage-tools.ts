@@ -13,6 +13,7 @@ export interface StageMcpTool {
   annotations: { title: string; readOnlyHint: boolean; destructiveHint: boolean; openWorldHint: boolean };
 }
 const notificationWriteDescriptions = {
+  timing: "Set delivery timing for future notifications of an editable type. Read notifications_timing first; preserve the workspace version. Null timing restores global inheritance.",
   controls: "Set workspace notification enablement and independent activity-source and delivery-channel filters. Global restrictions win. Preserves preferences; never changes outreach.",
   preferences: "Set one alert to Slack, owner email, both or Off. Slack requires an owned destination. Explicit email overrides fallback; Off sends nothing. Never changes outreach.",
   destination: "Save, rename or reactivate one workspace Slack destination; requires connected Slack. New destinations subscribe to default-on types. Does not post a message or change outreach.",
