@@ -1,3 +1,4 @@
+import { capacityReadout, type OutreachCapacityReadout } from "./outreach-capacity.js";
 import { AccountsGetSchema, type Account, type Participation } from "./identity-contracts.js";
 import { z } from "zod";
 import type { AuthSession } from "./app.js";
@@ -796,6 +797,7 @@ export interface PresentOptions {
   details?: ReadonlyMap<string, PlacementDetail[]>;
   warnings?: DeliverabilityResponse["warnings"];
   accounts?: ReadonlyMap<string, Account[]>;
+  capacity?: OutreachCapacityReadout[];
 }
 
 /** Maps the authorized database source to the public contract. Pure. */
@@ -812,6 +814,7 @@ export function presentDeliverability(source: DeliverabilitySource, now: Date, o
       senders: source.filters.senders.map(({ sender_ref, workspace_ref, name, mailbox_count }) => ({ sender_ref, workspace_ref, name, mailbox_count })), unassigned_count: source.filters.unassigned_count,
     },
     workspace_health: source.workspace_health.map(presentWorkspaceHealth),
+    ...(options.capacity ? { outreach_capacity: options.capacity } : {}),
     mailboxes: source.mailboxes.map(mailbox => presentMailbox(mailbox, workspaces, now,
       options.detail === "placement" ? options.details?.get(mailbox.mailbox_ref) ?? [] : null, options.accounts?.get(mailbox.workspace_ref))),
     total_count: source.total_count,
@@ -893,6 +896,18 @@ export function createEmailDeliverabilityOperations(dependencies: EmailDeliverab
           } catch { /* Unavailable evidence stays unknown, never disconnected or enabled. */ }
         }));
       }
+      const capacity: OutreachCapacityReadout[] = [];
+      // Read once for a selected workspace even when it has no inboxes. Fleet
+      // requests are bounded to the workspaces represented on this page.
+      const capacityWorkspaces = query.scope === "workspace" ? source.filters.workspaces.map(item => item.workspace_ref) : workspaces;
+      if (detail !== "placement") for (let offset = 0; offset < capacityWorkspaces.length; offset += 4) {
+        capacity.push(...await Promise.all(capacityWorkspaces.slice(offset, offset + 4).map(async workspace => {
+          try {
+            const result = await (session.client as RpcClient).rpc("get_lifty_outreach_capacity_readout", { p_workspace_id: workspace });
+            return capacityReadout(workspace, result.error ? null : result.data);
+          } catch { return capacityReadout(workspace, null); }
+        })));
+      }
       if (detail === "placement") {
         if (source.mailboxes.length !== 1) throw unavailable("LIFTY returned an inconsistent deliverability read. Retry shortly.");
         const mailbox = source.mailboxes[0]!;
@@ -908,7 +923,7 @@ export function createEmailDeliverabilityOperations(dependencies: EmailDeliverab
           warnings.push({ code: "placement_detail_not_configured", source: "placement_detail", mailbox_ref: mailbox.mailbox_ref, message: "Provider placement reports are not configured on this server." });
         }
       }
-      return presentDeliverability(source, now(), { detail: detail ?? null, details, warnings, accounts });
+      return presentDeliverability(source, now(), { detail: detail ?? null, details, warnings, accounts, ...(detail !== "placement" ? { capacity } : {}) });
     },
   };
 }

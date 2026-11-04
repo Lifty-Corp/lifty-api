@@ -21,12 +21,13 @@ function single(email: string, base = memberA): Record<string, unknown> {
   return copy as unknown as Record<string, unknown>;
 }
 
-function harness(options: { data?: unknown; accounts?: unknown; error?: unknown; throws?: boolean; details?: (tests: SourceTest[], email: string) => Promise<PlacementDetail[]> } = {}) {
+function harness(options: { data?: unknown; accounts?: unknown; capacity?: unknown; capacityError?: unknown; error?: unknown; throws?: boolean; details?: (tests: SourceTest[], email: string) => Promise<PlacementDetail[]> } = {}) {
   const rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
   const detailCalls: { tests: string[]; email: string }[] = [];
   const session = { userId: userA, client: { rpc: async (name: string, args: Record<string, unknown>) => {
     rpcCalls.push({ name, args });
     if (name === "get_lifty_sending_accounts") return { data: options.accounts ?? null, error: null };
+    if (name === "get_lifty_outreach_capacity_readout") return { data: options.capacity ?? null, error: options.capacityError ?? null };
     if (options.throws) throw new Error("network");
     return options.error ? { data: null, error: options.error } : { data: options.data ?? memberA, error: null };
   } } };
@@ -45,8 +46,9 @@ describe("deliverability read operation", () => {
     expect(h.rpcCalls).toEqual([
       { name: "deliverability_read", args: { p_query: { workspace: "fixture-a", history_limit: 3, limit: 50 } } },
       { name: "get_lifty_sending_accounts", args: { p_workspace_id: "10391000-0000-4000-8000-000000000001", p_query: { channel: "email" } } },
+      { name: "get_lifty_outreach_capacity_readout", args: { p_workspace_id: "10391000-0000-4000-8000-000000000001" } },
     ]);
-    expect(response).toEqual(presentDeliverability(DeliverabilitySource.parse(memberA), now, { detail: null, details: new Map(), warnings: [] }));
+    expect(response).toEqual(presentDeliverability(DeliverabilitySource.parse(memberA), now, { detail: null, details: new Map(), warnings: [], capacity: [{ status: "unavailable", workspace_ref: "10391000-0000-4000-8000-000000000001" }] }));
     expect(h.detailCalls).toEqual([]);
     const f = harness({ data: fleet });
     await f.ops.read(f.session, { scope: "fleet", sender: "unassigned", cursor: "abc_-1", history_limit: 8, limit: 10 });
@@ -245,5 +247,46 @@ describe("deliverability route", () => {
   it("documents the route in OpenAPI", async () => {
     const spec = await (await app().client.request("/openapi.json")).json() as { paths: Record<string, Record<string, { operationId: string }>> };
     expect(spec.paths["/v1/email/deliverability"]?.get?.operationId).toBe("getEmailDeliverability");
+  });
+});
+
+
+describe("capacity on the authorized deliverability read", () => {
+  const workspaceRef = "10391000-0000-4000-8000-000000000001";
+  it("preserves canonical per-person quantities, physical caps and LinkedIn additions while removing internal causes", async () => {
+    const h = harness({ capacity: fixture("capacity-source.json") });
+    const result = await h.ops.read(h.session, { workspace: "fixture-a", sender: "10392000-0000-4000-8000-000000000001", limit: 1 });
+    expect(result.outreach_capacity).toHaveLength(1);
+    const readout = result.outreach_capacity![0]!;
+    expect(readout.status).toBe("available");
+    if (readout.status !== "available") throw new Error("Expected the canonical calculation");
+    expect(readout.email.people[0]).toMatchObject({ sender_name: "Dana Smith", capacity_per_day: 15,
+      capacity_at_caps_per_day: 15, rate: 27.5, on_deck: 2, inboxes_to_connect: 2, days_to_clear: null });
+    expect(readout.email.people[0]!.inboxes[0]).toMatchObject({ cap: 15, planned: 15, safety_check_stale: true });
+    expect(readout.linkedin).toMatchObject({ senders_to_add: 1, planned_messages_per_day: 16, messages_needed_per_day: 21.6 });
+    expect(JSON.stringify(readout)).not.toMatch(/cause|operator_hold|account_ref|private_assumption/);
+    expect(h.rpcCalls.filter(call => call.name === "get_lifty_outreach_capacity_readout")).toEqual([
+      { name: "get_lifty_outreach_capacity_readout", args: { p_workspace_id: workspaceRef } },
+    ]);
+  });
+  it("keeps missing, malformed, failed and foreign capacity unavailable without hiding inbox health", async () => {
+    for (const capacity of [null, {}, { ...fixture("capacity-source.json"), workspace_ref: "10391000-0000-4000-8000-000000000002" }]) {
+      const h = harness({ capacity });
+      const result = await h.ops.read(h.session, { workspace: "fixture-a" });
+      expect(result.mailboxes.length).toBeGreaterThan(0);
+      expect(result.outreach_capacity).toEqual([{ workspace_ref: workspaceRef, status: "unavailable" }]);
+    }
+    const h = harness({ capacity: fixture("capacity-source.json"), capacityError: { message: "rpc not installed" } });
+    expect((await h.ops.read(h.session, { workspace: "fixture-a" })).outreach_capacity)
+      .toEqual([{ workspace_ref: workspaceRef, status: "unavailable" }]);
+  });
+  it("reads a workspace with no inboxes and preserves inactive channel facts without inventing recommendations", async () => {
+    const data = { ...memberA, mailboxes: [], total_count: 0 };
+    const capacity = fixture("capacity-source.json");
+    capacity.email = { operating: false, short: false, on_deck_total: 0, inboxes_to_connect: 0, people: [] };
+    const h = harness({ data, capacity });
+    const result = await h.ops.read(h.session, { workspace: "fixture-a" });
+    expect(result.outreach_capacity?.[0]).toMatchObject({ status: "available", email: { operating: false, inboxes_to_connect: 0 } });
+    expect(h.rpcCalls.map(call => call.name)).toEqual(["deliverability_read", "get_lifty_outreach_capacity_readout"]);
   });
 });
