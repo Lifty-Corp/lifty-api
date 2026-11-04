@@ -1,3 +1,4 @@
+import { capacityReadout, type OutreachCapacityReadout } from "./outreach-capacity.js";
 import { AccountsGetSchema, type Account, type Participation } from "./identity-contracts.js";
 import { z } from "zod";
 import type { AuthSession } from "./app.js";
@@ -546,7 +547,8 @@ function presentVerdict(parts: {
   if (account.state === "paused") return verdict("paused", "Sending off", "warn",
     "Sending is switched off for this inbox, so campaigns don't send from it. Warmup keeps running.",
     step("turn_on", "member", "Turn sending on", "Switch sending on in Senders when you want campaigns to use this inbox."));
-  if (account.observation.state === "unverified" || source.send_gate_known !== true) return verdict("not_ready", "Checking the connection", "warn",
+  // Connection status survives between scheduled health checks; send eligibility comes from the canonical gate.
+  if (source.send_gate_known !== true) return verdict("not_ready", "Checking the connection", "warn",
     "A current connection check isn't confirmed yet, so Lifty can't say whether this inbox can send.",
     step("wait", "lifty", "Wait for the next check", "Lifty checks the connection again automatically."));
   if (source.holds.length) return verdict("on_hold", "On hold", "bad",
@@ -687,7 +689,7 @@ function presentAccount(account: Account | undefined, connections: Connection[],
     connection.holds.map(item => reason("hold", `A safety hold is active (${item.reason}).`)));
   else if (connection?.send_gate.code === "blocked") outreach = make("blocked", "Blocked", "bad",
     connection.send_gate.description, connection.send_gate.reasons);
-  else if (account.observation.state === "unverified" || !connection || connection.send_gate.code === "unknown") outreach = make("unknown", "Unverified", "warn", "A current connection check is needed to confirm whether outreach can send.");
+  else if (!connection || connection.send_gate.code === "unknown") outreach = make("unknown", "Unverified", "warn", "A current connection check is needed to confirm whether outreach can send.");
   else {
     const active = campaigns.items.filter(item => item.status.code === "active" &&
       item.connection_ref === account.id);
@@ -796,6 +798,7 @@ export interface PresentOptions {
   details?: ReadonlyMap<string, PlacementDetail[]>;
   warnings?: DeliverabilityResponse["warnings"];
   accounts?: ReadonlyMap<string, Account[]>;
+  capacity?: OutreachCapacityReadout[];
 }
 
 /** Maps the authorized database source to the public contract. Pure. */
@@ -812,6 +815,7 @@ export function presentDeliverability(source: DeliverabilitySource, now: Date, o
       senders: source.filters.senders.map(({ sender_ref, workspace_ref, name, mailbox_count }) => ({ sender_ref, workspace_ref, name, mailbox_count })), unassigned_count: source.filters.unassigned_count,
     },
     workspace_health: source.workspace_health.map(presentWorkspaceHealth),
+    ...(options.capacity ? { outreach_capacity: options.capacity } : {}),
     mailboxes: source.mailboxes.map(mailbox => presentMailbox(mailbox, workspaces, now,
       options.detail === "placement" ? options.details?.get(mailbox.mailbox_ref) ?? [] : null, options.accounts?.get(mailbox.workspace_ref))),
     total_count: source.total_count,
@@ -893,6 +897,18 @@ export function createEmailDeliverabilityOperations(dependencies: EmailDeliverab
           } catch { /* Unavailable evidence stays unknown, never disconnected or enabled. */ }
         }));
       }
+      const capacity: OutreachCapacityReadout[] = [];
+      // Read once for a selected workspace even when it has no inboxes. Fleet
+      // requests are bounded to the workspaces represented on this page.
+      const capacityWorkspaces = query.scope === "workspace" ? source.filters.workspaces.map(item => item.workspace_ref) : workspaces;
+      if (detail !== "placement") for (let offset = 0; offset < capacityWorkspaces.length; offset += 4) {
+        capacity.push(...await Promise.all(capacityWorkspaces.slice(offset, offset + 4).map(async workspace => {
+          try {
+            const result = await (session.client as RpcClient).rpc("get_lifty_outreach_capacity_readout", { p_workspace_id: workspace });
+            return capacityReadout(workspace, result.error ? null : result.data);
+          } catch { return capacityReadout(workspace, null); }
+        })));
+      }
       if (detail === "placement") {
         if (source.mailboxes.length !== 1) throw unavailable("LIFTY returned an inconsistent deliverability read. Retry shortly.");
         const mailbox = source.mailboxes[0]!;
@@ -908,7 +924,7 @@ export function createEmailDeliverabilityOperations(dependencies: EmailDeliverab
           warnings.push({ code: "placement_detail_not_configured", source: "placement_detail", mailbox_ref: mailbox.mailbox_ref, message: "Provider placement reports are not configured on this server." });
         }
       }
-      return presentDeliverability(source, now(), { detail: detail ?? null, details, warnings, accounts });
+      return presentDeliverability(source, now(), { detail: detail ?? null, details, warnings, accounts, ...(detail !== "placement" ? { capacity } : {}) });
     },
   };
 }

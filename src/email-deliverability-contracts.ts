@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { OutreachCapacityReadout } from "./outreach-capacity.js";
 
 // LIF-1042: one read contract for the Deliverability page and `lifty email
 // deliverability`. The database read (LIF-1041, deliverability-source.v1)
@@ -400,6 +401,7 @@ export const DeliverabilityResponse = z.object({
     unassigned_count: Count,
   }).strict(),
   workspace_health: z.array(WorkspaceHealth).max(1000),
+  outreach_capacity: z.array(OutreachCapacityReadout).max(1000).optional(),
   mailboxes: z.array(DeliverabilityMailbox).max(100),
   total_count: Count,
   next_cursor: Cursor.nullable(),
