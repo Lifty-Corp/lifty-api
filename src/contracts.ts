@@ -241,20 +241,31 @@ export const IntegrationConnectionStatusSchema = z.union([
 // (LIF-1464). The database owns the catalog: a type code is validated by shape
 // only, so a new catalog type never makes this API reject a request or a read.
 export const NotificationTypeCodeSchema = z.string().max(100).regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/);
-export const NotificationChannelSchema = z.enum(["slack", "email"]);
+export const NotificationChannelSchema = z.string().regex(/^[a-z][a-z0-9_-]{0,63}$/);
+export const NotificationChannelInfoSchema = z.object({ code: NotificationChannelSchema, name: z.string().min(1), interactive: z.boolean(), capabilities: z.array(z.string()) }).strict();
 
 const notificationSources = z.array(z.enum(["email", "linkedin"])).min(1).max(2).refine(v => new Set(v).size === v.length);
-const notificationChannels = z.array(NotificationChannelSchema).min(1).max(2).refine(v => new Set(v).size === v.length);
+const notificationChannels = z.array(NotificationChannelSchema).min(1).max(32).refine(v => new Set(v).size === v.length);
 export const NotificationSettingsSchema = z.object({
   enabled: z.boolean(), sources: notificationSources, channels: notificationChannels, version: z.number().int().nonnegative(),
 }).strict();
 export const NotificationControlsSchema = z.object({ global: NotificationSettingsSchema, workspace: NotificationSettingsSchema }).strict();
 export const SetNotificationControlsRequestSchema = NotificationSettingsSchema.omit({ version: true }).extend({ expected_version: z.number().int().nonnegative() });
-export const SetNotificationPreferencesRequestSchema = z.object({
+const LegacyNotificationPreferencesRequestSchema = z.object({
   notification_type: NotificationTypeCodeSchema,
-  channels: z.array(NotificationChannelSchema).max(2).refine(v => new Set(v).size === v.length),
+  channels: z.array(z.enum(["slack", "email"])).max(2).refine(v => new Set(v).size === v.length),
   slack_destination_ref: z.uuid().nullable(),
 }).strict().refine(v => v.channels.includes("slack") === (v.slack_destination_ref !== null), "A Slack choice requires its destination");
+export const SetNotificationPreferencesRequestSchema = z.union([
+  z.object({ notification_type: NotificationTypeCodeSchema,
+    channels: z.array(NotificationChannelSchema).max(32).refine(v => new Set(v).size === v.length),
+    destination_refs: z.record(NotificationChannelSchema, z.uuid()),
+  }).strict().refine(v => {
+    const messaging = v.channels.filter(code => code !== "email");
+    return Object.keys(v.destination_refs).length === messaging.length && messaging.every(code => Boolean(v.destination_refs[code]));
+  }, "Choose one destination for each messaging channel"),
+  LegacyNotificationPreferencesRequestSchema,
+]);
 export type SetNotificationControlsRequest = z.infer<typeof SetNotificationControlsRequestSchema>;
 export type SetNotificationPreferencesRequest = z.infer<typeof SetNotificationPreferencesRequestSchema>;
 
@@ -309,22 +320,34 @@ const NotificationSlackStatusSchema = z.discriminatedUnion("status", [
     .strict(),
 ]);
 
+export const NotificationConnectionSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("not_connected") }).strict(),
+  z.object({ status: z.literal("connected"), tenant_id: z.string().min(1), tenant_name: z.string().min(1), reconnect_required: z.boolean() }).strict(),
+]);
+
 export const NotificationConfigSchema = z
   .object({
     workspace_ref: z.uuid(),
     slack: NotificationSlackStatusSchema,
+    channels: z.array(NotificationChannelInfoSchema).optional(),
+    connections: z.record(NotificationChannelSchema, NotificationConnectionSchema).optional(),
     types: z.array(NotificationCatalogTypeSchema),
     destinations: z.array(NotificationDestinationSchema),
     controls: NotificationControlsSchema.optional(),
   })
   .strict();
 
-export const UpsertNotificationDestinationRequestSchema = z
+const LegacyNotificationDestinationRequestSchema = z
   .object({
     channel_id: z.string().trim().regex(/^[CG][A-Z0-9]{2,31}$/),
     channel_name: z.string().trim().min(1).max(80),
   })
   .strict();
+
+export const UpsertNotificationDestinationRequestSchema = z.union([
+  z.object({ provider: NotificationChannelSchema, address: z.string().trim().min(1).max(2048), name: z.string().trim().min(1).max(100) }).strict(),
+  LegacyNotificationDestinationRequestSchema,
+]);
 
 /** Subscribe (enabled) or unsubscribe one destination to one notification type. */
 export const SetNotificationRouteRequestSchema = z

@@ -73,6 +73,7 @@ describe("notification configuration operations", () => {
     await expect(getNotificationConfig(session(database))).resolves.toEqual({
       workspace_ref: workspaceRef,
       slack: publishedSlack,
+      connections: { slack: { status: "connected", tenant_id: publishedSlack.team_id, tenant_name: publishedSlack.team_name, reconnect_required: publishedSlack.reconnect_required } },
       types: storedTypes().map(({ code, name, channels, default_on, paused, email_fallback }) => ({ code, name, channels, default_on, paused, email_fallback })),
       destinations: [
         { destination_ref: emailRef, channel: "email", address: null, name: null, active: true, types: ["sending_account.needs_reconnect"] },
@@ -88,7 +89,7 @@ describe("notification configuration operations", () => {
     ]);
     // Empty arrays arrive as JSON null.
     await expect(getNotificationConfig(session(notificationsDatabase({ types: [], destinations: [], slack: { provider: "slack", status: "not_connected" } }))))
-      .resolves.toEqual({ workspace_ref: workspaceRef, slack: { status: "not_connected" }, types: [], destinations: [] });
+      .resolves.toEqual({ workspace_ref: workspaceRef, slack: { status: "not_connected" }, connections: { slack: { status: "not_connected" } }, types: [], destinations: [] });
   });
 
   it("keeps the workspace selection errors and refuses an unusable workspace before the notifications functions", async () => {
@@ -132,6 +133,19 @@ describe("notification configuration operations", () => {
     const invalid = notificationsDatabase({ errors: { "notifications.save_slack_destination": { code: "22023", message: "A Slack destination needs a channel ID" } } });
     await expect(upsertNotificationDestination(session(invalid), { channel_id: "C643CHANNEL", channel_name: "client-alerts" }))
       .rejects.toMatchObject({ status: 400, code: "INVALID_REQUEST" });
+  });
+
+  it("uses the installed provider adapter with the neutral destination contract", async () => {
+    const database = notificationsDatabase();
+    await expect(upsertNotificationDestination(session(database), { provider: "slack", address: "G643PRIVATE", name: "founders" }))
+      .resolves.toMatchObject({ destination_ref: createdRef, channel: "slack", address: "G643PRIVATE" });
+    expect(database.calls.find(call => call.name === "save_message_destination")?.args).toEqual({
+      p_workspace_id: workspaceRef, p_provider: "slack", p_address: "G643PRIVATE", p_name: "founders", p_active: true,
+    });
+    const unknown = notificationsDatabase();
+    await expect(upsertNotificationDestination(session(unknown), { provider: "test_chat", address: "opaque-channel", name: "founders" }))
+      .rejects.toMatchObject({ status: 409 });
+    expect(unknown.calls.some(call => call.schema === "notifications")).toBe(false);
   });
 
   it("checks the destination, type and channel against the configuration before subscribing", async () => {
