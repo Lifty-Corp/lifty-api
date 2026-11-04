@@ -89,6 +89,13 @@ through one table in `src/rpc-errors.ts`; an unknown code is a 502
 `calibration_sample_incomplete`, `calibration_review_required`,
 `research_failed`, `search_exhausted` and `research_limit_reached`.
 
+Under `researched_v1`, five saved candidates with current research and fit
+rationales complete a review sample regardless of A/B/C grade or LinkedIn
+availability. Missing or unusable profile links appear as null; agents show
+"Not available" and keep the person in the sample. Contact enrichment does not
+require repeating completed research. Historical profile-related failures can
+complete through the same-cohort retry; founder confirmation remains separate.
+
 ### Routes
 
 - `GET /healthz`, `GET /readyz` — process liveness and readiness

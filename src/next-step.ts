@@ -162,7 +162,7 @@ const sampleFailures: Record<z.infer<typeof RunErrorCodeSchema>, { action: strin
     tools: [tool("sample-review", "post")],
   },
   calibration_sample_incomplete: {
-    action: `Some people lack current research, a valid profile URL or a fit rationale. Explain the gap, then retry once with ${tool("sample-review", "post")}; it reuses the saved people.`,
+    action: `Some people lack current research or a fit rationale. Explain the gap, then retry once with ${tool("sample-review", "post")}; it reuses the saved people. Missing LinkedIn data does not block review; an older failure for that reason can complete on retry.`,
     tools: [tool("sample-review", "post")],
   },
   calibration_review_required: {
