@@ -53,10 +53,22 @@ const Step = z.object({ position: z.number().int().min(1).max(5), delay: DelaySc
   template: Template.optional(), variants: z.array(Variant).min(1).max(40).optional(),
   writing_instructions: text(10000).optional().describe("Optional guidance for this message in generate mode; preserves campaign-wide instructions and Business voice."),
 }).strict();
-// Deterministic content lanes: the lead's title picks the first rule whose
-// terms it contains, otherwise (including a missing title) the default lane.
-export const LanesSchema = z.object({ field: z.literal("title"), default: LaneName,
-  rules: z.array(z.object({ lane: LaneName, contains_any: z.array(z.string().trim().min(1).max(60)).min(1).max(20) }).strict()).min(1).max(10),
+// Deterministic content lanes (LIF-1800): the first rule that matches picks the
+// lane, otherwise the default. A rule matches title terms (a missing title
+// matches none), the search lane that found the lead, or an exact value of a
+// current Scout research field; a missing or other value falls through. The
+// database checks that search lanes and research fields are the workspace's.
+const LaneTerms = z.array(z.string().trim().min(1).max(60)).min(1).max(20);
+// One object, not a union, keeps the published tool schema small.
+const LaneRule = z.object({ lane: LaneName, contains_any: LaneTerms.optional(),
+  search_lane_in: z.array(z.uuid()).min(1).max(20).optional(),
+  research_field: z.string().min(1).max(100).optional(), equals_any: LaneTerms.optional(),
+}).strict().refine(rule => [rule.contains_any !== undefined, rule.search_lane_in !== undefined,
+  rule.research_field !== undefined || rule.equals_any !== undefined].filter(Boolean).length === 1
+  && (rule.research_field === undefined) === (rule.equals_any === undefined),
+"Match title terms (contains_any), search lanes (search_lane_in) or a research field (research_field with equals_any).");
+export const LanesSchema = z.object({ field: z.literal("title").optional(), default: LaneName,
+  rules: z.array(LaneRule).min(1).max(10),
 }).strict().superRefine((lanes, context) => {
   const names = lanes.rules.map(rule => rule.lane);
   if (new Set(names).size !== names.length || names.includes(lanes.default))
