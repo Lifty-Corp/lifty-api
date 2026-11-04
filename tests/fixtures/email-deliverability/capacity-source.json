@@ -1,0 +1,101 @@
+{
+  "workspace_ref": "10391000-0000-4000-8000-000000000001",
+  "assessed_at": "2026-11-04T14:00:00Z",
+  "window_days": 7,
+  "business_days": 5,
+  "inputs": {
+    "private_assumption": "do not expose"
+  },
+  "email": {
+    "operating": true,
+    "short": true,
+    "on_deck_total": 2,
+    "inboxes_to_connect": 2,
+    "people": [
+      {
+        "sender_ref": "10392000-0000-4000-8000-000000000001",
+        "sender_name": "Dana Smith",
+        "email_steps": 3,
+        "inboxes": [
+          {
+            "account_ref": "10393000-0000-4000-8000-000000000001",
+            "mailbox": "dana@example.test",
+            "status": "sendable",
+            "cause": null,
+            "cap": 15,
+            "planned": 15,
+            "ready_on": null,
+            "safety_check_stale": true
+          },
+          {
+            "account_ref": "10393000-0000-4000-8000-000000000002",
+            "mailbox": "warming@example.test",
+            "status": "warming",
+            "cause": "warming",
+            "cap": 10,
+            "planned": 0,
+            "ready_on": "2026-11-15",
+            "safety_check_stale": false
+          },
+          {
+            "account_ref": "10393000-0000-4000-8000-000000000003",
+            "mailbox": "waiting@example.test",
+            "status": "not_counted",
+            "cause": "private_operator_hold",
+            "cap": 25,
+            "planned": 0,
+            "ready_on": null,
+            "safety_check_stale": false
+          }
+        ],
+        "sendable_inboxes": 1,
+        "warming_inboxes": 1,
+        "capacity_per_day": 15,
+        "capacity_at_caps_per_day": 15,
+        "target_rate": 24,
+        "committed_rate": 27.5,
+        "rate": 27.5,
+        "backlog": {
+          "overdue_steps": 9,
+          "waiting_journeys": 3,
+          "steps": 18
+        },
+        "days_to_clear": null,
+        "clears": false,
+        "inboxes_needed": 2,
+        "on_deck": 2,
+        "inboxes_to_connect": 2
+      }
+    ]
+  },
+  "linkedin": {
+    "operating": true,
+    "short": true,
+    "accounts": [
+      {
+        "cause": "operator_hold"
+      }
+    ],
+    "sendable_accounts": 1,
+    "invitations_per_week": 50,
+    "planned_messages_per_day": 16,
+    "invitations_needed_per_week": 60,
+    "messages_needed_per_day": 21.6,
+    "senders_needed": 2,
+    "senders_to_add": 1,
+    "backlog": {
+      "invitations": 7
+    },
+    "days_to_clear": null,
+    "clears": false,
+    "limits": {
+      "source": "workspace",
+      "reply_share": 0.2,
+      "new_sender": {
+        "invitations_per_7_days": 50,
+        "messages_per_day": 20,
+        "planned_messages_per_day": 16
+      }
+    }
+  }
+}

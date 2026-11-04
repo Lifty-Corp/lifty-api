@@ -159,6 +159,19 @@ describe("supported Outreach policy boundary", () => {
     expect(create("email", splitThread).success).toBe(false);
     expect(create("email", { ...laned(), compose_mode: "generate" }).success).toBe(false);
   });
+  it("lanes route by search lane and research field too, in rule order (LIF-1800)", () => {
+    const searchLane = "f3e01086-69bb-4204-8d01-087cd212cd2f";
+    const routed = (rules: unknown[], extra: object = {}) => create("email", { ...laned(), lanes: { default: "ops", rules, ...extra } });
+    const mixed = [{ lane: "transform", research_field: "line_breadth", equals_any: ["single_line"] }];
+    expect(routed(mixed)).toMatchObject({ success: true, data: { policy: { lanes: { default: "ops", rules: mixed } } } });
+    expect(routed([{ lane: "transform", search_lane_in: [searchLane] }]).success).toBe(true);
+    expect(routed([{ lane: "transform", contains_any: ["VP"] }], { field: "title" }).success).toBe(true);
+    for (const rule of [{ lane: "transform", search_lane_in: ["plumbing"] }, { lane: "transform", search_lane_in: [] },
+      { lane: "transform", research_field: "line_breadth", equals_any: [] }, { lane: "transform", research_field: "line_breadth" },
+      { lane: "transform", contains_any: ["VP"], search_lane_in: [searchLane] }, { lane: "transform" }])
+      expect(routed([rule]).success, JSON.stringify(rule)).toBe(false);
+    expect(routed(mixed, { field: "company" }).success).toBe(false);
+  });
   it("saves template placeholders the composer can fill, in its single-brace syntax (LIF-1333)", () => {
     const linkedin = (text: string) => create("linkedin", { ...policy, compose_mode: "templates", steps: [{ position: 1, delay: { business_days: 0 }, template: { text } }] });
     const saved = linkedin("Hola {{first_name}}, ¿en {{ company_name }} y {company_name} tienen {pain}?");
