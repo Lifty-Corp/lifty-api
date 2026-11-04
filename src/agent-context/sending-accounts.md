@@ -260,6 +260,16 @@ missing or out-of-date evidence is not healthy. Workspace health covers the
 whole workspace, not one inbox. This read never starts a test or
 changes sending; propose those only as separate, explicitly requested actions.
 
+## Outreach capacity
+
+Use `outreach_capacity` from `deliverability`: exact per-person email additions,
+LinkedIn senders and backlog, for the whole workspace even on filtered pages.
+Absent or `unavailable` means unknown, never zero. Only recommend additions for
+an `operating` channel. Never recalculate or add two to the returned recommendation.
+All ready inboxes send; `on_deck` is the two-inbox planning margin, not standby.
+Leads stay with their person. `cap` is enforced; planning uses at most 20 daily.
+Warming `ready_on` dates are estimates. This read never starts or throttles outreach.
+
 ## Campaigns and accounts
 
 Campaigns name no senders: persons take part in new Journeys through their

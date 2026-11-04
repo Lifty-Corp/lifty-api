@@ -222,7 +222,9 @@ describe("runtime context discovery and connection handoff", () => {
 // and the retired volume knobs never reach a customer surface. Operators see
 // provider details in logs and alerts only.
 describe("customer surfaces name no provider or retired volume knob", () => {
-  const retired = /apollo|unipile|heyreach|allowance|capacity|daily_discovery_target|pipeline_active|tier_1|tier_2/i;
+  // LIF-1709 publishes read-only outreach capacity. The retired capacity write
+  // operation still must not appear in the tool inventory checked below.
+  const retired = /apollo|unipile|heyreach|allowance|daily_discovery_target|pipeline_active|tier_1|tier_2/i;
   const source = (dir: string): string[] => readdirSync(new URL(dir, import.meta.url), { withFileTypes: true })
     .flatMap(entry => entry.isDirectory() ? source(`${dir}${entry.name}/`)
       : entry.name.endsWith(".ts") ? [readFileSync(new URL(`${dir}${entry.name}`, import.meta.url), "utf8")] : []);
