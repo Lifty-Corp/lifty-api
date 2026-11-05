@@ -24,6 +24,20 @@ function harness(options:{account?:unknown;senders?:unknown;profile?:unknown;lin
   };
   return {calls,provider:createUnipileV2Provider({accessToken:"v2-test-key",applicationId:"app_test",hostedAuthOrigins:["https://connect-v2.lifty.test"],fetchImpl})};
 }
+describe("Unipile V2 failures",()=>{
+  it("keeps the documented type and request id of a failed call, and nothing else of its body",async()=>{
+    const h=harness({body:new Response(JSON.stringify({object:"Error",status:403,type:"api/inactive_subscription",title:"Forbidden",detail:"Private text",req_id:"req-1"}),{status:403})});
+    await expect(h.provider.readEmailIdentity("acc_test",transport,email)).rejects.toMatchObject({code:"UNIPILE_UNAVAILABLE",
+      diagnostics:{upstream_operation:"unipile",upstream_code:"403",upstream_kind:"provider",provider_error:"api/inactive_subscription",provider_request_id:"req-1"}});
+    await harness({body:new Response(JSON.stringify({object:"Error",status:403,type:"api/inactive_subscription",detail:"Private text"}),{status:403})})
+      .provider.readEmailIdentity("acc_test",transport,email).catch((error:{diagnostics:unknown})=>expect(JSON.stringify(error.diagnostics)).not.toContain("Private"));
+  });
+  it("a gateway page still fails with its status",async()=>{
+    const h=harness({body:new Response("<html>Bad Gateway</html>",{status:502})});
+    await expect(h.provider.readEmailIdentity("acc_test",transport,email)).rejects.toMatchObject({code:"UNIPILE_UNAVAILABLE",
+      diagnostics:{upstream_operation:"unipile",upstream_code:"502",upstream_kind:"provider"}});
+  });
+});
 describe("Unipile V2 authenticated contract",()=>{
   it.each([{raw:account,readiness:"verified"},{raw:outlook,readiness:"verified"},{raw:outlook,readiness:"unknown"}])("retains canonical identity after exact application/scope/owner/alias readback: $raw.provider/$readiness",async({raw,readiness})=>{
     const h=harness({account:raw,senders:{data:[{...senders.data[0],verification_status:readiness}]}});

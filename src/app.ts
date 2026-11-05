@@ -227,6 +227,7 @@ export interface LogEvent {
   upstream_code?: string;
   upstream_kind?: string;
   provider_error?: string;
+  provider_request_id?: string;
   progress_stage?: string;
   connection_reference?: string;
 }
