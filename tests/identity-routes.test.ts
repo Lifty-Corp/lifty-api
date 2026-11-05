@@ -557,7 +557,7 @@ describe("participation causes", () => {
     expect((await read(receipt("participation.health_hold"))).participation.next_step)
       .toMatchObject({ label: "On hold · too many bounces", owner: "lifty", action: "lifty_review" });
     const { participation } = await read(receipt("participation.also"));
-    expect(participation.next_step).toMatchObject({ label: "Needs reconnecting", owner: "member", action: "reconnect" });
+    expect(participation.next_step).toMatchObject({ label: "Reconnect needed", owner: "member", action: "reconnect" });
     expect(participation.also).toEqual([{ status: "paused", cause: "paused_by_member", category: "intentional", since: "2026-11-05T16:52:24.71373+00:00",
       next_step: { label: "Paused", owner: "member", action: "resume_account", since: "2026-11-05T16:52:24.71373+00:00", since_estimated: null, review_by: null } }]);
   });

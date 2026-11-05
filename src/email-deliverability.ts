@@ -1,4 +1,5 @@
 import { capacityReadout, type OutreachCapacityReadout } from "./outreach-capacity.js";
+import { presentParticipation } from "./participation.js";
 import { AccountsGetSchema, type Account, type Participation } from "./identity-contracts.js";
 import { z } from "zod";
 import type { AuthSession } from "./app.js";
@@ -519,49 +520,56 @@ function fallbackStep(status: DeliverabilityMailbox["status"]): NextStep {
 }
 
 /**
- * LIF-1603: the one member-facing verdict for an inbox, with what resolves it.
- * Ordered by what the member sees first: the account (Senders), then the shared
- * send gate's reason, then campaigns. A LIFT pause is operator-side and never
- * changes this verdict; `account.outreach` and `connections[].controls` report it.
+ * LIF-1603, LIF-1771: the one member-facing verdict for an inbox, with what
+ * resolves it. Participation owns the order of causes: its primary cause is the
+ * top line, in the same words Senders shows, and the health detail below stays.
+ * The rest is what a cause cannot say on its own: the send gate's reason while
+ * an older database doesn't report it, then placement, warmup and campaigns.
  */
 function presentVerdict(parts: {
   account: Account | undefined; source: SourceConnection | undefined; connection: Connection | undefined;
   presented: DeliverabilityMailbox["account"]; placement: DeliverabilityMailbox["placement"]; campaigns: DeliverabilityMailbox["campaigns"];
-  warmup: DeliverabilityMailbox["warmup"]; readiness: DeliverabilityMailbox["readiness"]; hasEvidence: boolean;
+  warmup: DeliverabilityMailbox["warmup"]; readiness: DeliverabilityMailbox["readiness"]; hasEvidence: boolean; now: Date;
 }): Verdict {
-  const { account, source, connection, placement, campaigns, warmup } = parts;
+  const { account, source, connection, placement, campaigns, warmup, now } = parts;
   if (!account || !source || !connection) {
     const status = presentStatus({ account: parts.presented, placement, campaigns, warmup, readiness: parts.readiness, hasEvidence: parts.hasEvidence });
     return { status, next_step: fallbackStep(status) };
   }
   const mine = campaigns.items.filter(item => item.connection_ref === account.id);
   const active = mine.reduce((sum, item) => sum + (item.states.active ?? 0), 0);
-  const waiting = active ? ` ${active === 1 ? "An active campaign is" : `${active} active campaigns are`} waiting to send from it.` : "";
+  const participation = account.participation;
+  const journeys = participation.waiting_journeys ?? 0;
+  const waiting = journeys ? ` ${plural(journeys, "Journey")} waiting.`
+    : active ? ` ${active === 1 ? "An active campaign is" : `${active} active campaigns are`} waiting to send from it.` : "";
   const reconnect = step("reconnect", "member", "Reconnect", "Reconnect the mailbox in Senders with the same account.");
-
-  if (account.status === "disconnected") return verdict("disconnected", "Disconnected", "muted",
-    "This inbox was disconnected, so Lifty doesn't send from it. Its history stays.",
-    step("none", "none", "Nothing to do", "Reconnect it in Senders only if you want to send from it again."));
-  if (account.status === "needs_reconnect") return verdict("needs_reconnect", "Reconnect needed", "bad",
-    `Lifty lost access to this mailbox, so nothing sends from it.${waiting}`, reconnect);
-  if (account.state === "paused") return verdict("paused", "Sending off", "warn",
-    "Sending is switched off for this inbox, so campaigns don't send from it. Warmup keeps running.",
-    step("turn_on", "member", "Turn sending on", "Switch sending on in Senders when you want campaigns to use this inbox."));
-  // Connection status survives between scheduled health checks; send eligibility comes from the canonical gate.
-  if (source.send_gate_known !== true) return verdict("not_ready", "Checking the connection", "warn",
-    "A current connection check isn't confirmed yet, so Lifty can't say whether this inbox can send.",
-    step("wait", "lifty", "Wait for the next check", "Lifty checks the connection again automatically."));
-  if (source.holds.length) return verdict("on_hold", "On hold", "bad",
-    `A safety hold stops sends from this inbox.${waiting}`, LIFTY_REVIEW, connection.send_gate.reasons);
-
   const gate = source.send_block_reason ?? null;
-  // One verdict per blocking state: from the shared send gate, or from the
-  // account's participation when a LIFT pause or the send-time check masks the
-  // gate (LIF-1672). A LIFT pause's own reasons are never shown to members.
+  const gateBlocks = !!gate && gate !== SEND_TIME_CHECK && !gate.startsWith("send_paused:");
+
+  // One verdict per blocking state, named by the participation cause or by the
+  // shared send gate. A LIFT pause's own reasons are never shown to members.
   const blocking = (code: string, reasons: Reason[]): Verdict => {
     const blocked = (status: DeliverabilityMailbox["status"]["code"], label: string, tone: Tone, description: string, next: NextStep) =>
       verdict(status, label, tone, `${description}${waiting}`, next, reasons);
     switch (code) {
+      case "paused_by_lift":
+        return blocked("paused", "Paused by Lifty", "warn", "Lifty paused this inbox, so campaigns don't send from it. Warmup keeps running.", LIFTY_REVIEW);
+      case "sender_off":
+        return blocked("paused", "Sender retired", "warn", "This person is retired, so nothing new sends from this inbox. Replies keep arriving.",
+          step("turn_on", "member", "Turn the person on", "Turn them on in Senders if they should send again. Leads that moved stay with their new person."));
+      case "sender_paused":
+        return blocked("paused", "Sender paused", "warn", "This person is paused, so nothing automatic sends from this inbox. Replies keep arriving.",
+          step("turn_on", "member", "Resume the person", "Resume them in Senders. Any other stop on this inbox stays."));
+      case "workspace_suspended":
+        return blocked("on_hold", "Workspace paused", "bad", "This workspace is paused, so nothing sends.", LIFTY_REVIEW);
+      case "health_hold":
+        return blocked("on_hold", "On hold", "bad", "A safety hold stops sends from this inbox.", LIFTY_REVIEW);
+      case "signature_missing":
+        return verdict("not_ready", "Needs a signature", "warn", "Add a signature to this person in Senders to send email.",
+          step("add_signature", "member", "Add a signature", "Add it in Senders. New Journeys use it from then on."), reasons);
+      case "campaign_paused":
+        return verdict("ready_idle", "Campaign paused", "watch", "Every campaign using this inbox is paused.",
+          step("resume_campaign", "member", "Resume the campaign", "Resume it in Campaigns when you want this inbox to send."), reasons);
       case "account_paused":
         return blocked("paused", "Sending off", "warn", "Sending is switched off for this inbox. Warmup keeps running.",
           step("turn_on", "member", "Turn sending on", "Switch sending on in Senders when you want campaigns to use this inbox."));
@@ -610,7 +618,26 @@ function presentVerdict(parts: {
           reasons[0]?.message ?? "A send check stops this inbox from sending.", LIFTY_REVIEW);
     }
   };
-  if (gate && gate !== SEND_TIME_CHECK && !gate.startsWith("send_paused:")) return blocking(gate, connection.send_gate.reasons);
+  if (PARTICIPATION_BLOCKS.has(participation.status)) {
+    const result = blocking(PARTICIPATION_GATE[participation.cause] ?? participation.cause, gateBlocks ? connection.send_gate.reasons : []);
+    return { status: { ...result.status, label: presentParticipation(participation, now.getTime()).next_step.label }, next_step: result.next_step };
+  }
+
+  if (account.status === "disconnected") return verdict("disconnected", "Disconnected", "muted",
+    "This inbox was disconnected, so Lifty doesn't send from it. Its history stays.",
+    step("none", "none", "Nothing to do", "Reconnect it in Senders only if you want to send from it again."));
+  if (account.status === "needs_reconnect") return verdict("needs_reconnect", "Reconnect needed", "bad",
+    `Lifty lost access to this mailbox, so nothing sends from it.${waiting}`, reconnect);
+  if (account.state === "paused") return verdict("paused", "Sending off", "warn",
+    "Sending is switched off for this inbox, so campaigns don't send from it. Warmup keeps running.",
+    step("turn_on", "member", "Turn sending on", "Switch sending on in Senders when you want campaigns to use this inbox."));
+  // Connection status survives between scheduled health checks; send eligibility comes from the canonical gate.
+  if (source.send_gate_known !== true) return verdict("not_ready", "Checking the connection", "warn",
+    "A current connection check isn't confirmed yet, so Lifty can't say whether this inbox can send.",
+    step("wait", "lifty", "Wait for the next check", "Lifty checks the connection again automatically."));
+  if (source.holds.length) return verdict("on_hold", "On hold", "bad",
+    `A safety hold stops sends from this inbox.${waiting}`, LIFTY_REVIEW, connection.send_gate.reasons);
+  if (gateBlocks) return blocking(gate, connection.send_gate.reasons);
 
   if (placement.status.code === "failed") return verdict("placement_failed", "Placement test failed", "bad", placement.status.description,
     placementStep(warmup, true), placement.status.reasons);
@@ -618,24 +645,16 @@ function presentVerdict(parts: {
     dnsStep(warmup) ?? LIFTY_REVIEW, warmup.status.reasons);
   // LIF-1672: persons follow the workspace's Journeys, so the account's
   // participation decides once nothing above blocks it.
-  const participation = account.participation;
-  if (participation.cause === "signature_missing") return verdict("not_ready", "Needs a signature", "warn",
-    "Add a signature to this person in Senders to send email.",
-    step("add_signature", "member", "Add a signature", "Add it in Senders. New Journeys use it from then on."));
   if (participation.status === "sending") return verdict("in_campaign", "In campaign", "ok",
     active ? `Ready and used by ${plural(active, "active campaign")}. It sends on the campaign's schedule, up to its daily limit.`
       : "Ready and sending in active Journeys, on their campaigns' schedule and up to its daily limit.", NOTHING);
-  if (participation.cause === "campaign_paused")
-    return verdict("ready_idle", "Ready · campaign paused", "watch", "This inbox passed its checks, but every campaign using it is paused.",
-      step("resume_campaign", "member", "Resume the campaign", "Resume it in Campaigns when you want this inbox to send."));
   if (participation.status === "waiting_for_first_lead") return verdict("ready_idle", "Ready", "watch",
     "It takes part and sends once a lead reaches this channel.", NOTHING);
-  if (participation.status !== "no_active_campaign")
-    return blocking(PARTICIPATION_GATE[participation.cause] ?? participation.cause, []);
   return verdict("ready_idle", "Connected", "watch", "Sends once a campaign is active.", NOTHING);
 }
 
-/** The send-gate state each remaining participation cause matches; others get the gate's default verdict. */
+const PARTICIPATION_BLOCKS = new Set<Participation["status"]>(["paused", "not_connected", "email_not_ready"]);
+/** The verdict each participation cause shares with the send gate; the others are named by the cause itself. */
 const PARTICIPATION_GATE: Partial<Record<Participation["cause"], string>> = {
   disconnected: "account_disconnected", needs_reconnect: "account_needs_reconnect", unverified: "account_unverified",
   paused_by_member: "account_paused", declaration_required: "email_declaration_required", warming: "email_warmup_required",
@@ -676,7 +695,7 @@ function presentSending(source: SourceSending | null | undefined): Deliverabilit
     `${used} The count resets at midnight (${zone}). Room left today doesn't mean the inbox is ready; its status says whether campaigns can use it.`, reasons) };
 }
 
-function presentAccount(account: Account | undefined, connections: Connection[], campaigns: DeliverabilityMailbox["campaigns"]): DeliverabilityMailbox["account"] {
+function presentAccount(account: Account | undefined, connections: Connection[], campaigns: DeliverabilityMailbox["campaigns"], now: Date): DeliverabilityMailbox["account"] {
   if (!account) return null;
   const connection = connections.find(item => item.connection_ref === account.id);
   let outreach: NonNullable<DeliverabilityMailbox["account"]>["outreach"];
@@ -698,7 +717,8 @@ function presentAccount(account: Account | undefined, connections: Connection[],
     else if (active.some(item => item.sending.code === "unverified")) outreach = make("unknown", "Unverified", "warn", "The active campaign's sending state could not be confirmed.");
     else outreach = make("blocked", "Blocked", "warn", "An active campaign cannot currently send from this account.", active.flatMap(item => item.sending.reasons));
   }
-  return { connection_ref: account.id, status: account.status, observation: account.observation.state, checked_at: account.checked_at, outreach };
+  return { connection_ref: account.id, status: account.status, observation: account.observation.state, checked_at: account.checked_at, outreach,
+    participation: presentParticipation(account.participation, now.getTime()) };
 }
 
 function presentMailbox(source: SourceMailbox, workspaces: Map<string, { slug: string; name: string }>, now: Date, detail: PlacementDetail[] | null, accounts?: Account[]): DeliverabilityMailbox {
@@ -717,8 +737,8 @@ function presentMailbox(source: SourceMailbox, workspaces: Map<string, { slug: s
   const warmup = presentWarmup(source, now, account);
   const placement = presentPlacement(source, warmup, now, detail);
   const campaigns = presentCampaigns(source.campaigns.map(item => presentCampaign(item, paths)));
-  const currentAccount = presentAccount(account, connections, campaigns);
-  const result = presentVerdict({ account, presented: currentAccount, placement, campaigns, warmup, readiness,
+  const currentAccount = presentAccount(account, connections, campaigns, now);
+  const result = presentVerdict({ account, presented: currentAccount, placement, campaigns, warmup, readiness, now,
     source: account ? source.connections.find(item => item.connection_ref === account.id) : undefined,
     connection: account ? connections.find(item => item.connection_ref === account.id) : undefined,
     hasEvidence: warmup.sources.length > 0 || source.placement.test_count > 0 });

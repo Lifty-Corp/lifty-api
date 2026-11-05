@@ -69,12 +69,12 @@ const CAUSES: Record<ParticipationCause, ReturnType<typeof Words>> = {
   workspace_suspended: Words("Workspace paused", "workspace paused", "lifty", "contact_lift"),
   paused_by_lift: Words("Paused by Lifty", "paused by Lifty", "lifty", "lifty_review"),
   disconnected: Words("Disconnected", "disconnected", "member", "reconnect"),
-  needs_reconnect: Words("Needs reconnecting", "needs reconnecting", "member", "reconnect"),
+  needs_reconnect: Words("Reconnect needed", "needs reconnecting", "member", "reconnect"),
   unverified: Words("Connection not verified yet", "connection not verified yet", "lifty", "wait"),
   warming: Words("Warming up", "warming", "lifty", "wait"),
   placement_required: Words("Needs an inbox placement test", "needs an inbox placement test", "lifty", "wait"),
   declaration_required: Words("Confirm how this mailbox is used", "mailbox use not confirmed", "member", "set_mailbox_use"),
-  signature_missing: Words("Add a signature to send email", "signature missing", "member", "add_signature"),
+  signature_missing: Words("Needs a signature", "signature missing", "member", "add_signature"),
   mailbox_not_ready: Words("Not ready to send yet", "not ready to send yet", "lifty", "wait"),
   health_hold: Words("On hold", "on hold", "lifty", "lifty_review"),
 };
@@ -112,13 +112,20 @@ const Secondary = z.object({
   since: Timestamp.nullable(), next_step: ParticipationNextStep.optional(),
 }).strict().refine(belongs, "The cause belongs to another status.");
 
-function nextStep(value: { cause: ParticipationCause; since?: string | null | undefined; since_estimated?: boolean | undefined;
-  stop?: z.infer<typeof Stop> | undefined; health?: { reason: z.infer<typeof HealthReason> } | undefined }, primary: boolean, now: number): ParticipationNextStep {
+function nextStep(value: Omit<Reported, "also">, primary: boolean, now: number): ParticipationNextStep {
   const words = CAUSES[value.cause];
   const stopped = value.stop ? stopStep(value.stop, now) : null;
   const health = value.health ? `On hold · ${PLAIN_HEALTH_REASON[value.health.reason]}` : null;
   return { label: stopped?.label ?? health ?? words.label, owner: words.owner, action: words.action, since: value.since ?? null,
     since_estimated: primary ? value.since_estimated ?? false : null, review_by: stopped?.review_by ?? null };
+}
+
+type Reported = { cause: ParticipationCause; since?: string | null | undefined; since_estimated?: boolean | undefined; stop?: z.infer<typeof Stop> | undefined;
+  health?: { reason: z.infer<typeof HealthReason> } | undefined; also?: z.infer<typeof Secondary>[] | undefined };
+/** The same participation with every cause's words, as of `now`. */
+export function presentParticipation<T extends Reported>(value: T, now: number) {
+  return { ...value, next_step: nextStep(value, true, now),
+    ...(value.also ? { also: value.also.map(item => ({ ...item, next_step: nextStep(item, false, now) })) } : {}) };
 }
 
 /**
@@ -138,11 +145,7 @@ export const ParticipationSchema = z.object({
     "This status reports no waiting Journeys.")
   .refine(value => value.stop === undefined || value.cause === "paused_by_lift", "Only a Lifty stop reports stop facts.")
   .refine(value => value.health === undefined || value.cause === "health_hold", "Only a health hold reports its reason.")
-  .overwrite(value => {
-    const now = Date.now();
-    return { ...value, next_step: nextStep(value, true, now),
-      ...(value.also ? { also: value.also.map(item => ({ ...item, next_step: nextStep(item, false, now) })) } : {}) };
-  });
+  .overwrite(value => presentParticipation(value, Date.now()));
 export type Participation = z.infer<typeof ParticipationSchema>;
 
 const SENDABLE: readonly ParticipationStatus[] = ["sending", "waiting_for_first_lead", "no_active_campaign"];

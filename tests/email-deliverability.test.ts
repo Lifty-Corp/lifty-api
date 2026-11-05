@@ -6,6 +6,7 @@ import {
   type DeliverabilityMailbox, type DeliverabilitySource as Source,
 } from "../src/email-deliverability-contracts.js";
 import type { Account } from "../src/identity-contracts.js";
+import { receipt } from "./senders-fixtures.js";
 
 // Sources are real deliverability_read output for the LIF-1041 two-tenant
 // fixture, captured at this instant (see tests/fixtures/email-deliverability).
@@ -333,6 +334,28 @@ describe("member verdict and next step (LIF-1603)", () => {
     expect(by("email_not_ready", "signature_missing", active)).toEqual(expect.objectContaining({
       status: { code: "not_ready", label: "Needs a signature", tone: "warn", description: "Add a signature to this person in Senders to send email.", reasons: [] },
       next_step: { code: "add_signature", owner: "member", label: "Add a signature", description: "Add it in Senders. New Journeys use it from then on." } }));
+  });
+
+  // LIF-1771 AC-V1/V2: the verdict's top line is participation's primary cause,
+  // in the same words Senders shows. The health detail below it does not change.
+  it("takes its top line from participation and keeps the health detail", () => {
+    const stopped = verdict("send_paused:account", noCampaigns, { participation: { ...receipt("participation.stop"), waiting_journeys: 3 } });
+    expect(stopped.status).toMatchObject({ code: "paused", label: "Paused by Lifty · deliverability review · we review it by Nov 12" });
+    expect(stopped.status.description).toMatch(/3 Journeys waiting/);
+    expect(stopped.next_step).toMatchObject({ code: "lifty_review", owner: "lifty" });
+    const clear = verdict(null, noCampaigns);
+    for (const detail of ["warmup", "placement", "sending"] as const) expect(stopped[detail]).toEqual(clear[detail]);
+    expect(verdict(null, noCampaigns, { participation: receipt("participation.health_hold") }).status)
+      .toMatchObject({ code: "on_hold", label: "On hold · too many bounces", tone: "bad" });
+  });
+
+  it("shows the same primary cause and the other one below it", () => {
+    const paused = receipt("sender.pause").sender.accounts.find((item: Account) => item.identity?.startsWith("a1c9dcc0"));
+    const mailbox = verdict(null, noCampaigns, { participation: paused.participation });
+    expect(mailbox.status).toMatchObject({ code: "paused", label: "Sender paused" });
+    expect(mailbox.next_step).toMatchObject({ code: "turn_on", owner: "member", label: "Resume the person" });
+    expect(mailbox.account?.participation.next_step).toMatchObject({ label: "Sender paused", action: "resume_sender" });
+    expect(mailbox.account?.participation.also?.map(item => item.next_step?.label)).toEqual(["Paused"]);
   });
 
   it("explains a not-ready mailbox that a LIFT pause masks by its own state, never as Connected", () => {
