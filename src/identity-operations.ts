@@ -107,7 +107,7 @@ export const identityOperationDefinitions = {
       method: "GET", route: accountsRoute, rpc: "get_lifty_sending_accounts", connectionRpc: "get_lifty_connection_accounts", path: Empty,
       query: contracts.AccountsQuerySchema, request: null, invalid: invalidRequest,
       response: contracts.AccountsGetSchema, success: 200, args: input => ({ p_query: input.query }),
-      description: "Read sending accounts, optionally filtered by sender_id and channel, including disconnected history: connection status, usage state (active/paused), sending (allowed now, else reason), daily limits, last verified check, observation (verified/unverified), access removal, declaration and sends. Read-only; never checks or changes a provider. Unverified means the last known facts are older than the freshness window, not a disconnection.",
+      description: "Read sending accounts, optionally filtered by sender_id and channel, including disconnected history: connection status, usage state (active/paused), sending (allowed now, else reason), daily limits, last verified check, observation (verified/unverified), access removal, declaration, sends and participation (next_step holds the words to show, who acts and what to do). Read-only; never checks or changes a provider. Unverified means the last known facts are older than the freshness window, not a disconnection.",
     },
     connect: {
       method: "POST", route: `${accountsRoute}/connect`, cli: { operation: "connect" }, rpc: "connect_lifty_sending_account", connectionRpc: "connect_lifty_connection_account",

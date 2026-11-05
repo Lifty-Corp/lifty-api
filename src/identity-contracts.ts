@@ -131,7 +131,7 @@ const drainTarget = { sender_id: Id, drain_to_sender_id: Id, mode: DrainMode };
 // turned off meanwhile, or the customer list holds outreach. The function's
 // state "on" cannot follow a turn-off in the same transaction.
 const drainShapes = <E extends z.ZodType>(error: E) => z.union([
-  z.object({ ...drainTarget, outcomes: DrainOutcomes, errors: z.array(error).max(10), remaining: Count, handoff_ref: HandoffRef.optional() }).strict(),
+  z.object({ ...drainTarget, outcomes: DrainOutcomes, errors: z.array(error).max(10), remaining: Count, handoff_ref: HandoffRef.nullable().optional() }).strict(),
   z.object({ ...drainTarget, state: z.enum(["target_unavailable", "waiting_customer_list"]) }).strict(),
 ]);
 export const SenderDrainSchema = drainShapes(DrainLeadError);
