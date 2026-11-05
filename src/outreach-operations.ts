@@ -64,9 +64,9 @@ function reviewDefinition(read: boolean): Definition {
     path: read ? Empty : c.CampaignMessagePathSchema, query: read ? c.CampaignReviewsQuerySchema : Empty,
     request: read ? null : c.CampaignMessageReviewSchema, response: read ? c.CampaignReviewsSchema : c.CampaignMessageResultSchema,
     invalid, success: 200, cli: { operation: read ? "reviews_get" : "message_review_post" },
-    args: input => read ? { p_query: input.query } : { p_message_id: input.path.message_ref, p_payload: input.body },
-    description: read ? "Read the selected workspace's saved Campaign review queue, including the exact person, account and action. Paginated, read-only; failed reads stay unavailable. Members and operators use the same workflow."
-      : "Review one exact saved LinkedIn or email message using source_digest and expected_review_status. Approve schedules only the reviewed bytes; it never activates a Campaign. Skip closes only this channel's branch, without global suppression. Retry re-checks the account and sender and atomically approves the same bytes only after confirming that no begun, unknown or confirmed send could be replayed.",
+    args: input => read ? { p_query: { ...input.query, ...(input.query.unsent ? { unsent: true } : {}) } } : { p_message_id: input.path.message_ref, p_payload: input.body },
+    description: read ? "Read the selected workspace's saved Campaign review queue, including the exact person, account and action. review_status=approved with unsent=true lists what can still change. Paginated, read-only; failed reads stay unavailable. Members and operators use the same workflow."
+      : "Review one exact saved LinkedIn or email message using source_digest and expected_review_status. Approve schedules only the reviewed bytes; it never activates a Campaign. Skip closes only this channel's branch, without global suppression; it also applies to an approved, unsent message. Retry re-checks the account and sender and atomically approves the same bytes only after confirming that no begun, unknown or confirmed send could be replayed.",
   };
 }
 export const outreachOperationDefinitions = {
@@ -164,7 +164,8 @@ export async function executeOutreachOperation(session: AuthSession, key: string
     const receipt = c.CampaignReviewsSchema.parse(parsed.data);
     const query = input.query as z.infer<typeof c.CampaignReviewsQuerySchema>;
     if (receipt.messages.length > (query.limit ?? 100) || receipt.messages.some(message => message.direction !== "outbound" ||
-      (query.channel && message.channel !== query.channel) || (query.review_status && message.review_status !== query.review_status)))
+      (query.channel && message.channel !== query.channel) || (query.review_status && message.review_status !== query.review_status)
+      || (query.unsent && message.sent_at !== null)))
       throw new PublicError({ status: 502, ...unavailable });
     return receipt;
   }
