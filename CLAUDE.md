@@ -218,6 +218,16 @@ revision and never blocks a write or changes saved bytes.
 message, never a raw HTTP status. A new failure code needs this API first: an
 unknown code fails the response with 502.
 
+### Reports
+
+`src/report-operations.ts` passes stored reports and shared measurement through
+a strict envelope and computes nothing: a closed week reads the stored report
+the digest reads, any other range reads the live RPC. `get_lifty_research_status`
+keeps its admission-week meaning. A new metric or result key needs this API
+first (`METRIC_IDS`): an unknown key fails the response with 502. A nonmember's
+Slack approval of a Campaign revision has a null `actor_ref` and is still
+approved; Journey authoring stays member-only.
+
 ### Connection flows
 
 The contract is on [Connections](https://linear.app/lifty-corp/document/lead-gen-system-connections-2f15a8ae4cc6).

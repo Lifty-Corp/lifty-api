@@ -54,7 +54,9 @@ describe("generated MCP stage operations", () => {
     // is never published; codes carry only a pattern. LIF-1764 adds
     // senders_turn_off and senders_turn_on (about 3,600 characters). LIF-1800
     // adds search lane and research field lane rules (about 900 characters).
-    expect(JSON.stringify(tools).length).toBeLessThan(209_000);
+    // LIF-1571 adds the three report reads (about 4,800 characters); the metric
+    // ids stay out of it, because a report names its own.
+    expect(JSON.stringify(tools).length).toBeLessThan(214_000);
     expect(tools.find(tool => tool.name === "crm_mapping_sources")!.annotations.readOnlyHint).toBe(true);
     expect(tools.find(tool => tool.name === "sending_accounts_deliverability")!.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
     expect(tools.find(tool => tool.name === "sending_accounts_disconnect")!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: true });

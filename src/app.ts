@@ -3,6 +3,7 @@ import { SetNotificationControlsRequestSchema, SetNotificationPreferencesRequest
 import { historicalEmailResult, historicalOperation, HistoricalEmailResultSchema } from "./historical-outreach.js";
 import { executeOutreachOperation, type OutreachInput } from "./outreach-operations.js";
 import { executeLinkedinOperation, type LinkedinInput } from "./linkedin-operations.js";
+import { executeReportOperation } from "./report-operations.js";
 import { executeCrmPreferencesOperation } from "./crm-preferences.js";
 import { executeCrmSyncControlsOperation } from "./crm-sync-controls.js";
 import { executeCustomerExclusionsOperation } from "./customer-exclusions.js";
@@ -119,6 +120,8 @@ export interface AppDependencies {
   identityOperation(session: AuthSession, key: string, input: IdentityInput, signal?: AbortSignal): Promise<IdentityResult>;
   /** LinkedIn activity and waiting reasons (LIF-1190); read-only. */
   linkedinOperation(session: AuthSession, key: string, input: LinkedinInput): Promise<unknown>;
+  /** Stored weekly reports and shared live measurement (LIF-1571); read-only. */
+  reportOperation(session: AuthSession, key: string, input: IdentityInput): Promise<unknown>;
   /** CRM research-note and conversation preferences (LIF-1239). */
   crmPreferencesOperation(session: AuthSession, key: string, input: IdentityInput): Promise<unknown>;
   /** CRM automatic sync and the bounded test sync (LIF-1622). */
@@ -743,6 +746,7 @@ const defaultDependencies: AppDependencies = {
   outreachOperation: executeOutreachOperation,
   identityOperation: (session, key, input, signal) => executeIdentityOperation(session, key, input, connectorUnavailable, signal),
   linkedinOperation: executeLinkedinOperation,
+  reportOperation: executeReportOperation,
   crmPreferencesOperation: executeCrmPreferencesOperation,
   crmSyncControlsOperation: executeCrmSyncControlsOperation,
   customerExclusionsOperation: executeCustomerExclusionsOperation,

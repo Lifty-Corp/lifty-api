@@ -4,6 +4,7 @@ import { businessOperationDefinitions } from "./business-operations.js";
 import { researchOperationDefinitions } from "./research-operations.js";
 import { identityOperationDefinitions, type IdentityDefinition } from "./identity-operations.js";
 import { linkedinOperationDefinitions } from "./linkedin-operations.js";
+import { reportOperationDefinitions } from "./report-operations.js";
 import { crmPreferencesOperationDefinitions } from "./crm-preferences.js";
 import { crmSyncControlsOperationDefinitions } from "./crm-sync-controls.js";
 import { customerExclusionsOperationDefinitions } from "./customer-exclusions.js";
@@ -106,6 +107,7 @@ const definitionCatalog = (definitions: Record<string, Record<string, IdentityDe
 }))]));
 const identityCatalog = definitionCatalog(identityOperationDefinitions);
 const linkedinCatalog = definitionCatalog(linkedinOperationDefinitions);
+const reportsCatalog = definitionCatalog(reportOperationDefinitions);
 const crmPreferencesCatalog = definitionCatalog(crmPreferencesOperationDefinitions);
 const crmSyncControlsCatalog = definitionCatalog(crmSyncControlsOperationDefinitions);
 const customerExclusionsCatalog = definitionCatalog(customerExclusionsOperationDefinitions);
@@ -155,6 +157,7 @@ export const stageOperations: Record<string, Record<string, StageOperation>> = {
     patch: unsupported("leads", "PATCH", "Lead detail and feedback live in the dashboard."),
     delete: unsupported("leads", "DELETE", "Researched leads and their history are retained."),
   },
+  reports: reportsCatalog.reports!,
   "commercial-voice": { ...businessCatalog["commercial-voice"]!, post: unsupported("commercial-voice", "POST", "Empty voice exists at version 0 from workspace creation."), delete: unsupported("commercial-voice", "DELETE", "Use PATCH to clear values; pinned history is retained.") },
   crm: {
     sync_start: operation("POST", "/v1/workspace/crm/sync", "Queue delivery of up to 2,000 eligible saved leads to the current workspace's connected HubSpot or Attio account. Reattaches an active sync or retries its failed cohort before selecting unsynced qualified leads. Creates or updates CRM contacts and companies and mirrors research according to saved CRM preferences. Returns an asynchronous run_ref; does not discover leads or send outreach. While automatic sync is paused it returns CRM_AUTOMATIC_SYNC_PAUSED.", StartCrmSyncResultSchema, Empty),
