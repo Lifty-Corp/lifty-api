@@ -1,7 +1,10 @@
 export interface UpstreamDiagnostics {
   upstream_operation: string;
   upstream_code?: string;
-  upstream_kind: "database_storage" | "database_timeout" | "database_error" | "transport" | "edge_function";
+  upstream_kind: "database_storage" | "database_timeout" | "database_error" | "transport" | "edge_function" | "provider";
+  /** The provider's documented error type and request id, so a failure can be explained and traced. */
+  provider_error?: string;
+  provider_request_id?: string;
 }
 
 export interface PublicErrorOptions {
