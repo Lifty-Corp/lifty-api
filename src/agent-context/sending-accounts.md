@@ -209,19 +209,6 @@ warmup only cancels a pending pause. For a dedicated mailbox that has not
 completed its initial period, pausing or removing warmup delays sending; say
 so and get an explicit yes first. Report each mailbox separately.
 
-## DNS fixes
-
-A connected email account can have failing DNS records. Finishing onboarding does
-not wait for them, but sending readiness still applies. Read `dns_status` with
-the explicit `workspace` and `connection_ref`, and repeat only the records it
-lists. Give each record's instructions as returned. DKIM keys come from the
-mailbox provider's admin screen, so never invent a DKIM value.
-
-When the founder says the records are fixed, call `dns_recheck`. Lifty runs a
-fresh check and confirms within 30 minutes. Only a passing check closes the
-issue, so say it is being checked rather than fixed, and read `dns_status` again
-for the result. A repeated request returns the check already pending.
-
 ## Placement tests
 
 A placement test shows where a mailbox's email lands (inbox, spam or missing)
