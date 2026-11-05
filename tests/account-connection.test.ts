@@ -507,6 +507,14 @@ describe("server recovery of received authorizations (LIF-1629)", () => {
     expect(JSON.stringify(events)).not.toMatch(/acc_new|ana@example|connect\.lifty/);
   });
 
+  it("sends the proved mailbox type only to the owner that accepts it", async () => {
+    const db = attemptDb(); authorized(db); db.claim = [{ attempt_id: attemptId, attempts: 1, final: false }];
+    stub(db);
+    await createAccountConnection({ ...loadConfig(env).accounts!, serverKeys: { email: emailKey }, connectionOnly: true }).recover();
+    expect(db.payloads.complete).toEqual({ attempt_id: attemptId, verified: { api_version: "v2", application_id: "app_test",
+      account_scope_id: null, account_id: "acc_new", user_id: "user-1", email: "ana@example.test" } });
+  });
+
   it("keeps an unready or unreachable provider for the next retry and ends it only at the final check", async () => {
     const db = attemptDb(); authorized(db); db.claim = [{ attempt_id: attemptId, attempts: 3, final: false }];
     stub(db, { accountStatus: 503 });
