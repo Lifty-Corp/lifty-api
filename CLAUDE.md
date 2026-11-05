@@ -66,10 +66,10 @@ the policy or distributing it to other repositories.
 ## Release
 
 Feature PRs target `develop`, which deploys nothing. The Verify workflow runs
-the fast tier (`npm run verify -- --base origin/<base>`) on pull requests to
-`develop` and hotfix pull requests to `main`, and the full tier
+the fast tier (`npm run verify -- --base origin/<base>`) on hotfix pull requests
+to `main` and the full tier
 (`npm run verify:full`) on the release pull request `develop` → `main` and on
-manual runs; a push to `develop` runs nothing. A batched release promotes
+manual runs; a pull request or push to `develop` runs nothing (LIF-1818). A batched release promotes
 `develop` to `main` (Compass `CLAUDE.md`). `staging` holds `main`
 plus the isolated pilot: every push to `main` merges into it automatically
 ([Sync staging](.github/workflows/sync-staging.yml)), and each `staging` push
