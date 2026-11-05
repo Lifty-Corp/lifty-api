@@ -32,6 +32,8 @@ describe("runtime context discovery and connection handoff", () => {
       resume_campaigns: "POST /v1/workspace/sending-accounts/{id}/resume-campaigns",
       declare: "POST /v1/workspace/sending-accounts/{id}/declare",
       disconnect: "POST /v1/workspace/sending-accounts/{id}/disconnect",
+      incidents_get: "GET /v1/workspace/recovery-incidents",
+      action: "GET /v1/workspace/sending-accounts/{id}/action",
     });
     expect(operations.connect!.request.body).toMatchObject({ required: ["sender_id", "channel"], additionalProperties: false });
     expect(Object.keys(operations.disconnect!.responses)).toEqual(expect.arrayContaining(["200", "202"]));
@@ -43,6 +45,20 @@ describe("runtime context discovery and connection handoff", () => {
       delete: "POST /v1/workspace/senders/{id}/delete",
       turn_off: "POST /v1/workspace/senders/{id}/turn-off",
       turn_on: "POST /v1/workspace/senders/{id}/turn-on",
+      pause: "POST /v1/workspace/senders/{id}/pause",
+      resume: "POST /v1/workspace/senders/{id}/resume",
+      settings_get: "GET /v1/workspace/outreach-settings",
+      settings_patch: "PATCH /v1/workspace/outreach-settings",
+      handoff_get: "GET /v1/workspace/sender-handoffs/{handoff_ref}",
+      handoff_prepare: "POST /v1/workspace/sender-handoffs/{handoff_ref}/prepare",
+      handoff_approve: "POST /v1/workspace/sender-handoffs/{handoff_ref}/approve",
+      handoff_cancel: "POST /v1/workspace/sender-handoffs/{handoff_ref}/cancel",
+      handoff_settings_revise: "POST /v1/workspace/sender-handoffs/{handoff_ref}/settings",
+      handoff_reply_revise: "POST /v1/workspace/sender-handoffs/{handoff_ref}/replies/{turn_ref}",
+      stops_get: "GET /v1/workspace/stops",
+      stop_set: "POST /v1/workspace/stops",
+      stop_release: "POST /v1/workspace/stops/release",
+      stop_review: "POST /v1/workspace/stops/review",
     });
     expect(getAgentContext("senders")!.instructions).toContain("lifty post senders delete");
     expect(getAgentContext("senders")!.instructions).toContain("lifty context senders");
@@ -251,6 +267,19 @@ describe("customer surfaces name no provider or retired volume knob", () => {
     expect(publicCodes).toEqual(expect.arrayContaining(["RESEARCH_STATUS_UNAVAILABLE", "LEADS_UNAVAILABLE", "STAGE_OPERATION_UNSUPPORTED"]));
     for (const [name, text] of Object.entries(surfaces)) expect(text.match(retired)?.[0], name).toBeUndefined();
   });
+  // LIF-1771 AC-V6: a Lifty stop at any scope is never something a member resumes.
+  it("never directs a member to resume a Lifty stop", () => {
+    for (const stage of ["senders", "sending-accounts", "campaigns", "linkedin"]) {
+      const { instructions } = getAgentContext(stage)!;
+      const sentences = instructions.replace(/\s+/g, " ").split(/(?<=\.)\s/).filter(text => /paused_by_lift|Lifty stop|stopped by Lifty|Lifty stopped/i.test(text));
+      expect(sentences.length, stage).toBeGreaterThan(0);
+      for (const sentence of sentences) expect(sentence, stage).toMatch(/only LIFT|never|Only LIFT|stays stopped|stopped this account|Resume never/);
+    }
+    expect(getAgentContext("linkedin")!.instructions).toMatch(/`paused_by_lift`: Lifty stopped this account\. Only LIFT releases it, so never\s+offer to resume it\./);
+    for (const operation of [getAgentContext("senders")!.operations!.resume!, getAgentContext("sending-accounts")!.operations!.resume!])
+      expect(operation.description).toMatch(/Lifty stop.*stay|separate sending holds/i);
+  });
+
   it("keeps the sample's operations to get, post, progress and the founder's confirmation", () => {
     expect(Object.keys(stageOperations["sample-review"]!).sort()).toEqual(["confirm", "get", "post", "progress"]);
     expect(getStageMcpTools().map(tool => tool.name).filter(name => /recovery|capacity|allowance|apollo/.test(name))).toEqual([]);

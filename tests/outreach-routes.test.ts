@@ -17,6 +17,73 @@ function harness(result: (name: string, args: Record<string, unknown>) => unknow
   return { app, request, rpc };
 }
 
+// LIF-1771 AC-V3: activation names who cannot send yet, and still proceeds.
+describe("blocked people on activation", () => {
+  const roster = (senders: unknown[]) => ({ workspace, senders });
+  const mailbox = (sender: string, identity: string, participation: unknown, extra: Record<string, unknown> = {}) => ({ id: crypto.randomUUID(), sender_id: sender, channel: "email", identity, status: "connected", state: "active",
+    sending: { allowed: false, reason: "mailbox_not_ready", scope: null }, limits: { emails_per_day: 10 }, checked_at: null, observation: { state: "verified" }, connected_at: null, disconnected_at: null,
+    access_revoked_at: null, access_removal: null, declaration: null, sends: null, participation, ...extra });
+  const person = (id: string, name: string, accounts: unknown[], extra: Record<string, unknown> = {}) => ({ id, version: 1, name, signature: null, booking_url: null, accounts, ...extra });
+  const lee = "11111111-1111-4111-8111-111111111111"; const mia = "22222222-2222-4222-8222-222222222223";
+  const warming = { status: "email_not_ready", cause: "warming" };
+  const inbox = (address: string, ready_on: string | null) => ({ mailbox: address, status: "warming", cap: 10, planned: 0, ready_on, safety_check_stale: false });
+  const capacity = (inboxes: unknown[]) => ({ workspace_ref: workspace.workspace_ref, assessed_at: "2026-11-05T12:00:00Z", window_days: 14, business_days: 10,
+    email: { operating: true, short: false, on_deck_total: 0, inboxes_to_connect: 0, people: [{ sender_ref: lee, sender_name: "Lee", inboxes, sendable_inboxes: 0, warming_inboxes: 1, capacity_per_day: 0, capacity_at_caps_per_day: 0,
+      target_rate: 0, committed_rate: 0, rate: 0, backlog: { overdue_steps: 0, waiting_journeys: 0, steps: 0 }, days_to_clear: null, clears: false, inboxes_needed: 0, on_deck: 0, inboxes_to_connect: 0 }] },
+    linkedin: { operating: false, short: false, sendable_accounts: 0, invitations_per_week: 0, planned_messages_per_day: 0, invitations_needed_per_week: 0, messages_needed_per_day: 0, senders_needed: 0, senders_to_add: 0,
+      backlog: { invitations: 0 }, days_to_clear: null, clears: false, limits: { reply_share: 0.2, new_sender: { invitations_per_7_days: 0, messages_per_day: 0, planned_messages_per_day: 0 } } } });
+  const activated = (channel = "email") => ({ workspace, campaign: { ...campaign, channel, state: "active", active_revision: revision(policy, true) }, journey: { ...journey, executable_version: executableVersion } });
+  const activate = (reads: Record<string, unknown>, channel?: string) => {
+    const h = harness(name => {
+      if (name === "activate_lifty_campaign") return activated(channel);
+      if (!(name in reads)) throw new Error("unavailable");
+      return reads[name];
+    });
+    return { h, result: h.request("POST", `/v1/workspace/campaigns/${campaignRef}/activate`, { expected_version: 1, revision_ref: revisionRef, digest }) };
+  };
+
+  it("names the person, the cause and when it clears, and the campaign activates", async () => {
+    const { result } = activate({ get_lifty_senders: roster([person(lee, "Lee", [mailbox(lee, "lee@meetbramble.test", warming)]),
+      person(mia, "Mia", [mailbox(mia, "mia@meetbramble.test", { status: "waiting_for_first_lead", cause: "no_lead_yet" })])]),
+      get_lifty_outreach_capacity_readout: capacity([inbox("LEE@meetbramble.test", "2026-11-14")]) });
+    const response = await result;
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.campaign.state).toBe("active");
+    expect(body.blocked_people).toEqual([{ sender_id: lee, name: "Lee", cause: "warming", label: "Lee · warming until Nov 14", clears_on: "2026-11-14", owner: "lifty", action: "wait" }]);
+  });
+
+  it("reads one cause per person: any mailbox that can send clears them, and the soonest date speaks", async () => {
+    const { result } = activate({ get_lifty_senders: roster([
+      person(lee, "Lee", [mailbox(lee, "late@a.test", warming), mailbox(lee, "soon@a.test", warming)]),
+      person(mia, "Mia", [mailbox(mia, "one@a.test", warming), mailbox(mia, "two@a.test", { status: "sending", cause: "active_journeys" })]),
+      person("33333333-3333-4333-8333-333333333334", "Off", [mailbox("33333333-3333-4333-8333-333333333334", "off@a.test", { status: "paused", cause: "sender_off" })],
+        { sending: { state: "off", off_at: "2026-11-05T12:00:00Z", reason: "Left", drain_to_sender_id: mia, drain_mode: "continue", leads_remaining: 0 } }),
+      person("44444444-4444-4444-8444-444444444445", "No mailbox", []),
+      person("55555555-5555-4555-8555-555555555556", "Stopped", [mailbox("55555555-5555-4555-8555-555555555556", "stop@a.test", { status: "paused", cause: "paused_by_lift" })]),
+    ]), get_lifty_outreach_capacity_readout: capacity([inbox("late@a.test", "2026-11-20"), inbox("soon@a.test", "2026-11-14")]) });
+    const body = await (await result).json();
+    expect(body.blocked_people.map((item: { label: string }) => item.label)).toEqual(["Lee · warming until Nov 14", "Stopped · paused by Lifty"]);
+    expect(body.blocked_people[1]).toMatchObject({ owner: "lifty", action: "lifty_review", clears_on: null });
+  });
+
+  it("leaves a warming date unknown when the capacity read fails, and says nothing about who when the roster fails", async () => {
+    const dateless = await (await activate({ get_lifty_senders: roster([person(lee, "Lee", [mailbox(lee, "lee@a.test", warming)])]) }).result).json();
+    expect(dateless.blocked_people[0]).toMatchObject({ label: "Lee · warming", clears_on: null });
+    const { result, h } = activate({});
+    const response = await result;
+    expect(response.status).toBe(200);
+    expect((await response.json()).blocked_people).toBeNull();
+    expect(h.rpc.mock.calls[0]![0]).toBe("activate_lifty_campaign");
+  });
+
+  it("reads nothing more for a LinkedIn campaign", async () => {
+    const { result, h } = activate({}, "linkedin");
+    expect((await (await result).json()).blocked_people).toEqual([]);
+    expect(h.rpc).toHaveBeenCalledOnce();
+  });
+});
+
 describe("canonical Outreach member transport", () => {
   it("routes every catalog operation to its exact RPC without a second workspace selector", async () => {
     const h = harness(name => name === "get_lifty_journeys" ? { workspace, journeys: [journeySummary], next_cursor: null }

@@ -53,6 +53,24 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   DRAIN_MODE_UNAVAILABLE: "This drain mode is not available yet. Omit drain_mode or send unused_channels.",
   // Pausing a sender (LIF-1771).
   SENDER_OFF: "This person is retired, so they cannot be paused. Turn them on first, or leave them retired.",
+  // LIFT stops (LIF-1771). A member never gets past ADMIN_REQUIRED.
+  ADMIN_REQUIRED: "Only LIFT admins can do this.",
+  STOP_NOT_FOUND: "Nothing is stopped at this scope. Read the current stops.",
+  STOP_SCOPE_INVALID: "Choose an account, a person, a channel or the workspace to stop.",
+  STOP_REASON_INVALID: "Choose one of the listed stop reasons.",
+  STOP_NOTE_INVALID: "Keep the note to 1000 characters.",
+  STOP_REVIEW_INVALID: "Choose a review date in the future.",
+  // Workspace assignment (LIF-1771).
+  ASSIGNMENT_FOUNDER_REQUIRED: "This assignment mode needs a founder. Choose the person who is the founder.",
+  ASSIGNMENT_FOUNDER_INVALID: "Choose a founder from this workspace who is on and not deleted. Read senders for current ids.",
+  // Sender handoffs (LIF-1769).
+  HANDOFF_NOT_FOUND: "This handoff is not available in the selected workspace.",
+  HANDOFF_SCOPE_STALE: "This handoff is no longer current. Read the person's current handoff before continuing.",
+  HANDOFF_REVISION_STALE: "This handoff changed since you read it. Read it again and use its current revision.",
+  HANDOFF_CONTEXT_STALE: "A conversation in this handoff changed. Read it again and review the current sample before approving.",
+  HANDOFF_SAMPLE_INCOMPLETE: "This sample still has drafts to prepare. Approve it once every draft exists.",
+  HANDOFF_CONFIRMATION_REQUIRED: "Confirm this handoff with confirm:true and the action named in the handoff.",
+  HANDOFF_REPLY_STALE: "This reply changed or was already answered. Read the handoff again before editing it.",
   CAMPAIGN_RESUME_ACCOUNT_BLOCKED: "Reconnect the same LinkedIn account and resume its usage first. Sending holds and unverified health must be resolved before resuming campaigns.",
   ACCOUNT_NOT_FOUND: "This sending account is not available in the selected workspace. Read sending-accounts for current ids.",
   ACCOUNT_DISCONNECTED: "This account is disconnected. Reconnect it before resuming or changing it.",
@@ -70,7 +88,7 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   OUTREACH_SEND_UNCONFIRMED: "This message has begun, unknown or confirmed sending work. Read its saved evidence before changing it; repeating a send could duplicate it.",
   OUTREACH_TARGET_STOPPED: "Outreach has stopped for this person. Read its current state before reviewing more messages.",
   OUTREACH_REPLY_MOVED: "This reply turn changed or was already answered. Read its current state before deciding again.",
-  OUTREACH_SETTINGS_MOVED: "Review settings changed since you read them. Read the current settings and apply your change again.",
+  OUTREACH_SETTINGS_MOVED: "These settings changed since you read them. Read the current settings and apply your change again.",
   OUTREACH_REPLY_ROUTE_UNAVAILABLE: "The original reply account or conversation could not be verified. Read its status before sending.",
   OUTREACH_ACCOUNT_UNAVAILABLE: "The saved account is not ready to send. Check its status in Senders before trying again.",
   OUTREACH_APPROACH_UNAVAILABLE: "This message's approved writing approach is no longer available. Read its Campaign before approving it.",

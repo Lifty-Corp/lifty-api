@@ -2,8 +2,10 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { z } from "zod";
 import type { AuthSession } from "./app.js";
 import { PublicError } from "./errors.js";
-import { rpcFailure } from "./rpc-errors.js";
+import { RPC_ERROR_MESSAGES, rpcFailure } from "./rpc-errors.js";
 import * as contracts from "./identity-contracts.js";
+import { accountActionAvailable, accountControlDefinitions, senderControlDefinitions } from "./sender-controls.js";
+import { AccountActionQuery, HandoffSchema, WorkspaceSettingsResultSchema } from "./sender-control-contracts.js";
 
 // LIF-1182 Identity: senders and their sending accounts. Every definition is a
 // catalog operation (HTTP route, MCP tool, CLI noun, public context). Member
@@ -19,6 +21,8 @@ export interface IdentityDefinition {
   method: "GET" | "POST" | "PATCH";
   /** Override the method default when a GET can persist provider reconciliation. */
   readOnly?: boolean;
+  /** The RPC refuses a null p_workspace_id, so the selected workspace is resolved first. */
+  explicitWorkspace?: boolean;
   route: string;
   cli?: { operation: string };
   rpc: string;
@@ -96,6 +100,7 @@ export const identityOperationDefinitions = {
       args: input => ({ p_sender_id: path(input), p_payload: input.body }),
       description: "Turn a person who is off back on with expected_version and confirm:true: they take part in new Journeys again; drained leads stay with the person they moved to. Never connects or sends by itself. After an uncertain response read senders: no sending object means the person is on.",
     },
+    ...senderControlDefinitions,
   },
   "sending-accounts": {
     get: {
@@ -159,8 +164,21 @@ export const identityOperationDefinitions = {
       args: input => ({ p_account_id: path(input), p_payload: input.body }),
       description: "Disconnect this account with confirm:true: it is paused and disconnected at once (new sends stop; submitted sends keep their history), then Lifty requests removal of its access at the provider. 200 when removal is confirmed (access_revoked_at set) or not applicable, 202 when it is still unconfirmed: Lifty keeps removing it on its own, so do not repeat the request. Other accounts are unaffected.",
     },
+    ...accountControlDefinitions,
   },
 } satisfies Record<string, Record<string, IdentityDefinition>>;
+
+/** Which handoff needs its current-reply drafts after this response, if any. */
+export function handoffRepliesRequest(key: string, body: unknown): { workspaceId: string; handoffRef: string; settingsRevision: number | null } | null {
+  if (key === "senders.turn_off") {
+    const { workspace, drain } = body as z.output<typeof contracts.SenderTurnOffResultSchema>;
+    return "handoff_ref" in drain && drain.handoff_ref ? { workspaceId: workspace.workspace_ref, handoffRef: drain.handoff_ref, settingsRevision: null } : null;
+  }
+  if (key !== "senders.handoff_prepare" && key !== "senders.handoff_settings_revise") return null;
+  const handoff = body as z.output<typeof HandoffSchema>;
+  return { workspaceId: handoff.workspace_id, handoffRef: handoff.drain_ref,
+    settingsRevision: key === "senders.handoff_settings_revise" ? handoff.settings_revision : null };
+}
 
 export const identityEntries = () =>
   Object.entries(identityOperationDefinitions).flatMap(([resource, operations]) =>
@@ -328,8 +346,20 @@ export async function executeIdentityOperation(session: AuthSession, key: string
     return { status: 200, body: verified(contracts.AttemptCloseResultSchema, { ...receipt,
       attempt: presentAttempt(receipt.attempt, connector, profile), successor }) };
   }
+  // A LIFT admin names the workspace; a member's comes from the shared selection rule.
+  const selectedWorkspace = async () => session.workspaceRef
+    ?? verified(WorkspaceSettingsResultSchema, await call("get_lifty_workspace_settings", {})).workspace.workspace_ref;
   const operationRpc = profile === "connections" && definition.connectionRpc ? definition.connectionRpc : definition.rpc;
-  const data = await call(operationRpc, definition.args(input));
+  const data = await call(operationRpc, { ...definition.args(input), ...(definition.explicitWorkspace ? { p_workspace_id: await selectedWorkspace() } : {}) });
+  if (key === "sending-accounts.action") {
+    const { workspace, accounts } = verified(contracts.AccountsGetSchema, data);
+    const account = accounts.find(item => item.id === contracts.IdPath.parse(input.path).id);
+    if (!account) throw new PublicError({ status: 404, code: "ACCOUNT_NOT_FOUND", message: RPC_ERROR_MESSAGES.ACCOUNT_NOT_FOUND! });
+    const { action } = AccountActionQuery.parse(input.query);
+    return { status: 200, body: verified(definition.response, { workspace, account_id: account.id, sender_id: account.sender_id, channel: account.channel,
+      action, available: accountActionAvailable(account, action),
+      operation: action === "reconnect" ? "sending_accounts_reconnect" : "sending_accounts_warmup_start", next_step: account.participation.next_step }) };
+  }
   if (key === "sending-accounts.connect" || key === "sending-accounts.reconnect") {
     const { channel, ...attemptStart } = verified(StartedAttempt, data);
     const attempt = await readAttempt(attemptStart.id);

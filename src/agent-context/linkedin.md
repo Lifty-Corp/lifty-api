@@ -79,6 +79,8 @@ normally. Otherwise it says why the account's due LinkedIn work waits:
   work, only when the founder asks.
 - `account_paused`: the account is paused. Resume it with
   `sending_accounts_resume`, only when the founder asks.
+- `paused_by_lift`: Lifty stopped this account. Only LIFT releases it, so never
+  offer to resume it. Show the account's `participation.next_step.label`.
 - `account_needs_attention`: Lifty cannot use the account now. Read
   `lifty get sending-accounts`: a `needs_reconnect` account (or a
   `disconnected` one the founder wants to use again) needs

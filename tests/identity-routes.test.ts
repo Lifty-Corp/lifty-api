@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createApp } from "../src/app.js";
+import { createApp, type AppDependencies, type LogEvent } from "../src/app.js";
 import { STAGE_CLIENT_CONTRACT } from "../src/agent-context.js";
 import { executeIdentityOperation, type AccountConnector } from "../src/identity-operations.js";
 import { operationToolNames } from "../src/operation-names.js";
@@ -28,7 +28,8 @@ const attempt = (state: string, extra: Record<string, unknown> = {}) => ({ works
   progress: {stage: state === "pending" ? "verifying" : "complete"}, recovery: null, replaced_by: null, provider_hint: null, ...extra });
 
 type Rpc = (name: string, args: Record<string, unknown>) => unknown;
-function harness(rpc: Rpc, connector: Partial<AccountConnector> = {}, profile: "full" | "connections" = "full") {
+type AppEnqueue = AppDependencies["enqueueHandoffReplies"];
+function harness(rpc: Rpc, connector: Partial<AccountConnector> = {}, profile: "full" | "connections" = "full", enqueueHandoffReplies: AppEnqueue = vi.fn(async () => ({ id: "run" }))) {
   const calls: { name: string; args: Record<string, unknown> }[] = [];
   const client = { rpc: vi.fn(async (name: string, args: Record<string, unknown>) => {
     calls.push({ name, args });
@@ -40,12 +41,13 @@ function harness(rpc: Rpc, connector: Partial<AccountConnector> = {}, profile: "
     revoke: vi.fn(async () => {}),
     ...connector,
   };
-  const app = createApp({ runtimeProfile: profile, authenticate: async () => ({ ok: true, session: { userId: "founder", client } }),
-    identityOperation: (session, key, input, signal) => executeIdentityOperation(session, key, input, effects, signal, profile), log: () => {} });
+  const logged: LogEvent[] = [];
+  const app = createApp({ runtimeProfile: profile, authenticate: async () => ({ ok: true, session: { userId: "founder", client } }), enqueueHandoffReplies,
+    identityOperation: (session, key, input, signal) => executeIdentityOperation(session, key, input, effects, signal, profile), log: event => { logged.push(event); } });
   const request = (method: string, path: string, body?: unknown) => app.request(path, { method,
     headers: { authorization: "Bearer session", "x-lifty-client-contract": STAGE_CLIENT_CONTRACT, "x-lifty-workspace": "example", "content-type": "application/json" },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
-  return { request, calls, effects };
+  return { request, calls, effects, logged, enqueueHandoffReplies };
 }
 const dbError = (code: string, message: string, details?: unknown) => Object.assign(new Error(message), { code, message, details: details === undefined ? null : JSON.stringify(details) });
 
@@ -596,5 +598,303 @@ describe("participation causes", () => {
     expect((await paused.json()).sender.sending).toEqual({ state: "paused", paused_at: "2026-11-05T16:52:25.182571+00:00", reason: "Leave" });
     const roster = await harness(() => receipt("sender.pending_transfer")).request("GET", "/v1/workspace/senders");
     expect((await roster.json()).senders[0].sending.pending_transfer).toEqual({ retired_at: "2026-11-05T16:52:25.523203+00:00", leads_awaiting_transfer: 0 });
+  });
+});
+
+// LIF-1771 S-01, S-02, S-10: member controls, against the authentic receipts.
+describe("sender pause and retire", () => {
+  const path = `/v1/workspace/senders/${senderId}`;
+  it("pauses and resumes with expected_version through the member RPCs", async () => {
+    const h = harness(name => name === "pause_lifty_sender" ? receipt("sender.pause") : receipt("sender.resume"));
+    const paused = await h.request("POST", `${path}/pause`, { expected_version: 2, confirm: true, reason: "Leave" });
+    expect(paused.status).toBe(200);
+    expect((await paused.json()).sender.sending.state).toBe("paused");
+    const resumed = await h.request("POST", `${path}/resume`, { expected_version: 3, confirm: true });
+    const body = await resumed.json();
+    expect(body.sender).not.toHaveProperty("sending");
+    // Resume clears the pause and nothing else: the Lifty stop on this account stands.
+    expect(body.sender.accounts.find((item: { channel: string }) => item.channel === "linkedin").participation.next_step)
+      .toMatchObject({ owner: "lifty", action: "lifty_review" });
+    expect(h.calls).toEqual([
+      { name: "pause_lifty_sender", args: { p_workspace_id: null, p_sender_id: senderId, p_payload: { expected_version: 2, confirm: true, reason: "Leave" } } },
+      { name: "resume_lifty_sender", args: { p_workspace_id: null, p_sender_id: senderId, p_payload: { expected_version: 3, confirm: true } } },
+    ]);
+  });
+
+  it.each([
+    ["pause", { confirm: true }], ["pause", { expected_version: 2 }], ["pause", { expected_version: 2, confirm: true, reason: "  " }],
+    ["pause", { expected_version: 2, confirm: true, drain_to_sender_id: senderId }], ["resume", { expected_version: 2, confirm: true, reason: "back" }],
+  ])("refuses %s %j before any RPC", async (action, body) => {
+    const h = harness(() => { throw new Error("must not call"); });
+    expect((await h.request("POST", `${path}/${action}`, body)).status).toBe(400);
+    expect(h.calls).toEqual([]);
+  });
+
+  it.each([
+    ["PT409", "SENDER_OFF", 409], ["PT422", "VERSION_REQUIRED", 422], ["PT409", "VERSION_CONFLICT", 409], ["PT404", "SENDER_NOT_FOUND", 404], ["PT403", "lifty_workspace_forbidden", 403],
+  ])("surfaces %s %s as a stable public error", async (sqlstate, code, status) => {
+    const response = await harness(() => { throw dbError(sqlstate, code); }).request("POST", `${path}/pause`, { expected_version: 2, confirm: true });
+    expect(response.status).toBe(status);
+    expect((await response.json()).error.code).toBe(code === "lifty_workspace_forbidden" ? "WORKSPACE_FORBIDDEN" : code);
+  });
+
+  it("names a missing, foreign, off or paused target truthfully and changes nothing", async () => {
+    const h = harness(() => { throw dbError("PT422", "DRAIN_TARGET_INVALID"); });
+    const response = await h.request("POST", `${path}/turn-off`, { expected_version: 2, confirm: true, reason: "Left", drain_to_sender_id: otherAccount });
+    expect(response.status).toBe(422);
+    expect((await response.json()).error).toMatchObject({ code: "DRAIN_TARGET_INVALID", message: expect.stringMatching(/on, not paused and not deleted.*Nothing changed.*pause the person/) });
+    expect(h.calls.map(call => call.name)).toEqual(["turn_off_lifty_sender"]);
+    expect(h.enqueueHandoffReplies).not.toHaveBeenCalled();
+    // The target stays mandatory.
+    expect((await h.request("POST", `${path}/turn-off`, { expected_version: 2, confirm: true, reason: "Left" })).status).toBe(400);
+  });
+
+  it("requests the handoff's replies after a retire, and a failed request never fails it", async () => {
+    const retire = { expected_version: 2, confirm: true, reason: "Left", drain_to_sender_id: otherAccount };
+    const h = harness(() => receipt("sender.retired"));
+    const response = await h.request("POST", `${path}/turn-off`, retire);
+    expect(response.status).toBe(200);
+    expect((await response.json()).drain).toMatchObject({ handoff_ref: "119", outcomes: { waiting_sample_approval: 1 }, remaining: 1 });
+    expect(h.enqueueHandoffReplies).toHaveBeenCalledExactlyOnceWith({ workspaceId: "eb866d72-d75a-4897-ba42-3b722fa7be14", handoffRef: "119", settingsRevision: null });
+    const failing = harness(() => receipt("sender.retired"), {}, "full", vi.fn(async () => { throw new Error("Trigger is down"); }));
+    expect((await failing.request("POST", `${path}/turn-off`, retire)).status).toBe(200);
+    expect(failing.logged).toEqual([expect.objectContaining({ event: "handoff_replies_enqueue_failed", error_code: "HANDOFF_REPLIES_ENQUEUE_FAILED" })]);
+  });
+
+  it("requests nothing for a retire with no handoff", async () => {
+    const { handoff_ref: _ref, ...drain } = receipt("sender.retired").drain;
+    const h = harness(() => ({ ...receipt("sender.retired"), drain }));
+    expect((await h.request("POST", `${path}/turn-off`, { expected_version: 2, confirm: true, reason: "Left", drain_to_sender_id: otherAccount })).status).toBe(200);
+    expect(h.enqueueHandoffReplies).not.toHaveBeenCalled();
+  });
+});
+
+// LIF-1771 S-12, S-13, S-18: the database refuses members; these prove the API
+// relays that refusal, sends the exact payload and adds no write of its own.
+describe("LIFT stops", () => {
+  const scope = { scope: "account", account_id: "91fcb437-dab8-4f4f-84b7-f9e0e6177fba" };
+  const workspaceRef = "cf81841c-a5b7-4079-a85f-7a476697ee2b";
+  it("sets, lists, moves and releases a stop for an admin, who sees who set it and the note", async () => {
+    const h = harness(name => receipt({ set_lifty_stop: "stop.set", get_lifty_stops: "stop.list", move_lifty_stop_review: "stop.move", release_lifty_stop: "stop.release" }[name]!));
+    const named = `?workspace_id=${workspaceRef}`;
+    const set = { ...scope, reason: "deliverability_review", note: "Bounce spike" };
+    const review = { ...scope, review_by: "2026-11-08T16:52:24.13946+00:00" };
+    const stopped = await (await h.request("POST", `/v1/workspace/stops${named}`, set)).json();
+    expect(stopped.stop).toMatchObject({ set_by: "52b3de44-9f5f-4dbf-b4e5-d52f2ea1cc38", note: "Bounce spike", review_by: "2026-11-12T16:52:24.103126+00:00" });
+    expect((await (await h.request("GET", `/v1/workspace/stops${named}`)).json()).stops).toHaveLength(1);
+    expect((await (await h.request("POST", `/v1/workspace/stops/review${named}`, review)).json()).stop.review_by).toBe(review.review_by);
+    expect(await (await h.request("POST", `/v1/workspace/stops/release${named}`, scope)).json()).toMatchObject({ stop: null, released: true });
+    expect(h.calls).toEqual([
+      { name: "set_lifty_stop", args: { p_workspace_id: workspaceRef, p_payload: set } }, { name: "get_lifty_stops", args: { p_workspace_id: workspaceRef } },
+      { name: "move_lifty_stop_review", args: { p_workspace_id: workspaceRef, p_payload: review } }, { name: "release_lifty_stop", args: { p_workspace_id: workspaceRef, p_payload: scope } },
+    ]);
+  });
+
+  it.each([
+    ["GET", "/v1/workspace/stops", undefined], ["POST", "/v1/workspace/stops", { ...scope, reason: "setup" }],
+    ["POST", "/v1/workspace/stops/release", scope], ["POST", "/v1/workspace/stops/review", { ...scope, review_by: "2026-11-08T16:52:24Z" }],
+  ])("gives a member 403 on %s %s and mutates nothing", async (method, route, body) => {
+    const h = harness(() => { throw dbError("PT403", "ADMIN_REQUIRED"); });
+    const response = await h.request(method, route, body);
+    expect(response.status).toBe(403);
+    const { error } = await response.json();
+    expect(error.code).toBe("ADMIN_REQUIRED");
+    expect(JSON.stringify(error)).not.toMatch(/set_by|note/);
+    // One refused RPC: no read of stop facts and no second write around it.
+    expect(h.calls).toHaveLength(1);
+  });
+
+  it.each([
+    [{ scope: "account" }], [{ scope: "account", sender_id: senderId, account_id: accountId }], [{ scope: "channel" }], [{ scope: "workspace", channel: "email" }],
+    [{ scope: "all_workspaces" }], [{ scope: "account", account_id: "someone" }],
+  ])("refuses the target %j before any RPC", async target => {
+    const h = harness(() => { throw new Error("must not call"); });
+    expect((await h.request("POST", "/v1/workspace/stops", { ...target, reason: "setup" })).status).toBe(400);
+    expect(h.calls).toEqual([]);
+  });
+
+  it("refuses a system reason, a bad date and a long note, and relays the database's refusals", async () => {
+    const h = harness(() => { throw new Error("must not call"); });
+    for (const body of [{ ...scope, reason: "provider_risk" }, { ...scope, reason: "setup", review_by: "next week" }, { ...scope, reason: "setup", note: "x".repeat(1001) }])
+      expect((await h.request("POST", "/v1/workspace/stops", body)).status).toBe(400);
+    expect(h.calls).toEqual([]);
+    const refuse = (code: string, sqlstate: string) => harness(() => { throw dbError(sqlstate, code); }).request("POST", "/v1/workspace/stops/review", { ...scope, review_by: "2026-11-08T16:52:24Z" });
+    for (const [code, sqlstate, status] of [["STOP_NOT_FOUND", "PT404", 404], ["STOP_REVIEW_INVALID", "PT422", 422], ["ACCOUNT_NOT_FOUND", "PT404", 404], ["WORKSPACE_SUSPENDED", "PT409", 409]] as const) {
+      const response = await refuse(code, sqlstate);
+      expect([response.status, (await response.json()).error.code]).toEqual([status, code]);
+    }
+  });
+});
+
+// LIF-1771 S-14: one member read and one validated write.
+describe("workspace settings", () => {
+  it("reads and writes assignment, sample size and review, and nothing else", async () => {
+    const h = harness(name => receipt(name === "get_lifty_workspace_settings" ? "settings.defaults" : "settings.update"));
+    const read = await h.request("GET", "/v1/workspace/outreach-settings");
+    expect((await read.json()).settings).toEqual(receipt("settings.defaults").settings);
+    const change = { expected_version: 0, assignment: { mode: "founder_weight", founder_sender_id: "974d0a9c-fb3b-4b0c-9f02-efb7f1de6654" }, handoff: { sample_size: 3 } };
+    const saved = await h.request("PATCH", "/v1/workspace/outreach-settings", change);
+    expect(await saved.json()).toEqual(receipt("settings.update"));
+    expect(h.calls[1]).toEqual({ name: "update_lifty_workspace_settings", args: { p_workspace_id: null, p_payload: change } });
+  });
+
+  it.each([
+    [{ expected_version: 0 }], [{ assignment: { mode: "equal" } }], [{ expected_version: 0, assignment: { mode: "round_robin" } }],
+    [{ expected_version: 0, handoff: { sample_size: 0 } }], [{ expected_version: 0, handoff: { sample_size: 101 } }],
+    [{ expected_version: 0, recovery_mode: "apply" }], [{ expected_version: 0, auto_reply_enabled: true }],
+  ])("refuses %j before any RPC", async body => {
+    const h = harness(() => { throw new Error("must not call"); });
+    expect((await h.request("PATCH", "/v1/workspace/outreach-settings", body)).status).toBe(422);
+    expect(h.calls).toEqual([]);
+  });
+
+  it("never reports recovery mode or an automatic-reply switch, even if the database did", async () => {
+    const { settings } = receipt("settings.defaults");
+    for (const extra of [{ recovery_mode: "report" }, { auto_reply_enabled: true }])
+      expect((await harness(() => ({ workspace, settings: { ...settings, ...extra } })).request("GET", "/v1/workspace/outreach-settings")).status).toBe(502);
+    expect((await harness(() => ({ workspace, accounts: [account(accountId, { assignment: { mode: "equal" } })] })).request("GET", "/v1/workspace/sending-accounts")).status).toBe(502);
+  });
+
+  it.each([
+    ["OUTREACH_SETTINGS_MOVED", "PT409", 409], ["ASSIGNMENT_FOUNDER_REQUIRED", "PT422", 422], ["ASSIGNMENT_FOUNDER_INVALID", "PT422", 422], ["WORKSPACE_SUSPENDED", "PT409", 409],
+  ])("surfaces %s", async (code, sqlstate, status) => {
+    const response = await harness(() => { throw dbError(sqlstate, code); }).request("PATCH", "/v1/workspace/outreach-settings", { expected_version: 0, handoff: { sample_size: 3 } });
+    expect([response.status, (await response.json()).error.code]).toEqual([status, code]);
+  });
+});
+
+// LIF-1771 S-03, S-04, S-05, S-07: the database owns the handoff; the API names
+// the workspace, relays every refusal and keeps vendor facts private.
+describe("sender handoffs", () => {
+  const ready = () => receipt("handoff.ready");
+  const hashes = () => ({ scope_sha256: ready().scope_sha256, settings_sha256: ready().settings_sha256, context_sha256: ready().context_sha256, revision: ready().revision });
+  const approval = () => ({ action: "approve_sample_and_transfer", confirm: true, source_sender_id: ready().source_sender_id, replacement_sender_id: ready().replacement.sender_id, ...hashes() });
+  const selected = "332ede34-3993-453b-867e-4e9f8387bd89";
+  const handoffs = (receiptName: string) => harness(name => name === "get_lifty_workspace_settings"
+    ? { ...receipt("settings.defaults"), workspace: { workspace_ref: selected, name: "Example", state: "ready_for_connections" } } : receipt(receiptName));
+  const route = (ref = "163") => `/v1/workspace/sender-handoffs/${ref}`;
+
+  it("names the selected workspace, which the database requires, and reports the sample", async () => {
+    const h = handoffs("handoff.view");
+    const response = await h.request("GET", route("132"));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ state: "preparing", sample_complete: false, preparing_count: 1, held_for_human: 0, members: [{ dispatch_reason: "preparation_pending", prepared: false }] });
+    expect(h.calls).toEqual([{ name: "get_lifty_workspace_settings", args: { p_workspace_id: null } },
+      { name: "get_lifty_sender_handoff", args: { p_workspace_id: selected, p_drain_ref: "132" } }]);
+  });
+
+  it("shows what is held for a person and each member's dispatch reason", async () => {
+    const body = await (await handoffs("handoff.held").request("GET", route("154"))).json();
+    expect(body).toMatchObject({ held_for_human: 1, cohort_count: 6, sample_count: 5, remainder_count: 1, sample_complete: true });
+    expect(body.members.map((member: { dispatch_reason: string | null }) => member.dispatch_reason)).toEqual(["held_for_human", null, null, null, null, null]);
+    expect(body.samples[0]).toMatchObject({ kind: "current_reply", body: "Happy to help.\n\nTarget, Lifty", draft_event_ref: "679e8e69-b705-40cc-9982-79d3fc9a59cd", turn_version: 2 });
+  });
+
+  it.each(["handoff.view", "handoff.ready", "handoff.held", "handoff.approve", "handoff.cancel", "recovery.handoff.reply"])("keeps vendor facts out of %s", async name => {
+    expect(JSON.stringify(receipt(name))).toMatch(/"provider|state_token/);
+    const text = await (await handoffs(name).request("GET", route(receipt(name).drain_ref))).text();
+    expect(text).not.toMatch(/unipile|"provider|account-|state_token|approved_policy/);
+  });
+
+  it("approves with the exact hashes and never calls the result sent", async () => {
+    const h = handoffs("handoff.approve");
+    const response = await h.request("POST", `${route()}/approve`, approval());
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toMatchObject({ state: "approved", authorization: { state: "authorized" }, transferred_count: 1, queued_count: 0 });
+    expect(JSON.stringify(body)).not.toMatch(/"sent|"delivered/);
+    expect(h.calls[1]).toEqual({ name: "approve_lifty_sender_handoff", args: { p_workspace_id: selected, p_drain_ref: "163", p_payload: approval() } });
+    expect(h.enqueueHandoffReplies).not.toHaveBeenCalled();
+  });
+
+  it("requests replies after prepare and after a settings revision, keyed by what changed", async () => {
+    const prepare = handoffs("handoff.ready");
+    expect((await prepare.request("POST", `${route()}/prepare`, {})).status).toBe(200);
+    expect(prepare.calls[1]).toEqual({ name: "prepare_lifty_sender_handoff", args: { p_workspace_id: selected, p_drain_ref: "163" } });
+    expect(prepare.enqueueHandoffReplies).toHaveBeenCalledExactlyOnceWith({ workspaceId: selected, handoffRef: "163", settingsRevision: null });
+    const revise = handoffs("handoff.ready");
+    const body = { revision: ready().revision, generation_settings: { instructions: "Keep it short." } };
+    expect((await revise.request("POST", `${route()}/settings`, body)).status).toBe(200);
+    expect(revise.calls[1]).toEqual({ name: "revise_lifty_sender_handoff_settings", args: { p_workspace_id: selected, p_drain_ref: "163", p_payload: body } });
+    expect(revise.enqueueHandoffReplies).toHaveBeenCalledExactlyOnceWith({ workspaceId: selected, handoffRef: "163", settingsRevision: 1 });
+  });
+
+  it("keeps the member's action when the request for replies fails", async () => {
+    const h = harness(name => name === "get_lifty_workspace_settings" ? receipt("settings.defaults") : receipt("handoff.ready"), {}, "full", vi.fn(async () => { throw new Error("down"); }));
+    expect((await h.request("POST", `${route()}/prepare`, {})).status).toBe(200);
+    expect(h.logged[0]).toMatchObject({ event: "handoff_replies_enqueue_failed" });
+  });
+
+  it("cancels with its revision and edits one reply with its turn version", async () => {
+    const cancel = handoffs("handoff.cancel");
+    const canceled = await (await cancel.request("POST", `${route("164")}/cancel`, { confirm: true, revision: receipt("handoff.cancel").revision })).json();
+    expect(canceled).toMatchObject({ state: "canceled", authorization: { state: "canceled" } });
+    const edit = { turn_version: 2, draft_event_ref: "679e8e69-b705-40cc-9982-79d3fc9a59cd", text: "Happy to help." };
+    const reply = handoffs("handoff.held");
+    const turn = "af2fb1fe-4500-4c85-9530-c1057944a747";
+    expect((await reply.request("POST", `${route("154")}/replies/${turn}`, edit)).status).toBe(200);
+    expect(reply.calls[1]).toEqual({ name: "revise_lifty_sender_handoff_reply", args: { p_workspace_id: selected, p_drain_ref: "154", p_turn_id: turn, p_payload: edit } });
+  });
+
+  it.each([
+    ["approve", { ...approval(), confirm: false }], ["approve", { ...approval(), action: "approve" }], ["approve", { ...approval(), revision: "abc" }], ["approve", { ...approval(), extra: 1 }],
+    ["cancel", { revision: ready().revision }], ["settings", { revision: ready().revision, generation_settings: { instructions: "x".repeat(6001) } }],
+  ])("refuses %s %j before any RPC", async (action, body) => {
+    const h = handoffs("handoff.ready");
+    expect((await h.request("POST", `${route()}/${action}`, body)).status).toBe(400);
+    expect(h.calls).toEqual([]);
+  });
+
+  it.each([
+    ["HANDOFF_NOT_FOUND", "PT404", 404], ["HANDOFF_SCOPE_STALE", "PT409", 409], ["HANDOFF_REVISION_STALE", "PT409", 409], ["HANDOFF_CONTEXT_STALE", "PT409", 409],
+    ["HANDOFF_SAMPLE_INCOMPLETE", "PT409", 409], ["HANDOFF_CONFIRMATION_REQUIRED", "PT422", 422], ["HANDOFF_REPLY_STALE", "PT409", 409], ["DRAIN_TARGET_INVALID", "PT409", 409],
+    ["OUTREACH_SEND_UNCONFIRMED", "PT409", 409], ["OUTREACH_RESOURCE_FORBIDDEN", "PT403", 403], ["OUTREACH_COPY_INVALID", "PT422", 422],
+  ])("surfaces %s", async (code, sqlstate, status) => {
+    const h = harness(name => { if (name === "get_lifty_workspace_settings") return receipt("settings.defaults"); throw dbError(sqlstate, code); });
+    const response = await h.request("POST", `${route()}/approve`, approval());
+    expect([response.status, (await response.json()).error.code]).toEqual([status, code]);
+  });
+
+  it("gives another workspace's handoff no data, and refuses a member the database refuses", async () => {
+    const foreign = harness(name => { if (name === "get_lifty_workspace_settings") return receipt("settings.defaults"); throw dbError("PT404", "HANDOFF_NOT_FOUND"); });
+    const response = await foreign.request("GET", route("999"));
+    expect(response.status).toBe(404);
+    expect(await response.text()).not.toMatch(/lead_ref|samples/);
+    expect((await harness(() => { throw new Error("must not call"); }).request("GET", route("not-a-ref"))).status).toBe(400);
+  });
+});
+
+// LIF-1771 S-06, S-07, S-16.
+describe("recovery incidents and notification links", () => {
+  it("reads open incidents for a member, with no mode or plan detail", async () => {
+    const response = await harness(() => receipt("recovery.incidents")).request("GET", "/v1/workspace/recovery-incidents");
+    expect(response.status).toBe(200);
+    expect((await response.json()).incidents).toEqual(receipt("recovery.incidents").incidents);
+    const [incident] = receipt("recovery.incidents").incidents;
+    const leak = { ...receipt("recovery.incidents"), incidents: [{ ...incident, mode: "apply" }] };
+    expect((await harness(() => leak).request("GET", "/v1/workspace/recovery-incidents")).status).toBe(502);
+  });
+
+  it("resolves a link to the authorized account and action, and opening it mutates nothing", async () => {
+    const lost = account(accountId, { status: "needs_reconnect", participation: { status: "not_connected", cause: "needs_reconnect" } });
+    const h = harness(() => ({ workspace, accounts: [lost, account(otherAccount)] }));
+    const reconnect = await h.request("GET", `/v1/workspace/sending-accounts/${accountId}/action?action=reconnect`);
+    expect(await reconnect.json()).toMatchObject({ account_id: accountId, sender_id: senderId, channel: "email", action: "reconnect", available: true,
+      operation: "sending_accounts_reconnect", next_step: { action: "reconnect", owner: "member" } });
+    expect((await (await h.request("GET", `/v1/workspace/sending-accounts/${otherAccount}/action?action=reconnect`)).json()).available).toBe(false);
+    expect(await (await h.request("GET", `/v1/workspace/sending-accounts/${otherAccount}/action?action=warmup`)).json())
+      .toMatchObject({ available: true, operation: "sending_accounts_warmup_start" });
+    expect(new Set(h.calls.map(call => call.name))).toEqual(new Set(["get_lifty_sending_accounts"]));
+    expect(h.effects.connectionUrl).not.toHaveBeenCalled();
+    expect(h.effects.reconcileAttempt).not.toHaveBeenCalled();
+  });
+
+  it("offers warmup on no LinkedIn account and fails on another workspace's account", async () => {
+    const h = harness(() => ({ workspace, accounts: [account(otherAccount, { channel: "linkedin" })] }));
+    expect((await (await h.request("GET", `/v1/workspace/sending-accounts/${otherAccount}/action?action=warmup`)).json()).available).toBe(false);
+    const foreign = await h.request("GET", `/v1/workspace/sending-accounts/${accountId}/action?action=reconnect`);
+    expect(foreign.status).toBe(404);
+    expect((await foreign.json()).error.code).toBe("ACCOUNT_NOT_FOUND");
+    expect((await h.request("GET", `/v1/workspace/sending-accounts/${accountId}/action?action=disconnect`)).status).toBe(400);
   });
 });
