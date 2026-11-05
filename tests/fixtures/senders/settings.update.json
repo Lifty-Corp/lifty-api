@@ -1,0 +1,28 @@
+{
+  "settings": {
+    "assignment": {
+      "founder_sender_id": "974d0a9c-fb3b-4b0c-9f02-efb7f1de6654",
+      "mode": "founder_weight"
+    },
+    "handoff": {
+      "sample_size": 3
+    },
+    "review": {
+      "email": {
+        "mode": "send_and_sample",
+        "sample_rate": 20
+      },
+      "linkedin": {
+        "mode": "send_and_sample",
+        "sample_rate": 20
+      },
+      "version": 1
+    },
+    "version": 1
+  },
+  "workspace": {
+    "name": "Synthetic handoff",
+    "state": "ready_for_connections",
+    "workspace_ref": "5bc9b518-e5be-44f2-a9a8-f765d8819cca"
+  }
+}

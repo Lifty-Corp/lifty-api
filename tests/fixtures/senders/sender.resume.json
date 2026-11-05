@@ -1,0 +1,157 @@
+{
+  "sender": {
+    "accounts": [
+      {
+        "access_removal": null,
+        "access_revoked_at": null,
+        "channel": "linkedin",
+        "checked_at": "2026-11-05T16:52:24.931091+00:00",
+        "connected_at": "2026-10-06T16:52:24.931091+00:00",
+        "declaration": null,
+        "disconnect_pause": {
+          "can_resume": false,
+          "count": 0
+        },
+        "disconnected_at": null,
+        "id": "07de4e87-ecfd-48e5-8586-117a3ea767c7",
+        "identity": null,
+        "limits": {
+          "invitations_per_7_days": 25,
+          "invitations_per_day": 5,
+          "messages_per_day": 0
+        },
+        "observation": {
+          "state": "verified"
+        },
+        "participation": {
+          "also": [],
+          "category": "long",
+          "cause": "paused_by_lift",
+          "since": "2026-11-05T16:52:25.166419+00:00",
+          "since_estimated": false,
+          "status": "paused",
+          "stop": {
+            "origin": "system",
+            "reason": "provider_risk",
+            "review_by": "2026-11-12T16:52:25.166419+00:00",
+            "scope": "account"
+          },
+          "waiting_journeys": 0
+        },
+        "sender_id": "c3358009-611b-49b9-bba4-957bc4abe727",
+        "sending": {
+          "allowed": false,
+          "reason": "paused_by_lift",
+          "scope": "account"
+        },
+        "sends": {
+          "last_7_days": 0,
+          "today": 0
+        },
+        "state": "active",
+        "status": "connected"
+      },
+      {
+        "access_removal": null,
+        "access_revoked_at": null,
+        "channel": "email",
+        "checked_at": "2026-11-05T16:52:25.091755+00:00",
+        "connected_at": "2026-10-06T16:52:25.091755+00:00",
+        "declaration": {
+          "declared_at": "2026-11-05T16:52:25.091757+00:00",
+          "declared_by": "e2bcb863-2ef1-4de0-a0de-f81a75ae3ac4",
+          "mailbox_use": "habitual"
+        },
+        "disconnect_pause": {
+          "can_resume": false,
+          "count": 0
+        },
+        "disconnected_at": null,
+        "id": "a1c9dcc0-b768-424f-8b81-6b1f5a311008",
+        "identity": "a1c9dcc0-b768-424f-8b81-6b1f5a311008@lif1771.test",
+        "limits": {
+          "emails_per_day": 10
+        },
+        "observation": {
+          "state": "verified"
+        },
+        "participation": {
+          "also": [],
+          "category": "intentional",
+          "cause": "paused_by_member",
+          "since": "2026-11-05T16:52:25.16777+00:00",
+          "since_estimated": false,
+          "status": "paused",
+          "waiting_journeys": 0
+        },
+        "sender_id": "c3358009-611b-49b9-bba4-957bc4abe727",
+        "sending": {
+          "allowed": false,
+          "reason": "paused_by_member",
+          "scope": null
+        },
+        "sends": {
+          "last_7_days": 0,
+          "today": 0
+        },
+        "state": "paused",
+        "status": "connected"
+      },
+      {
+        "access_removal": null,
+        "access_revoked_at": null,
+        "channel": "email",
+        "checked_at": "2026-11-05T16:52:24.930181+00:00",
+        "connected_at": "2026-10-06T16:52:24.930182+00:00",
+        "declaration": {
+          "declared_at": "2026-11-05T16:52:24.930184+00:00",
+          "declared_by": "e2bcb863-2ef1-4de0-a0de-f81a75ae3ac4",
+          "mailbox_use": "habitual"
+        },
+        "disconnect_pause": {
+          "can_resume": false,
+          "count": 0
+        },
+        "disconnected_at": null,
+        "id": "ff72ad79-4b16-44ba-bef0-6c9e62f5cbb3",
+        "identity": "ff72ad79-4b16-44ba-bef0-6c9e62f5cbb3@lif1771.test",
+        "limits": {
+          "emails_per_day": 10
+        },
+        "observation": {
+          "state": "verified"
+        },
+        "participation": {
+          "also": [],
+          "category": null,
+          "cause": "no_lead_yet",
+          "since": null,
+          "since_estimated": false,
+          "status": "waiting_for_first_lead"
+        },
+        "sender_id": "c3358009-611b-49b9-bba4-957bc4abe727",
+        "sending": {
+          "allowed": true,
+          "reason": null,
+          "scope": null
+        },
+        "sends": {
+          "last_7_days": 0,
+          "today": 0
+        },
+        "state": "active",
+        "status": "connected"
+      }
+    ],
+    "booking_url": null,
+    "id": "c3358009-611b-49b9-bba4-957bc4abe727",
+    "name": "Source",
+    "signature": "Source, Lifty",
+    "version": 3
+  },
+  "workspace": {
+    "name": "Synthetic handoff",
+    "state": "ready_for_connections",
+    "workspace_ref": "2dcea61e-2eed-4265-8e80-a81fef1caed8"
+  }
+}

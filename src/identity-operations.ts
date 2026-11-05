@@ -45,6 +45,13 @@ const accountAction = (action: "pause" | "resume", description: string): Identit
   args: input => ({ p_account_id: path(input) }), description,
 });
 
+const senderPause = (action: "pause" | "resume", description: string): IdentityDefinition => ({
+  method: "POST", route: `${sendersRoute}/{id}/${action}`, cli: { operation: action }, rpc: `${action}_lifty_sender`,
+  path: contracts.IdPath, query: Empty, request: action === "pause" ? contracts.SenderPauseSchema : contracts.SenderResumeSchema,
+  invalid: invalidRequest, response: contracts.SenderResultSchema, success: 200,
+  args: input => ({ p_sender_id: path(input), p_payload: input.body }), description,
+});
+
 export const identityOperationDefinitions = {
   senders: {
     get: {
@@ -71,13 +78,16 @@ export const identityOperationDefinitions = {
       args: input => ({ p_sender_id: path(input), p_payload: input.body }),
       description: "Soft-delete a person with expected_version and confirm:true. The person leaves the roster and every account they own is disconnected exactly as sending-accounts disconnect; history stays. 200 when Lifty's access was confirmed removed for every account (or not applicable), 202 when the accounts are blocked and removal at the provider continues on its own: do not repeat the request. Not reversible.",
     },
+    // LIF-1794: pausing needs no replacement and moves nothing.
+    pause: senderPause("pause", "Pause a person with expected_version and confirm:true, and optionally a reason. They keep every lead and account, take no new leads and nothing automatic sends on either channel, including automatic replies. Inbound replies are still captured and a person can still answer by hand. Needs no replacement, and it never turns into a retirement. Idempotent. Refused with SENDER_OFF while the person is retired. After an uncertain response read senders: sending.state paused means it is saved."),
+    resume: senderPause("resume", "Resume a paused person with expected_version and confirm:true. They take new leads again and their automatic work continues under its usual limits. Clears the person's pause and nothing else: a Lifty stop, an account pause, a campaign pause and every hold stay as they are, so a resumed person can still be stopped. Idempotent. Never sends by itself. After an uncertain response read senders: no sending object means the person sends normally."),
     // LIF-1764: off is reversible and keeps the person's accounts connected.
     turn_off: {
       method: "POST", route: `${sendersRoute}/{id}/turn-off`, cli: { operation: "turn-off" }, rpc: "turn_off_lifty_sender",
       path: contracts.IdPath, query: Empty, request: contracts.SenderTurnOffSchema, invalid: invalidRequest,
       response: contracts.SenderTurnOffResultSchema, success: 200,
       args: input => ({ p_sender_id: path(input), p_payload: input.body }),
-      description: "Turn a person off with expected_version, confirm:true, a reason and drain_to_sender_id (another person who is on). Their accounts stay connected so replies keep arriving; they take part in no new Journey and send no outreach. Their admitted leads drain to the target, who sends only channels each prospect never received (drain_mode unused_channels; continue is not available yet). drain reports the first batch; Lifty drains the remaining leads on its own. Never deletes, disconnects or sends by itself: the target's runs send on the target's schedule. After an uncertain response read senders: sending.state off means it is saved.",
+      description: "Retire a person with expected_version, confirm:true, a reason and drain_to_sender_id (another person in this workspace who is on, not paused and not deleted; a person with no replacement is paused instead). They stop at once: their accounts stay connected so replies keep arriving, they take part in no new Journey and send no outreach. Untouched leads move to the target under ordinary rules. With drain_mode continue, contacted conversations and current replies stay with this person until a sample is approved: drain.handoff_ref names that handoff, so read it with handoff_get and approve it with handoff_approve; approved is not sent. With drain_mode unused_channels the target sends only channels each prospect never received. Omitted drain_mode uses the workspace's mode. drain reports the first batch; Lifty drains the remaining leads on its own. Refused with DRAIN_TARGET_INVALID when the target is missing, foreign, off or paused; nothing changes. Never deletes, disconnects or sends by itself. After an uncertain response read senders: sending.state off means it is saved.",
     },
     turn_on: {
       method: "POST", route: `${sendersRoute}/{id}/turn-on`, cli: { operation: "turn-on" }, rpc: "turn_on_lifty_sender",

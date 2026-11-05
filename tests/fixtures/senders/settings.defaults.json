@@ -1,0 +1,28 @@
+{
+  "settings": {
+    "assignment": {
+      "founder_sender_id": null,
+      "mode": "equal"
+    },
+    "handoff": {
+      "sample_size": 5
+    },
+    "review": {
+      "email": {
+        "mode": "send_and_sample",
+        "sample_rate": 20
+      },
+      "linkedin": {
+        "mode": "send_and_sample",
+        "sample_rate": 20
+      },
+      "version": 1
+    },
+    "version": 0
+  },
+  "workspace": {
+    "name": "Synthetic handoff",
+    "state": "ready_for_connections",
+    "workspace_ref": "5bc9b518-e5be-44f2-a9a8-f765d8819cca"
+  }
+}

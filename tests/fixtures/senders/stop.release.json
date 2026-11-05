@@ -1,0 +1,9 @@
+{
+  "released": true,
+  "stop": null,
+  "workspace": {
+    "name": "Synthetic handoff",
+    "state": "ready_for_connections",
+    "workspace_ref": "cf81841c-a5b7-4079-a85f-7a476697ee2b"
+  }
+}

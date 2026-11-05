@@ -1,0 +1,23 @@
+{
+  "stops": [
+    {
+      "account_id": "91fcb437-dab8-4f4f-84b7-f9e0e6177fba",
+      "channel": "email",
+      "note": "Bounce spike",
+      "origin": "person",
+      "reason": "setup",
+      "review_by": "2026-11-08T16:52:24.13946+00:00",
+      "scope": "account",
+      "scope_key": "cf81841c-a5b7-4079-a85f-7a476697ee2b:email:sender:bdf17a11-50f9-4d2b-9ee2-d013aafde259:connection:91fcb437-dab8-4f4f-84b7-f9e0e6177fba",
+      "sender_id": "bdf17a11-50f9-4d2b-9ee2-d013aafde259",
+      "set_by": "52b3de44-9f5f-4dbf-b4e5-d52f2ea1cc38",
+      "since": "2026-11-05T16:52:24.103126+00:00",
+      "since_estimated": false
+    }
+  ],
+  "workspace": {
+    "name": "Synthetic handoff",
+    "state": "ready_for_connections",
+    "workspace_ref": "cf81841c-a5b7-4079-a85f-7a476697ee2b"
+  }
+}

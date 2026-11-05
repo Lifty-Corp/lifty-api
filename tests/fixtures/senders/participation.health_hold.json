@@ -1,0 +1,12 @@
+{
+  "also": [],
+  "category": null,
+  "cause": "health_hold",
+  "health": {
+    "reason": "bounce_rate"
+  },
+  "since": "2026-11-05T16:52:24.911824+00:00",
+  "since_estimated": false,
+  "status": "email_not_ready",
+  "waiting_journeys": 0
+}

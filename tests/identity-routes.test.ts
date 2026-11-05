@@ -1,8 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/app.js";
 import { STAGE_CLIENT_CONTRACT } from "../src/agent-context.js";
 import { executeIdentityOperation, type AccountConnector } from "../src/identity-operations.js";
 import { operationToolNames } from "../src/operation-names.js";
+import { receipt } from "./senders-fixtures.js";
 
 // LIF-1182 Identity HTTP boundary: catalog routes call the documented member
 // RPCs with the database-resolved workspace, validate before any write, and
@@ -84,7 +85,7 @@ describe("Identity member routes", () => {
     expect(h.calls).toEqual([]);
     const response = await h.request("POST", path, { confirm: true });
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual(result);
+    expect(await response.json()).toMatchObject(result);
     expect(h.calls).toEqual([{ name: "resume_lifty_disconnected_campaigns",
       args: { p_workspace_id: null, p_account_id: accountId, p_payload: { confirm: true } } }]);
     expect(h.effects.reconcileAttempt).not.toHaveBeenCalled();
@@ -101,7 +102,7 @@ describe("Identity member routes", () => {
     expect(h.calls).toEqual([]);
     const response = await h.request("POST", path, { mailbox_use: "dedicated", confirm: true });
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual(result);
+    expect(await response.json()).toMatchObject(result);
     expect(h.calls).toEqual([{ name: "declare_lifty_sending_account_use",
       args: { p_workspace_id: null, p_account_id: accountId, p_payload: { mailbox_use: "dedicated", confirm: true } } }]);
     expect(h.effects.reconcileAttempt).not.toHaveBeenCalled();
@@ -147,7 +148,7 @@ describe("Identity member routes", () => {
     const h = harness(() => ({ workspace, accounts: [held, linkedin] }));
     const response = await h.request("GET", "/v1/workspace/sending-accounts");
     expect(response.status).toBe(200);
-    expect((await response.json()).accounts).toEqual([held, linkedin]);
+    expect((await response.json()).accounts).toMatchObject([held, linkedin]);
     // A missing sending state or participation, an unknown reason, a mixed limit shape or a
     // participation cause of another status is not the published contract.
     const { sending: _sending, ...unpublished } = account();
@@ -376,11 +377,11 @@ describe("sender turn-off and turn-on", () => {
     const off = await h.request("POST", `/v1/workspace/senders/${senderId}/turn-off`, turnOff);
     expect(off.status).toBe(200);
     const text = await off.text();
-    expect(JSON.parse(text)).toEqual({ workspace, sender: offSender, drain: { ...drain, errors: [{ lead_ref: leadRef, sqlstate: "23505" }] } });
+    expect(JSON.parse(text)).toMatchObject({ workspace, sender: offSender, drain: { ...drain, errors: [{ lead_ref: leadRef, sqlstate: "23505" }] } });
     expect(text).not.toContain("private database detail");
     const on = await h.request("POST", `/v1/workspace/senders/${senderId}/turn-on`, { expected_version: 3, confirm: true });
     expect(on.status).toBe(200);
-    expect(await on.json()).toEqual({ workspace, sender: { ...sender, version: 4 } });
+    expect(await on.json()).toMatchObject({ workspace, sender: { ...sender, version: 4 } });
     expect(h.calls).toEqual([
       { name: "turn_off_lifty_sender", args: { p_workspace_id: null, p_sender_id: senderId, p_payload: turnOff } },
       { name: "turn_on_lifty_sender", args: { p_workspace_id: null, p_sender_id: senderId, p_payload: { expected_version: 3, confirm: true } } },
@@ -394,12 +395,13 @@ describe("sender turn-off and turn-on", () => {
     const response = await harness(() => ({ workspace, senders: [sender, offSender] })).request("GET", "/v1/workspace/senders");
     expect(response.status).toBe(200);
     const read = await response.json();
-    expect(read.senders).toEqual([sender, offSender]);
+    expect(read.senders).toMatchObject([sender, offSender]);
     expect(read.senders[0]).not.toHaveProperty("sending");
     // A drain that waits as a whole has no outcomes.
     const waiting = { workspace, sender: offSender, drain: { ...drainTarget, state: "target_unavailable" } };
     const off = await harness(() => waiting).request("POST", `/v1/workspace/senders/${senderId}/turn-off`, turnOff);
-    expect([off.status, await off.json()]).toEqual([200, waiting]);
+    expect(off.status).toBe(200);
+    expect(await off.json()).toMatchObject(waiting);
     for (const invalid of [
       { ...sender, sending: null },
       { ...offSender, sending: { ...sending, state: "on" } },
@@ -508,5 +510,91 @@ describe("account disconnect and sender delete receipts", () => {
     expect(signals[0]!.aborted).toBe(false);
     expect(h.calls.map(call => call.name)).toEqual(["delete_lifty_sender", "get_lifty_sending_accounts"]);
     expect(h.calls[1]!.args).toEqual({ p_workspace_id: null, p_query: { sender_id: senderId } });
+  });
+});
+
+// LIF-1771 S-11/S-12: the words come from one place. Fixtures are the authentic
+// SQL receipts; every expected label is the approved copy, written out here.
+describe("participation causes", () => {
+  beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-05T18:00:00Z") }); });
+  afterEach(() => { vi.useRealTimers(); });
+  const read = async (participation: unknown) => {
+    const response = await harness(() => ({ workspace, accounts: [account(accountId, { participation })] })).request("GET", "/v1/workspace/sending-accounts");
+    return { status: response.status, participation: response.status === 200 ? (await response.json()).accounts[0].participation : null };
+  };
+  const stopped = (stop: Record<string, unknown>) => ({ ...receipt("participation.stop"), stop: { ...receipt("participation.stop").stop, ...stop } });
+
+  it("reads a member's Lifty stop with its plain reason, review date and estimated since", async () => {
+    const { participation } = await read(receipt("participation.stop"));
+    expect(participation.next_step).toEqual({ label: "Paused by Lifty · deliverability review · we review it by Nov 12", owner: "lifty",
+      action: "lifty_review", since: "2026-11-05T16:52:24.103126+00:00", since_estimated: false, review_by: "2026-11-12T16:52:24.103126+00:00" });
+    expect(participation).toMatchObject({ status: "paused", cause: "paused_by_lift", category: "intentional", waiting_journeys: 0 });
+    expect((await read({ ...receipt("participation.stop"), since_estimated: true })).participation.next_step.since_estimated).toBe(true);
+  });
+
+  it.each([
+    ["deliverability_review", "Paused by Lifty · deliverability review · we review it by Nov 12"],
+    ["account_safety", "Paused by Lifty · account safety · we review it by Nov 12"],
+    ["provider_risk", "Paused by Lifty · account safety · we review it by Nov 12"],
+    ["setup", "Paused by Lifty · setup · we review it by Nov 12"],
+    ["cutover", "Paused by Lifty · setup · we review it by Nov 12"],
+    ["recorded_before_lif1710", "Paused by Lifty · setup · we review it by Nov 12"],
+    ["client_request", "Paused by Lifty · at your request · we review it by Nov 12"],
+    ["maintenance", "Paused by Lifty · maintenance · we review it by Nov 12"],
+    ["other", "Paused by Lifty · we review it by Nov 12"],
+  ])("words a stop for %s", async (reason, label) => {
+    expect((await read(stopped({ reason }))).participation.next_step.label).toBe(label);
+  });
+
+  it("says under review past the date and hides the date of the every-workspace stop", async () => {
+    const overdue = (await read(stopped({ review_by: "2026-11-01T00:00:00Z" }))).participation.next_step;
+    expect(overdue).toMatchObject({ label: "Paused by Lifty · deliverability review · under review", review_by: null });
+    const everywhere = (await read(stopped({ scope: "all_workspaces", reason: "other" }))).participation.next_step;
+    expect(everywhere).toMatchObject({ label: "Paused by Lifty · maintenance", review_by: null });
+  });
+
+  it("reads a health hold's reason and keeps a secondary cause below the primary one", async () => {
+    expect((await read(receipt("participation.health_hold"))).participation.next_step)
+      .toMatchObject({ label: "On hold · too many bounces", owner: "lifty", action: "lifty_review" });
+    const { participation } = await read(receipt("participation.also"));
+    expect(participation.next_step).toMatchObject({ label: "Needs reconnecting", owner: "member", action: "reconnect" });
+    expect(participation.also).toEqual([{ status: "paused", cause: "paused_by_member", category: "intentional", since: "2026-11-05T16:52:24.71373+00:00",
+      next_step: { label: "Paused", owner: "member", action: "resume_account", since: "2026-11-05T16:52:24.71373+00:00", since_estimated: null, review_by: null } }]);
+  });
+
+  it("names the sender's pause first and a Lifty stop below it, which only Lifty releases", async () => {
+    const paused = receipt("sender.pause").sender;
+    const linkedin = paused.accounts.find((item: { channel: string }) => item.channel === "linkedin");
+    const { participation } = await read(linkedin.participation);
+    expect(participation.next_step).toMatchObject({ label: "Sender paused", owner: "member", action: "resume_sender" });
+    expect(participation.also[0].next_step).toMatchObject({ label: "Paused by Lifty", owner: "lifty", action: "lifty_review" });
+  });
+
+  it("keeps older participation readable and every other shape refused", async () => {
+    expect((await read({ status: "sending", cause: "active_journeys" })).participation.next_step)
+      .toEqual({ label: "Sending", owner: "none", action: "none", since: null, since_estimated: false, review_by: null });
+    expect((await read({ status: "not_connected", cause: "needs_reconnect", waiting_journeys: 2, category: "fixable_by_client", since: null, since_estimated: false, also: [] })).status).toBe(200);
+    for (const invalid of [
+      { ...receipt("participation.stop"), status: "email_not_ready" },
+      { ...receipt("participation.health_hold"), status: "paused" },
+      { ...receipt("participation.also"), cause: "health_hold", stop: receipt("participation.stop").stop },
+      { ...receipt("participation.also"), also: [{ status: "sending", cause: "warming", category: null, since: null }] },
+      stopped({ reason: "not_a_reason" }),
+      { status: "waiting_for_first_lead", cause: "no_lead_yet", waiting_journeys: 1 },
+    ]) expect((await read(invalid)).status, JSON.stringify(invalid)).toBe(502);
+  });
+
+  it("never lets a setter, a note or a vendor reach a member", async () => {
+    for (const leak of [{ note: "Bounce spike" }, { set_by: "52b3de44-9f5f-4dbf-b4e5-d52f2ea1cc38" }]) expect((await read(stopped(leak))).status).toBe(502);
+    const { participation } = await read(receipt("participation.stop"));
+    expect(JSON.stringify(participation)).not.toMatch(/set_by|note|unipile|mailivery|smartlead/i);
+  });
+
+  it("passes the sender's paused state and the pending-transfer fact through senders", async () => {
+    const paused = await harness(() => receipt("sender.pause")).request("POST", `/v1/workspace/senders/${senderId}/resume`, { expected_version: 2, confirm: true });
+    expect(paused.status).toBe(200);
+    expect((await paused.json()).sender.sending).toEqual({ state: "paused", paused_at: "2026-11-05T16:52:25.182571+00:00", reason: "Leave" });
+    const roster = await harness(() => receipt("sender.pending_transfer")).request("GET", "/v1/workspace/senders");
+    expect((await roster.json()).senders[0].sending.pending_transfer).toEqual({ retired_at: "2026-11-05T16:52:25.523203+00:00", leads_awaiting_transfer: 0 });
   });
 });
