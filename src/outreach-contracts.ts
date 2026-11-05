@@ -374,7 +374,7 @@ export const CampaignTestsSchema = z.object({ ...Workspace, tests: z.array(TestS
 
 export const CampaignMessagePathSchema = z.object({ message_ref: Ref }).strict();
 export const CampaignMessageReviseSchema = z.object({ request_ref: Ref, source_digest: Digest,
-  expected_review_status: z.enum(["pending", "enroll_failed"]), changes: z.union([
+  expected_review_status: z.enum(["pending", "enroll_failed", "approved"]), changes: z.union([
     z.object({ text: text(3000) }).strict(),
     z.object({ steps: z.array(z.object({ position: z.number().int().min(1).max(6), subject: text(300).refine(value => !/[\r\n]/.test(value)).optional(), text: text(20000) }).strict()).min(1).max(6).refine(steps => new Set(steps.map(step => step.position)).size === steps.length) }).strict(),
   ]),
@@ -414,9 +414,11 @@ export const CampaignMessageResultSchema = z.object({ ...Workspace, message: Cam
 export const CampaignReviewsQuerySchema = z.object({ channel: z.enum(["linkedin", "email"]).optional(),
   review_status: z.enum(["pending", "enroll_failed", "approved", "suppressed"]).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(), after: Ref.optional(),
+  // With review_status=approved, lists what can still change, newest first.
+  unsent: z.literal("true").optional(),
 }).strict();
 export const CampaignReviewsSchema = z.object({ ...Workspace, messages: z.array(CampaignMessageSchema).max(100), next_after: Ref.nullable() }).strict();
-export const ReviewPageQuerySchema = CampaignReviewsQuerySchema.omit({ review_status: true });
+export const ReviewPageQuerySchema = CampaignReviewsQuerySchema.omit({ review_status: true, unsent: true });
 const ChannelReviewPolicy = z.object({ mode: z.enum(["approve_each", "send_and_sample"]),
   sample_rate: z.union([z.literal(0), z.literal(10), z.literal(20), z.literal(50)]),
 }).strict();
@@ -462,7 +464,7 @@ export const ReplyTurnReviewSchema = z.object({ decision_id: Ref, expected_versi
   action: z.enum(["send", "skip", "recover", "retry"]), text: z.string().trim().pipe(text(20000)).optional(),
 }).strict().refine(value => value.action === "send" || value.text === undefined, "Only send accepts edited text.");
 export const CampaignMessageRewriteSchema = z.object({ request_ref: Ref, source_digest: Digest,
-  expected_review_status: z.literal("pending"),
+  expected_review_status: z.enum(["pending", "approved"]),
 }).strict();
 export const LeadOutreachPathSchema = z.object({ lead_ref: Ref }).strict();
 export const StopLeadOutreachSchema = z.object({ request_ref: Ref, confirm: z.literal(true) }).strict();
@@ -490,9 +492,10 @@ export const ReassignLeadsResultSchema = z.object({ ...Workspace, request_ref: R
   "A moved lead names its new person, a refused lead its refusal and an unchanged lead keeps its person.")).max(5000),
 }).strict();
 export const CampaignMessageReviewSchema = z.object({ action: z.enum(["approve", "skip", "retry"]), source_digest: Digest,
-  expected_review_status: z.enum(["pending", "enroll_failed"]), reason: text(2000).optional(),
+  expected_review_status: z.enum(["pending", "enroll_failed", "approved"]), reason: text(2000).optional(),
   feedback: z.object({ rating: z.enum(["up", "down"]), note: text(2000) }).strict().optional(),
 }).strict().refine(value => value.action !== "retry" || value.expected_review_status === "enroll_failed", "Retry requires a saved review failure.")
+  .refine(value => value.expected_review_status !== "approved" || value.action === "skip", "An approved message can be skipped, not decided again.")
   .refine(value => value.action !== "skip" || value.reason !== undefined, "Explain why this message is being skipped.")
   .refine(value => value.action !== "skip" || value.feedback === undefined, "Decision feedback is only available for approve or retry.");
 export const CampaignRuntimeSchema = z.object({ ...Workspace, campaign_ref: Ref, intent_active: z.boolean(),

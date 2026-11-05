@@ -94,7 +94,10 @@ export function memberReviewReceiptMatches(action: string, input: IdentityInput,
       const request = c.CampaignMessageRewriteSchema.parse(input.body);
       const work = receipt.rewrite_work;
       return receipt.message.message_ref === input.path.message_ref && work != null
-        && work.message_ref === input.path.message_ref && work.source_digest === request.source_digest
+        && work.message_ref === input.path.message_ref
+        // Asking to rewrite approved copy returns it to pending, which changes its digest.
+        && (request.expected_review_status === "approved" ? work.source_digest === receipt.message.source_digest && receipt.message.review_status === "pending"
+          : work.source_digest === request.source_digest)
         && receipt.message.direction === "outbound"
         && receipt.history.every(message => c.inConversation(message, receipt.message))
         && receipt.revisions.every(message => message.lead_ref === receipt.message.lead_ref
