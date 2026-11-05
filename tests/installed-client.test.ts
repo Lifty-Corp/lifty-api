@@ -28,7 +28,9 @@ const approve = { action: "approve_sample_and_transfer", confirm: true, source_s
 const stopTarget = { scope: "account", account_id: receipt("stop.set").stop.account_id };
 const reply = receipt("handoff.held").samples[0];
 const scope = receipt("sender.transfer_scope");
-const controls: readonly { stage: string; command: string; path?: Record<string, string>; query?: Record<string, string>; body?: unknown; rpc: string; fixture: string }[] = [
+const paused = receipt("sender.pause");
+const account = paused.sender.accounts[0];
+const controls: readonly { stage: string; command: string; path?: Record<string, string>; query?: Record<string, string>; body?: unknown; rpc: string; fixture?: string; data?: unknown }[] = [
   { stage: "senders", command: "POST pause", path: { id: senderId }, body: { expected_version: 2, confirm: true }, rpc: "pause_lifty_sender", fixture: "sender.pause" },
   { stage: "senders", command: "POST resume", path: { id: senderId }, body: { expected_version: 3, confirm: true }, rpc: "resume_lifty_sender", fixture: "sender.resume" },
   { stage: "senders", command: "GET settings-get", rpc: "get_lifty_workspace_settings", fixture: "settings.defaults" },
@@ -45,15 +47,18 @@ const controls: readonly { stage: string; command: string; path?: Record<string,
   { stage: "senders", command: "POST stop-release", body: stopTarget, rpc: "release_lifty_stop", fixture: "stop.release" },
   { stage: "senders", command: "POST stop-review", body: { ...stopTarget, review_by: "2026-11-30T00:00:00Z" }, rpc: "move_lifty_stop_review", fixture: "stop.move" },
   { stage: "sending-accounts", command: "GET incidents-get", rpc: "get_lifty_recovery_incidents", fixture: "recovery.incidents" },
+  // The accounts of a real sender receipt, in the shape get_lifty_sending_accounts answers.
+  { stage: "sending-accounts", command: "GET action", path: { id: account.id }, query: { action: "reconnect" }, rpc: "get_lifty_sending_accounts",
+    data: { workspace: paused.workspace, accounts: paused.sender.accounts } },
   { stage: "campaigns", command: "GET reply_counts_get", query: { sender_id: receipt("review.counts.sender").counts.senders[0].sender_id }, rpc: "get_lifty_reply_turn_counts", fixture: "review.counts.sender" },
 ];
 
 describe("installed clients", () => {
-  it.each(controls)("run $stage $command from the catalog alone", async ({ stage, command, path, query, body, rpc, fixture }) => {
+  it.each(controls)("run $stage $command from the catalog alone", async ({ stage, command, path, query, body, rpc, fixture, data }) => {
     const calls: string[] = [];
     const client = { rpc: async (name: string) => {
       calls.push(name);
-      return { data: name === "get_lifty_workspace_settings" && rpc !== name ? settings : receipt(fixture), error: null };
+      return { data: name === "get_lifty_workspace_settings" && rpc !== name ? settings : data ?? receipt(fixture!), error: null };
     } };
     const app = createApp({ authenticate: async () => ({ ok: true, session: { userId: "founder", client } }), enqueueHandoffReplies: async () => ({ id: "run" }), log: () => {} });
     const context = await (await app.request(`/v1/context/${stage}?client_contract=${SUPPORTED_CLIENT_CONTRACTS[0]}`)).json();

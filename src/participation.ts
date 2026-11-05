@@ -54,29 +54,28 @@ export const ParticipationNextStep = z.object({
 }).strict();
 export type ParticipationNextStep = z.infer<typeof ParticipationNextStep>;
 
-const Words = (label: string, short: string, owner: z.infer<typeof ParticipationOwner>, action: z.infer<typeof ParticipationAction>) =>
-  ({ label, short, owner, action });
-// `short` is how the same cause reads after a person's name: "Lee · warming".
+const Words = (label: string, owner: z.infer<typeof ParticipationOwner>, action: z.infer<typeof ParticipationAction>) =>
+  ({ label, owner, action });
 const CAUSES: Record<ParticipationCause, ReturnType<typeof Words>> = {
-  active_journeys: Words("Sending", "sending", "none", "none"),
-  no_active_campaign_on_channel: Words("Connected · sends once a campaign is active", "no active campaign", "none", "none"),
-  no_lead_yet: Words("Ready · sends once a lead reaches this channel", "ready", "none", "none"),
-  paused_by_member: Words("Paused", "paused", "member", "resume_account"),
-  sender_paused: Words("Sender paused", "sender paused", "member", "resume_sender"),
-  sender_off: Words("Sender retired", "retired", "member", "turn_on_sender"),
-  paused_by_disconnect: Words("Paused after a disconnect", "paused after a disconnect", "member", "resume_campaigns"),
-  campaign_paused: Words("Campaign paused", "campaign paused", "member", "resume_campaign"),
-  workspace_suspended: Words("Workspace paused", "workspace paused", "lifty", "contact_lift"),
-  paused_by_lift: Words("Paused by Lifty", "paused by Lifty", "lifty", "lifty_review"),
-  disconnected: Words("Disconnected", "disconnected", "member", "reconnect"),
-  needs_reconnect: Words("Reconnect needed", "needs reconnecting", "member", "reconnect"),
-  unverified: Words("Connection not verified yet", "connection not verified yet", "lifty", "wait"),
-  warming: Words("Warming up", "warming", "lifty", "wait"),
-  placement_required: Words("Needs an inbox placement test", "needs an inbox placement test", "lifty", "wait"),
-  declaration_required: Words("Confirm how this mailbox is used", "mailbox use not confirmed", "member", "set_mailbox_use"),
-  signature_missing: Words("Needs a signature", "signature missing", "member", "add_signature"),
-  mailbox_not_ready: Words("Not ready to send yet", "not ready to send yet", "lifty", "wait"),
-  health_hold: Words("On hold", "on hold", "lifty", "lifty_review"),
+  active_journeys: Words("Sending", "none", "none"),
+  no_active_campaign_on_channel: Words("Connected · sends once a campaign is active", "none", "none"),
+  no_lead_yet: Words("Ready · sends once a lead reaches this channel", "none", "none"),
+  paused_by_member: Words("Paused", "member", "resume_account"),
+  sender_paused: Words("Sender paused", "member", "resume_sender"),
+  sender_off: Words("Sender retired", "member", "turn_on_sender"),
+  paused_by_disconnect: Words("Paused after a disconnect", "member", "resume_campaigns"),
+  campaign_paused: Words("Campaign paused", "member", "resume_campaign"),
+  workspace_suspended: Words("Workspace paused", "lifty", "contact_lift"),
+  paused_by_lift: Words("Paused by Lifty", "lifty", "lifty_review"),
+  disconnected: Words("Disconnected", "member", "reconnect"),
+  needs_reconnect: Words("Reconnect needed", "member", "reconnect"),
+  unverified: Words("Connection not verified yet", "lifty", "wait"),
+  warming: Words("Warming up", "lifty", "wait"),
+  placement_required: Words("Needs an inbox placement test", "lifty", "wait"),
+  declaration_required: Words("Confirm how this mailbox is used", "member", "set_mailbox_use"),
+  signature_missing: Words("Needs a signature", "member", "add_signature"),
+  mailbox_not_ready: Words("Not ready to send yet", "lifty", "wait"),
+  health_hold: Words("On hold", "lifty", "lifty_review"),
 };
 
 // A cause a member reads never names a vendor or an operator's note. `other`
@@ -90,7 +89,7 @@ const PLAIN_STOP_REASON: Record<StopReason, string | null> = {
   other: null, unspecified: null,
 };
 const PLAIN_HEALTH_REASON: Record<z.infer<typeof HealthReason>, string> = {
-  complaint: "spam complaint", workspace_complaint: "spam complaint", bounce_rate: "too many bounces", safety_check_failed: "too many bounces",
+  complaint: "spam complaint", workspace_complaint: "spam complaint in this workspace", bounce_rate: "too many bounces", safety_check_failed: "too many bounces",
   provider_health: "inbox health", placement_failed: "placement test failed",
 };
 
@@ -128,8 +127,13 @@ export function presentParticipation<T extends Reported>(value: T, now: number) 
     ...(value.also ? { also: value.also.map(item => ({ ...item, next_step: nextStep(item, false, now) })) } : {}) };
 }
 
-/** One cause on its own, as a recovery incident reports it: no stop facts and no estimate of `since`. */
-export const causeStep = (cause: ParticipationCause, since: string | null) => nextStep({ cause, since }, false, 0);
+/**
+ * One cause on its own, as a recovery incident reports it: no stop facts and no
+ * estimate of `since`. A recovered inbox is listed only while its handoff waits,
+ * so its cause no longer asks anything of anyone.
+ */
+export const causeStep = (cause: ParticipationCause, since: string | null, recovered = false): ParticipationNextStep =>
+  recovered ? { label: "Recovered", owner: "none", action: "none", since, since_estimated: null, review_by: null } : nextStep({ cause, since }, false, 0);
 
 /**
  * The database's participation, with `next_step` added on every read so no
@@ -155,7 +159,7 @@ const SENDABLE: readonly ParticipationStatus[] = ["sending", "waiting_for_first_
 /** Whether this account can send once a lead reaches it. */
 export const canSend = (participation: Participation) => SENDABLE.includes(participation.status);
 
-/** "Lee · warming until Nov 14". Without a date it only names the cause. */
-export function blockedLabel(name: string, cause: ParticipationCause, clearsOn: string | null): string {
-  return `${name} · ${CAUSES[cause].short}${clearsOn ? ` until ${shortDay(clearsOn)}` : ""}`;
+/** One person's line, in the cause's own words: "Lee · Warming up until Nov 14". */
+export function blockedLabel(name: string, label: string, clearsOn: string | null): string {
+  return `${name} · ${label}${clearsOn ? ` until ${shortDay(clearsOn)}` : ""}`;
 }

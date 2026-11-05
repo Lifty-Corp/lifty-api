@@ -349,6 +349,15 @@ describe("member verdict and next step (LIF-1603)", () => {
       .toMatchObject({ code: "on_hold", label: "On hold · too many bounces", tone: "bad" });
   });
 
+  // A workspace complaint fails the same safety gate, so no surface may blame bounces.
+  it("never blames bounces for a workspace complaint", () => {
+    const hold = { ...receipt("participation.health_hold"), health: { reason: "workspace_complaint" } };
+    const mailbox = verdict("email_safety_check_failed", noCampaigns, { participation: hold });
+    expect(mailbox.status).toMatchObject({ code: "on_hold", label: "On hold · spam complaint in this workspace" });
+    const { status, next_step: next, readiness, connections, account } = mailbox;
+    expect(JSON.stringify({ status, next, readiness, connections, outreach: account?.outreach })).not.toMatch(/bounce/i);
+  });
+
   it("shows the same primary cause and the other one below it", () => {
     const paused = receipt("sender.pause").sender.accounts.find((item: Account) => item.channel === "email" && item.participation.also?.[0]?.cause === "paused_by_member");
     const mailbox = verdict(null, noCampaigns, { participation: paused.participation });

@@ -287,7 +287,17 @@ describe("customer surfaces name no provider or retired volume knob", () => {
     expect(guide).toContain("Never promise that work will move");
     expect(guide).toContain("only `moved` says work moved");
     expect(guide).not.toMatch(/Lifty (?:moves|will move|can move)/);
+    // A disconnected account is one recovery can act on.
+    expect(guide).not.toContain("never moves their leads");
+    expect(guide).toContain("does not hand over their leads");
     expect(getAgentContext("sending-accounts")!.operations!.incidents_get!.description).toMatch(/only moved says work moved/);
+  });
+
+  it("sends a paused sender to the sender's own resume, not the account's", () => {
+    const guide = getAgentContext("linkedin")!.instructions.replace(/\s+/g, " ");
+    const line = guide.slice(guide.indexOf("- `sender_paused`"), guide.indexOf("- `paused_by_lift`"));
+    expect(line).toContain("`senders_resume`");
+    expect(line).not.toContain("sending_accounts_resume");
   });
 
   it("keeps the sample's operations to get, post, progress and the founder's confirmation", () => {

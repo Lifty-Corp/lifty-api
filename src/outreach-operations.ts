@@ -159,9 +159,9 @@ async function blockedPeople(session: AuthSession, channel: string, workspaceRef
       .map(account => ({ account, on: readyOn(account.identity) })).sort((a, b) => (a.on ?? "9999").localeCompare(b.on ?? "9999"));
     const chosen = warming[0]?.account ?? mailboxes[0]!;
     const clearsOn = warming[0]?.on ?? null;
-    const { cause, next_step: step } = chosen.participation;
-    return { sender_id: sender.id, name: sender.name, cause, label: blockedLabel(sender.name, cause, clearsOn), clears_on: clearsOn,
-      owner: step!.owner, action: step!.action };
+    const { cause, next_step: step, waiting_journeys: waiting } = chosen.participation;
+    return { sender_id: sender.id, name: sender.name, cause, label: blockedLabel(sender.name, step!.label, clearsOn), clears_on: clearsOn,
+      owner: step!.owner, action: step!.action, since: step!.since, review_by: step!.review_by, waiting_journeys: waiting ?? null };
   });
 }
 

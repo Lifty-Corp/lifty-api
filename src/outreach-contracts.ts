@@ -340,7 +340,8 @@ export const CampaignActivationReceiptSchema = CampaignResultSchema.extend({ jou
 // LIF-1771: who this activation cannot reach yet, in participation's words.
 // Activation still proceeds. Null when that read failed, which is not "nobody".
 export const BlockedPersonSchema = z.object({ sender_id: Ref, name: z.string().min(1), cause: z.string().min(1), label: z.string().min(1),
-  clears_on: z.iso.date().nullable(), owner: ParticipationOwner, action: ParticipationAction }).strict();
+  clears_on: z.iso.date().nullable(), owner: ParticipationOwner, action: ParticipationAction,
+  since: Timestamp.nullable(), review_by: Timestamp.nullable(), waiting_journeys: z.number().int().nonnegative().nullable() }).strict();
 export const CampaignActivationResultSchema = CampaignActivationReceiptSchema.extend({ blocked_people: z.array(BlockedPersonSchema).max(1000).nullable() }).strict();
 export type JourneyPolicy = z.infer<typeof JourneyPolicySchema>;
 export type CampaignPolicy = z.infer<typeof CampaignPolicySchema>;

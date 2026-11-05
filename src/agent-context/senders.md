@@ -140,7 +140,8 @@ one when that person has no other healthy inbox.
 
 Approved and queued are not sent. Never say a message went out from a handoff
 read: messages go on their schedule under the usual checks. `senders_handoff_cancel`
-ends a waiting handoff; leads that already moved stay moved.
+ends a waiting handoff; leads that already moved stay moved. An approved handoff
+cannot be canceled (`HANDOFF_ALREADY_APPROVED`).
 
 ## Technical recovery
 
@@ -150,6 +151,7 @@ failure, two business days after a recoverable one. Never promise that work will
 move: that depends on things you cannot see. `counts` is a plan and can be null;
 only `moved` says work moved. With no other healthy inbox of the same person,
 contacted work waits for a sample, and `handoff_ref` is the handoff above.
+`handoff_pending` says that sample still waits, even after the inbox recovered.
 Reconnecting never brings moved work back, and a voluntary pause is never a failure.
 
 A notification's link reads `sending_accounts_action` with `path.id` and
@@ -185,7 +187,8 @@ are already blocked and Lifty keeps removing access at the provider on its own
 is pending. Never claim access was removed without `access_revoked_at`.
 
 A deleted sender cannot receive connections or take part in new Journeys.
-Removing or replacing a person's account never moves their leads on its own.
+Removing or replacing a person's account does not hand over their leads.
+Technical recovery may act on a lost inbox, and only `moved` says it did.
 When leads wait on a person's lost account and their outreach has not started,
 move them with `lead_reassign_post` (`lifty context campaigns`); it never moves
 contacted leads. To hand over every admitted lead of a person, contacted or

@@ -130,11 +130,13 @@ export const HandoffReplySchema = z.object({ turn_version: z.number().int().nonn
 export const RecoveryIncidentsSchema = z.object({ ...Workspace, incidents: z.array(z.object({
   incident_ref: Id, account_id: Id, sender_id: Id, channel: Channel,
   cause: z.enum(["disconnected", "needs_reconnect", "paused_by_lift", "health_hold"]), severity: z.enum(["severe", "recoverable"]),
-  since: Timestamp, due_at: Timestamp, state: z.enum(["open", "applied"]), handoff_ref: HandoffRef.nullable(),
+  since: Timestamp, due_at: Timestamp, state: z.enum(["open", "applied", "recovered"]), handoff_ref: HandoffRef.nullable(),
+  // Its sample still waits, even after the inbox recovered. It says nothing about the recovery mode.
+  handoff_pending: z.boolean().optional(),
   // The plan of the last wake, or null when nothing recorded one. Only `moved` says work moved.
   counts: z.record(z.string(), Count).nullable(), moved: Count.nullable(), next_step: ParticipationNextStep.optional(),
   // The cause's own words. They name no move: recovery may only be reporting, and members never see that mode.
-}).strict().overwrite(incident => ({ ...incident, next_step: causeStep(incident.cause, incident.since) }))).max(5000) }).strict();
+}).strict().overwrite(incident => ({ ...incident, next_step: causeStep(incident.cause, incident.since, incident.state === "recovered") }))).max(5000) }).strict();
 
 // ---------------------------------------------------------------- action links
 

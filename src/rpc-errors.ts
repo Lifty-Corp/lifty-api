@@ -69,6 +69,7 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   HANDOFF_REVISION_STALE: "This handoff changed since you read it. Read it again and use its current revision.",
   HANDOFF_CONTEXT_STALE: "A conversation in this handoff changed. Read it again and review the current sample before approving.",
   HANDOFF_SAMPLE_INCOMPLETE: "This sample still has drafts to prepare. Approve it once every draft exists.",
+  HANDOFF_ALREADY_APPROVED: "This handoff is already approved, so it can no longer be canceled. Nothing changed. Read it for its current state.",
   HANDOFF_CONFIRMATION_REQUIRED: "Confirm this handoff with confirm:true and the action named in the handoff.",
   HANDOFF_REPLY_STALE: "This reply changed or was already answered. Read the handoff again before editing it.",
   CAMPAIGN_RESUME_ACCOUNT_BLOCKED: "Reconnect the same LinkedIn account and resume its usage first. Sending holds and unverified health must be resolved before resuming campaigns.",

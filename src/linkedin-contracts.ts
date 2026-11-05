@@ -15,7 +15,7 @@ const Counts = z.object({
 // Why an account's due LinkedIn work waits; null when nothing waits.
 export const WaitingReason = z.enum([
   "prior_campaign_running", "awaiting_review", "outside_schedule", "daily_limit_reached",
-  "campaign_paused", "account_paused", "paused_by_lift", "account_needs_attention", "on_hold",
+  "campaign_paused", "account_paused", "sender_paused", "paused_by_lift", "account_needs_attention", "on_hold",
 ]);
 const LinkedinAccountSchema = AccountSchema.pick({ id: true, sender_id: true, status: true, state: true })
   .extend({ today: Counts, last_7_days: Counts, waiting_reason: WaitingReason.nullable() }).strict();

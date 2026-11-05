@@ -284,7 +284,8 @@ const controlReasons: Record<string, string> = {
   email_warmup_spam: "Warmup emails are landing in spam. Sending remains held until a later sufficient clean measurement.",
   email_placement_required: "This mailbox needs a passing placement test from the last ten days before sending.",
   email_safety_check_required: "This mailbox needs a recent successful safety check before sending.",
-  email_safety_check_failed: "5% or more of this mailbox's emails in the last 7 days bounced, so sending stopped until the rate falls.",
+  // A workspace complaint fails this check too, so the reason names no bounces.
+  email_safety_check_failed: "This mailbox's latest safety check failed, so sending stopped until a later check passes.",
   email_critical_hold: "An explicit safety hold blocks this mailbox.",
 };
 

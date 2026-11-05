@@ -1,10 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../src/app.js";
 import { STAGE_CLIENT_CONTRACT, getAgentContext } from "../src/agent-context.js";
 import { executeOutreachOperation, outreachEntries } from "../src/outreach-operations.js";
 import { memberReviewOperationDefinitions } from "../src/member-review-operations.js";
 import { getStageMcpTools, callStageMcpTool } from "../src/mcp-stage-tools.js";
 
+import { receipt as sql } from "./senders-fixtures.js";
 import { journeyRef, campaignRef, revisionRef, senderId, workspace, digest, policy, journeyPolicy, revision, executableVersion, journey, campaign, journeySummary, campaignSummary } from "./outreach-fixtures.js";
 function harness(result: (name: string, args: Record<string, unknown>) => unknown) {
   const rpc = vi.fn(async (name: string, args: Record<string, unknown>) => {
@@ -50,7 +51,8 @@ describe("blocked people on activation", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.campaign.state).toBe("active");
-    expect(body.blocked_people).toEqual([{ sender_id: lee, name: "Lee", cause: "warming", label: "Lee · warming until Nov 14", clears_on: "2026-11-14", owner: "lifty", action: "wait" }]);
+    expect(body.blocked_people).toEqual([{ sender_id: lee, name: "Lee", cause: "warming", label: "Lee · Warming up until Nov 14", clears_on: "2026-11-14", owner: "lifty", action: "wait",
+      since: null, review_by: null, waiting_journeys: null }]);
   });
 
   it("reads one cause per person: any mailbox that can send clears them, and the soonest date speaks", async () => {
@@ -63,13 +65,30 @@ describe("blocked people on activation", () => {
       person("55555555-5555-4555-8555-555555555556", "Stopped", [mailbox("55555555-5555-4555-8555-555555555556", "stop@a.test", { status: "paused", cause: "paused_by_lift" })]),
     ]), get_lifty_outreach_capacity_readout: capacity([inbox("late@a.test", "2026-11-20"), inbox("soon@a.test", "2026-11-14")]) });
     const body = await (await result).json();
-    expect(body.blocked_people.map((item: { label: string }) => item.label)).toEqual(["Lee · warming until Nov 14", "Stopped · paused by Lifty"]);
+    expect(body.blocked_people.map((item: { label: string }) => item.label)).toEqual(["Lee · Warming up until Nov 14", "Stopped · Paused by Lifty"]);
     expect(body.blocked_people[1]).toMatchObject({ owner: "lifty", action: "lifty_review", clears_on: null });
+  });
+
+  describe("the same facts as Senders", () => {
+    afterEach(() => { vi.useRealTimers(); });
+    const stop = { ...sql("participation.stop"), waiting_journeys: 3 };
+    const entry = async (participation: unknown) => (await (await activate({ get_lifty_senders: roster([person(lee, "Lee", [mailbox(lee, "lee@a.test", participation)])]) }).result).json()).blocked_people[0];
+
+    it("carries since, the review date and the waiting count of the chosen account", async () => {
+      vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-05T18:00:00Z") });
+      expect(await entry(stop)).toMatchObject({ cause: "paused_by_lift", label: "Lee · Paused by Lifty · deliverability review · we review it by Nov 12", clears_on: null,
+        since: stop.since, review_by: stop.stop.review_by, waiting_journeys: 3 });
+    });
+
+    it("keeps the review date null past its day, as elsewhere", async () => {
+      vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-12-01T00:00:00Z") });
+      expect(await entry(stop)).toMatchObject({ label: "Lee · Paused by Lifty · deliverability review · under review", review_by: null, waiting_journeys: 3 });
+    });
   });
 
   it("leaves a warming date unknown when the capacity read fails, and says nothing about who when the roster fails", async () => {
     const dateless = await (await activate({ get_lifty_senders: roster([person(lee, "Lee", [mailbox(lee, "lee@a.test", warming)])]) }).result).json();
-    expect(dateless.blocked_people[0]).toMatchObject({ label: "Lee · warming", clears_on: null });
+    expect(dateless.blocked_people[0]).toMatchObject({ label: "Lee · Warming up", clears_on: null });
     const { result, h } = activate({});
     const response = await result;
     expect(response.status).toBe(200);

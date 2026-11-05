@@ -60,12 +60,12 @@ describe("LinkedIn activity route", () => {
       expect(h.calls).toEqual([]);
     });
 
-  // LIF-1771: a Lifty stop reads as its own reason, so nobody offers to resume it.
-  it("reports a Lifty stop as its own waiting reason", async () => {
-    const stopped = { ...receipt, accounts: [{ ...receipt.accounts[0], waiting_reason: "paused_by_lift" }] };
+  // LIF-1771: each reads as its own reason, so the guide can name the right action.
+  it.each(["paused_by_lift", "sender_paused"])("reports %s as its own waiting reason", async reason => {
+    const stopped = { ...receipt, accounts: [{ ...receipt.accounts[0], waiting_reason: reason }] };
     const response = await harness(() => stopped).read("");
     expect(response.status).toBe(200);
-    expect((await response.json()).accounts[0].waiting_reason).toBe("paused_by_lift");
+    expect((await response.json()).accounts[0].waiting_reason).toBe(reason);
   });
 
   it("returns a generic not-found for an unknown, foreign or deleted sender", async () => {

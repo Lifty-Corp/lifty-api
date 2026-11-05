@@ -51,7 +51,7 @@ export const senderControlDefinitions = {
     "With the user's explicit yes, approve this exact sample and transfer the contacted conversations to the replacement, using the current revision and hashes from handoff_get and confirm:true. One approval covers the sample and each remaining first message, never a future reply. Refused when the sample is incomplete or anything changed; read handoff_get again. Approved is not sent: messages go out on their schedule under ordinary checks.",
     c.HandoffApproveSchema, input => ({ p_payload: input.body })),
   handoff_cancel: handoff("handoff_cancel", "POST", "/cancel", "cancel_lifty_sender_handoff",
-    "Cancel a handoff that is waiting, with its revision and confirm:true. Untouched leads that already moved stay moved, and the person stays retired. Idempotent.",
+    "Cancel a handoff that is waiting, with its revision and confirm:true. An approved handoff cannot be canceled: 409 HANDOFF_ALREADY_APPROVED, and nothing changes. Untouched leads that already moved stay moved, and the person stays retired. Idempotent.",
     c.HandoffCancelSchema, input => ({ p_payload: input.body })),
   handoff_settings_revise: handoff("handoff_settings_revise", "POST", "/settings", "revise_lifty_sender_handoff_settings",
     "Change the instructions Lifty writes this handoff's first messages with, using its current revision. Every draft is written again, and approval is needed again. Never sends.",
@@ -76,7 +76,7 @@ export const accountControlDefinitions = {
   incidents_get: {
     method: "GET", route: "/v1/workspace/recovery-incidents", cli: { operation: "incidents-get" }, rpc: "get_lifty_recovery_incidents",
     path: Empty, query: Empty, request: null, invalid, response: c.RecoveryIncidentsSchema, success: 200, args: () => ({}),
-    description: "Read open and applied inbox recovery incidents: the account, cause, severity, since, due_at (the earliest Lifty may act), next_step (the words to show), and handoff_ref when a sample needs approval. counts is a plan and may be null; only moved says work moved. Never promise that work will move. Read-only.",
+    description: "Read open and applied inbox recovery incidents: the account, cause, severity, since, due_at (the earliest Lifty may act), next_step (the words to show), and handoff_ref with handoff_pending when a sample waits, even after the inbox recovered. counts is a plan and may be null; only moved says work moved. Never promise that work will move. Read-only.",
   },
   action: {
     method: "GET", route: "/v1/workspace/sending-accounts/{id}/action", cli: { operation: "action" }, rpc: "get_lifty_sending_accounts",

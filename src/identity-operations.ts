@@ -174,10 +174,12 @@ export function handoffRepliesRequest(key: string, body: unknown): { workspaceId
     const { workspace, drain } = body as z.output<typeof contracts.SenderTurnOffResultSchema>;
     return "handoff_ref" in drain && drain.handoff_ref ? { workspaceId: workspace.workspace_ref, handoffRef: drain.handoff_ref, settingsRevision: null } : null;
   }
-  if (key !== "senders.handoff_prepare" && key !== "senders.handoff_settings_revise") return null;
+  if (key !== "senders.handoff_prepare" && key !== "senders.handoff_settings_revise" && key !== "senders.handoff_approve") return null;
   const handoff = body as z.output<typeof HandoffSchema>;
+  // Prepare shares the retire's key. An approval keys on its revision, so one
+  // made minutes after the retire is not collapsed into that earlier request.
   return { workspaceId: handoff.workspace_id, handoffRef: handoff.drain_ref,
-    settingsRevision: key === "senders.handoff_settings_revise" ? handoff.settings_revision : null };
+    settingsRevision: key === "senders.handoff_prepare" ? null : handoff.settings_revision };
 }
 
 export const identityEntries = () =>

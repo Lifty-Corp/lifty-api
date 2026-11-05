@@ -571,6 +571,13 @@ describe("participation causes", () => {
       next_step: { label: "Paused", owner: "member", action: "resume_account", since, since_estimated: null, review_by: null } }]);
   });
 
+  it("gives a workspace complaint its own label, never a bounce", async () => {
+    const hold = { ...receipt("participation.health_hold"), health: { reason: "workspace_complaint" } };
+    const { label } = (await read(hold)).participation.next_step;
+    expect(label).toBe("On hold · spam complaint in this workspace");
+    expect(label).not.toBe((await read({ ...hold, health: { reason: "complaint" } })).participation.next_step.label);
+  });
+
   it("names the sender's pause first and a Lifty stop below it, which only Lifty releases", async () => {
     const paused = receipt("sender.pause").sender;
     const linkedin = paused.accounts.find((item: { channel: string }) => item.channel === "linkedin");
@@ -844,7 +851,9 @@ describe("sender handoffs", () => {
     expect(body).toMatchObject({ state: "approved", authorization: { state: "authorized" }, transferred_count: 1, queued_count: 0 });
     expect(JSON.stringify(body)).not.toMatch(/"sent|"delivered/);
     expect(h.calls[1]).toEqual({ name: "approve_lifty_sender_handoff", args: { p_workspace_id: selected, p_drain_ref: "163", p_payload: approval() } });
-    expect(h.enqueueHandoffReplies).not.toHaveBeenCalled();
+    // Keyed on the revision, so an approval right after a retire is not collapsed into the retire's request.
+    const { workspace_id: workspaceId, drain_ref: handoffRef, settings_revision: settingsRevision } = receipt("handoff.approve");
+    expect(h.enqueueHandoffReplies).toHaveBeenCalledExactlyOnceWith({ workspaceId, handoffRef, settingsRevision });
   });
 
   it("requests replies after prepare and after a settings revision, keyed by what changed", async () => {
@@ -859,10 +868,18 @@ describe("sender handoffs", () => {
     expect(revise.enqueueHandoffReplies).toHaveBeenCalledExactlyOnceWith({ workspaceId: ready().workspace_id, handoffRef: ready().drain_ref, settingsRevision: 1 });
   });
 
-  it("keeps the member's action when the request for replies fails", async () => {
-    const h = harness(name => name === "get_lifty_workspace_settings" ? receipt("settings.defaults") : receipt("handoff.ready"), {}, "full", vi.fn(async () => { throw new Error("down"); }));
-    expect((await h.request("POST", `${route()}/prepare`, {})).status).toBe(200);
+  it.each([["prepare", "handoff.ready", () => ({})], ["approve", "handoff.approve", approval]] as const)("keeps the member's %s when the request for replies fails", async (action, fixture, body) => {
+    const h = harness(name => name === "get_lifty_workspace_settings" ? receipt("settings.defaults") : receipt(fixture), {}, "full", vi.fn(async () => { throw new Error("down"); }));
+    expect((await h.request("POST", `${route()}/${action}`, body())).status).toBe(200);
     expect(h.logged[0]).toMatchObject({ event: "handoff_replies_enqueue_failed" });
+  });
+
+  it("refuses to cancel an approved handoff with a stable 409, and says so in the catalog", async () => {
+    const h = harness(name => { if (name === "get_lifty_workspace_settings") return receipt("settings.defaults"); throw dbError("PT409", "HANDOFF_ALREADY_APPROVED"); });
+    const response = await h.request("POST", `${route()}/cancel`, { confirm: true, revision: ready().revision });
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toMatchObject({ code: "HANDOFF_ALREADY_APPROVED", message: expect.stringMatching(/already approved.*Nothing changed/) });
+    expect(identityOperationDefinitions.senders.handoff_cancel.description).toMatch(/An approved handoff cannot be canceled: 409 HANDOFF_ALREADY_APPROVED/);
   });
 
   it("cancels with its revision and edits one reply with its turn version", async () => {
@@ -930,6 +947,26 @@ describe("recovery incidents and notification links", () => {
       expect(body.incidents[0].next_step).toMatchObject({ label, owner, action });
       expect(JSON.stringify(body.incidents[0].next_step)).not.toMatch(/mov|transfer|automatic|recover|inbox/i);
     }
+  });
+
+  it("passes handoff_pending through as a fact, never as a mode", async () => {
+    const [incident] = receipt("recovery.incidents").incidents;
+    const read = async (item: unknown) => harness(() => ({ ...receipt("recovery.incidents"), incidents: [item] })).request("GET", "/v1/workspace/recovery-incidents");
+    const waiting = { ...incident, handoff_ref: receipt("sender.pending_transfer.handoff").handoff_ref, handoff_pending: true };
+    const open = (await (await read(waiting)).json()).incidents[0];
+    expect(open).toMatchObject({ handoff_pending: true, handoff_ref: waiting.handoff_ref, counts: null, moved: null });
+    // The words do not change: a waiting sample says nothing about how recovery runs.
+    expect(open.next_step).toEqual((await (await read({ ...waiting, handoff_pending: false })).json()).incidents[0].next_step);
+    expect((await read({ ...waiting, handoff_pending: "yes" })).status).toBe(502);
+  });
+
+  it("stops asking for a reconnect once the inbox recovered, while its handoff still waits", async () => {
+    const [incident] = receipt("recovery.incidents").incidents;
+    const recovered = { ...incident, cause: "needs_reconnect", state: "recovered", handoff_ref: receipt("sender.pending_transfer.handoff").handoff_ref, handoff_pending: true };
+    const response = await harness(() => ({ ...receipt("recovery.incidents"), incidents: [recovered] })).request("GET", "/v1/workspace/recovery-incidents");
+    expect(response.status).toBe(200);
+    expect((await response.json()).incidents[0]).toMatchObject({ state: "recovered", handoff_pending: true,
+      next_step: { label: "Recovered", owner: "none", action: "none", since: incident.since, since_estimated: null, review_by: null } });
   });
 
   it("resolves a link to the authorized account and action, and opening it mutates nothing", async () => {
