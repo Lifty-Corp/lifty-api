@@ -66,6 +66,15 @@ function harness(receipt: unknown) {
   } };
 }
 describe("member Review transport", () => {
+  it("rewrites approved copy only when the receipt shows the message went back to pending", async () => {
+    const digest = "b".repeat(64);
+    const held = { ...rewrite, message: { ...rewrite.message, source_digest: digest }, rewrite_work: { ...rewrite.rewrite_work, source_digest: digest } };
+    const rewriteCase = cases.find(value => value.action === "message_rewrite_post")!;
+    const approvedBody = { ...rewriteBody, expected_review_status: "approved" };
+    expect((await harness(held).request(rewriteCase, approvedBody)).status).toBe(202);
+    expect((await harness({ ...held, message: { ...held.message, review_status: "approved" } }).request(rewriteCase, approvedBody)).status).toBe(502);
+    expect((await harness({ ...held, rewrite_work: { ...held.rewrite_work, source_digest: message.source_digest } }).request(rewriteCase, approvedBody)).status).toBe(502);
+  });
   it("accepts real SQL receipts and their exact recorded write selectors", () => {
     for (const receipt of [sql.settings, sql.settings_changed]) contracts.ReviewSettingsResultSchema.parse(receipt);
     contracts.CampaignReviewsSchema.parse(sql.samples);
@@ -189,7 +198,7 @@ describe("member Review transport", () => {
       ["lead_reassign_post", { ...reassignBody, leads: { lead_refs: [message.lead_ref], from_sender_id: message.sender_id } }],
       ["lead_reassign_post", { ...reassignBody, to: { kind: "sender" } }],
       ["lead_reassign_post", { ...reassignBody, sender_ids: [message.sender_id] }],
-      ["message_rewrite_post", { ...rewriteBody, expected_review_status: "approved" }],
+      ["message_rewrite_post", { ...rewriteBody, expected_review_status: "enroll_failed" }],
       ["reply_review_post", { ...replyBody, expected_version: -1 }],
       ["reply_review_post", { ...replyBody, action: "skip" }],
       ["review_settings_patch", { expected_version: 1, linkedin: { mode: "send_and_sample", sample_rate: 100 } }],
