@@ -1,7 +1,7 @@
 import type { EmailProvider } from "./connect-state.js";
 import { connectionFetch, noteProviderError } from "./connection-confirmation.js";
 import { z } from "zod";
-import { PublicError } from "./errors.js";
+import { PublicError, type UpstreamDiagnostics } from "./errors.js";
 import { parseHostedAuthOrigin } from "./hosted-auth-branding.js";
 import { ProviderIdentifier, type UnipileTransport, type VerifiedTransport } from "./unipile-transport.js";
 
@@ -25,9 +25,10 @@ const Account = z.object({
   metadata: z.object({ v1_account_id: ProviderIdentifier.optional(),
     products_connection_status: z.record(z.string(), z.enum(["running", "disconnected", "errored"])).optional() }),
 });
-// A refused hosted link names its documented error type; only that code is kept.
+// A refused call names its documented error type and request id; only those are kept.
 // https://developer.unipile.com/v2.0/reference/error-responses
-const HostedLinkError = z.object({object: z.literal("Error"), type: z.string().max(100)});
+const ProviderFailure = z.object({object: z.literal("Error"), type: z.string().regex(/^[a-z0-9_]{1,40}\/[a-z0-9_]{1,40}$/),
+  req_id: z.string().regex(/^[A-Za-z0-9._:-]{1,100}$/).optional()});
 const Senders = z.object({data: z.array(z.object({object: z.literal("EmailSender"), email: z.email(),
   is_primary: z.boolean(), verification_status: z.enum(["verified", "pending", "unknown"])})),
   next_cursor: z.string().nullish(), total_count: z.number().int().nonnegative().optional()});
@@ -55,8 +56,8 @@ export function createUnipileV2Provider(settings: UnipileV2Settings & {fetchImpl
   const fetchImpl = connectionFetch(settings.fetchImpl ?? fetch);
   const timeoutMs = settings.timeoutMs ?? 15_000;
   if (!Number.isInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 30_000) throw new Error("Invalid Unipile V2 timeout.");
-  function fail(code = "UNIPILE_UNAVAILABLE", status = 502): never {
-    throw new PublicError({code, status, message: "LIFTY could not verify this connection. Check status and reconnect if needed."});
+  function fail(code = "UNIPILE_UNAVAILABLE", status = 502, diagnostics?: UpstreamDiagnostics): never {
+    throw new PublicError({code, status, message: "LIFTY could not verify this connection. Check status and reconnect if needed.", ...(diagnostics ? {diagnostics} : {})});
   }
   async function request(path: string, body?: Record<string, unknown>, method: "GET" | "POST" | "DELETE" = body ? "POST" : "GET", deadline?: AbortSignal): Promise<unknown> {
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -68,15 +69,15 @@ export function createUnipileV2Provider(settings: UnipileV2Settings & {fetchImpl
         ...(body ? {body: JSON.stringify(body)} : {}),
       });
       if (!response.ok) {
+        const failure = ProviderFailure.safeParse(await json(response, signal, 16_384).catch(() => null));
+        if (failure.success) noteProviderError(failure.data.type);
+        const diagnostics: UpstreamDiagnostics = {upstream_operation: "unipile", upstream_code: String(response.status), upstream_kind: "provider",
+          ...(failure.success ? {provider_error: failure.data.type} : {}),
+          ...(failure.data?.req_id ? {provider_request_id: failure.data.req_id} : {})};
         // Unipile refused to create the link: asking again gets the same answer.
-        if (path === "auth/link" && [400, 401, 403, 422].includes(response.status)) {
-          const error = HostedLinkError.safeParse(await json(response, signal, 16_384).catch(() => null));
-          if (error.success) noteProviderError(error.data.type);
-          fail("UNIPILE_HOSTED_REJECTED");
-        }
-        void response.body?.cancel().catch(() => {});
-        if (response.status === 404) fail("UNIPILE_ACCOUNT_NOT_FOUND", 409);
-        fail();
+        if (path === "auth/link" && [400, 401, 403, 422].includes(response.status)) fail("UNIPILE_HOSTED_REJECTED", 502, diagnostics);
+        if (response.status === 404) fail("UNIPILE_ACCOUNT_NOT_FOUND", 409, diagnostics);
+        fail("UNIPILE_UNAVAILABLE", 502, diagnostics);
       }
       return await json(response, signal, 1_048_576);
     } catch (error) {
