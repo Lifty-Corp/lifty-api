@@ -114,7 +114,7 @@ Journeys again. Leads already moved stay with their target.
 
 A handoff moves contacted conversations to another person after the founder
 approves a real sample. Retiring a person opens one, and so does inbox recovery
-when nobody else's inbox of that person can take over.
+when that person has no other healthy inbox.
 
 1. `senders_handoff_get` (`lifty get senders handoff-get`) with `path.handoff_ref`.
    Drafts prepare on their own; `senders_handoff_prepare` asks again and never
@@ -139,11 +139,12 @@ ends a waiting handoff; leads that already moved stay moved.
 ## Technical recovery
 
 `sending_accounts_incidents_get` lists inbox failures Lifty is watching. `due_at`
-is when it may act: 24 hours after a severe failure, two business days after a
-recoverable one. Lifty moves email to another healthy inbox of the same person on
-its own and tells nobody new. With no such inbox, contacted work waits for a
-sample: `handoff_ref` is the handoff above. Reconnecting never brings moved work
-back, and a voluntary pause is never a failure.
+is the earliest it may act: 24 hours after a severe failure, two business days
+after a recoverable one. Lifty can move email to another healthy inbox of the
+same person. With no such inbox, contacted work waits for a sample: `handoff_ref`
+is the handoff above. `counts` and `moved` say what actually happened; never say
+work moved without them. Reconnecting never brings moved work back, and a
+voluntary pause is never a failure.
 
 A notification's link reads `sending_accounts_action` with `path.id` and
 `query.action` (`reconnect`, `warmup`): whether it still applies and which
