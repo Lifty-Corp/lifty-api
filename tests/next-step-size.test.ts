@@ -29,9 +29,10 @@ const limits: Record<string, number> = {
   linkedin_outreach_active: 25_000,
   linkedin_reconnect_needed: 25_000,
   // LIF-1670: Part 3 also asks to draft and approve a campaign while none is active.
-  email_connected: 27_000,
+  // LIF-1255: the DNS status and recheck operations add two guide lines (200 characters).
+  email_connected: 27_500,
   email_preparing: 27_000,
-  email_held: 25_000,
+  email_held: 25_500,
   email_ready: 80_000,
 };
 
