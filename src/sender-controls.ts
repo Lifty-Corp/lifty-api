@@ -38,6 +38,11 @@ export const senderControlDefinitions = {
     args: input => ({ p_payload: input.body }),
     description: "Change assignment, handoff sample size and/or review with expected_version (0 until the first save); review carries its own expected_version. All of it commits or refuses together. founder_weight and tier_a_founder need a founder_sender_id who is on. Applies to new leads and new handoffs; leads already assigned stay put. Never sends.",
   },
+  transfer_scope: {
+    method: "GET", route: "/v1/workspace/senders/{id}/transfer-scope", cli: { operation: "transfer-scope" }, rpc: "get_lifty_sender_transfer_scope",
+    path: IdPath, query: Empty, request: null, invalid, response: c.TransferScopeSchema, success: 200, args: input => ({ p_sender_id: input.path.id }),
+    description: "Before a retire, read how it is expected to divide this person's leads: not_contacted would move to the replacement, and conversations would wait for a sample; replies are already inside conversations. Never add the groups or call them all of the person's leads: a contacted lead with nothing to continue is in neither. It is an estimate made before a target is chosen, and it assumes the replacement can send email, so show it as what to expect. What a retire actually did is in its receipt. Read-only.",
+  },
   handoff_get: handoff("handoff_get", "GET", "", "get_lifty_sender_handoff",
     "Read one handoff by the handoff_ref from retire or recovery: source and replacement, sample with real drafts, cohort and remainder, what is held for a person (held_for_human), and each member's dispatch_reason. sample_complete says whether it can be approved. Approved and queued are not sent. Read-only.", null, () => ({})),
   handoff_prepare: handoff("handoff_prepare", "POST", "/prepare", "prepare_lifty_sender_handoff",
@@ -71,7 +76,7 @@ export const accountControlDefinitions = {
   incidents_get: {
     method: "GET", route: "/v1/workspace/recovery-incidents", cli: { operation: "incidents-get" }, rpc: "get_lifty_recovery_incidents",
     path: Empty, query: Empty, request: null, invalid, response: c.RecoveryIncidentsSchema, success: 200, args: () => ({}),
-    description: "Read open and applied inbox recovery incidents: the account, cause, severity, since, due_at (when Lifty may act), counts by action, and handoff_ref when a sample needs approval. Read-only.",
+    description: "Read open and applied inbox recovery incidents: the account, cause, severity, since, due_at (the earliest Lifty may act), next_step (the words to show), and handoff_ref when a sample needs approval. counts is a plan and may be null; only moved says work moved. Never promise that work will move. Read-only.",
   },
   action: {
     method: "GET", route: "/v1/workspace/sending-accounts/{id}/action", cli: { operation: "action" }, rpc: "get_lifty_sending_accounts",

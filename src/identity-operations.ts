@@ -5,7 +5,7 @@ import { PublicError } from "./errors.js";
 import { RPC_ERROR_MESSAGES, rpcFailure } from "./rpc-errors.js";
 import * as contracts from "./identity-contracts.js";
 import { accountActionAvailable, accountControlDefinitions, senderControlDefinitions } from "./sender-controls.js";
-import { AccountActionQuery, HandoffSchema, WorkspaceSettingsResultSchema } from "./sender-control-contracts.js";
+import { AccountActionQuery, HandoffSchema, TransferScopeSchema, WorkspaceSettingsResultSchema } from "./sender-control-contracts.js";
 
 // LIF-1182 Identity: senders and their sending accounts. Every definition is a
 // catalog operation (HTTP route, MCP tool, CLI noun, public context). Member
@@ -351,6 +351,9 @@ export async function executeIdentityOperation(session: AuthSession, key: string
     ?? verified(WorkspaceSettingsResultSchema, await call("get_lifty_workspace_settings", {})).workspace.workspace_ref;
   const operationRpc = profile === "connections" && definition.connectionRpc ? definition.connectionRpc : definition.rpc;
   const data = await call(operationRpc, { ...definition.args(input), ...(definition.explicitWorkspace ? { p_workspace_id: await selectedWorkspace() } : {}) });
+  // A scope for another person cannot describe this one.
+  if (key === "senders.transfer_scope" && verified(TransferScopeSchema, data).sender_id !== contracts.IdPath.parse(input.path).id)
+    throw new PublicError({ status: 502, ...unavailable });
   if (key === "sending-accounts.action") {
     const { workspace, accounts } = verified(contracts.AccountsGetSchema, data);
     const account = accounts.find(item => item.id === contracts.IdPath.parse(input.path).id);

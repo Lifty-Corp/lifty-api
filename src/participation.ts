@@ -128,6 +128,9 @@ export function presentParticipation<T extends Reported>(value: T, now: number) 
     ...(value.also ? { also: value.also.map(item => ({ ...item, next_step: nextStep(item, false, now) })) } : {}) };
 }
 
+/** One cause on its own, as a recovery incident reports it: no stop facts and no estimate of `since`. */
+export const causeStep = (cause: ParticipationCause, since: string | null) => nextStep({ cause, since }, false, 0);
+
 /**
  * The database's participation, with `next_step` added on every read so no
  * route or client can miss it. `category`, `since` and the rest stay optional

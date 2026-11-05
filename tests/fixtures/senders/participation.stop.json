@@ -2,13 +2,13 @@
   "also": [],
   "category": "intentional",
   "cause": "paused_by_lift",
-  "since": "2026-11-05T16:52:24.103126+00:00",
+  "since": "2026-11-05T18:29:03.758928+00:00",
   "since_estimated": false,
   "status": "paused",
   "stop": {
     "origin": "person",
     "reason": "deliverability_review",
-    "review_by": "2026-11-12T16:52:24.103126+00:00",
+    "review_by": "2026-11-12T18:29:03.758928+00:00",
     "scope": "account"
   },
   "waiting_journeys": 0

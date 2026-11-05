@@ -2,7 +2,7 @@ import { z } from "zod";
 import { WorkspaceIdentitySchema } from "./business-contracts.js";
 import { Channel, Count, HandoffRef, Id, Timestamp } from "./identity-contracts.js";
 import { ReviewSettingsSchema, ReviewSettingsUpdateSchema } from "./outreach-contracts.js";
-import { ParticipationNextStep, SendingScope, StopOrigin, StopPersonReason, StopReason } from "./participation.js";
+import { causeStep, ParticipationNextStep, SendingScope, StopOrigin, StopPersonReason, StopReason } from "./participation.js";
 
 // LIF-1771: the Senders controls the database owns, as published schemas: LIFT
 // stops, workspace settings, handoffs, recovery incidents and notification
@@ -59,6 +59,17 @@ export const WorkspaceSettingsPatchSchema = z.object({
   review: ReviewSettingsUpdateSchema.optional(),
 }).strict().refine(value => value.assignment !== undefined || value.handoff !== undefined || value.review !== undefined,
   { message: "Change at least one of assignment, handoff or review.", path: [] });
+
+// ---------------------------------------------------------------- transfer scope
+
+/**
+ * How a retire would divide a person's leads, before anyone chooses a target.
+ * `replies` sits inside `conversations`. The groups never sum to all leads: a
+ * contacted lead with nothing to continue is in neither, so there is no total.
+ * It assumes the replacement can send email; the retire's own receipt decides.
+ */
+export const TransferScopeSchema = z.object({ ...Workspace, sender_id: Id, not_contacted: Count, conversations: Count, replies: Count }).strict()
+  .refine(value => value.replies <= value.conversations, "Replies are part of the conversations.");
 
 // ---------------------------------------------------------------- handoffs
 
@@ -120,8 +131,10 @@ export const RecoveryIncidentsSchema = z.object({ ...Workspace, incidents: z.arr
   incident_ref: Id, account_id: Id, sender_id: Id, channel: Channel,
   cause: z.enum(["disconnected", "needs_reconnect", "paused_by_lift", "health_hold"]), severity: z.enum(["severe", "recoverable"]),
   since: Timestamp, due_at: Timestamp, state: z.enum(["open", "applied"]), handoff_ref: HandoffRef.nullable(),
-  counts: z.record(z.string(), Count).nullable(), moved: Count.nullable(),
-}).strict()).max(5000) }).strict();
+  // The plan of the last wake, or null when nothing recorded one. Only `moved` says work moved.
+  counts: z.record(z.string(), Count).nullable(), moved: Count.nullable(), next_step: ParticipationNextStep.optional(),
+  // The cause's own words. They name no move: recovery may only be reporting, and members never see that mode.
+}).strict().overwrite(incident => ({ ...incident, next_step: causeStep(incident.cause, incident.since) }))).max(5000) }).strict();
 
 // ---------------------------------------------------------------- action links
 

@@ -5,10 +5,10 @@
   "cohort_count": 1,
   "configured_sample_size": 5,
   "confirmation_action": "approve_sample_and_transfer",
-  "context_sha256": "d329df1e8e2f6bfc8dbf8cba4586cad43819174a915b82fac72e4ae370b86a92",
+  "context_sha256": "4234714d53bf6f3eef2a282cce657e7f943c341ae4e8fcc513f1d103198f78e0",
   "contract": "sender-handoff-approval.v2",
   "current_reply_count": 0,
-  "drain_ref": "132",
+  "drain_ref": "1991",
   "generation_settings": {
     "instructions": ""
   },
@@ -17,13 +17,13 @@
     {
       "dispatch_reason": "preparation_pending",
       "kind": "proactive",
-      "lead_ref": "250e9b7f-f7ab-4db9-92f8-2349fff707a4",
-      "owner": "ab9059c5-e276-46d4-ba28-a882634d2c8f",
+      "lead_ref": "1782d647-f974-477f-9d8e-f8a366c8d94c",
+      "owner": "02a998cd-913e-4f7c-a124-e237fbce3b4c",
       "prepared": false,
       "reason": null,
       "route": null,
-      "run_ref": "9d8bbbfc-02cb-4a60-ae40-d93efa856028",
-      "state_token": "7f19f928fe01929e1a92a93970d0af2c66659f5ac6c69230696342a26e287c12",
+      "run_ref": "32d66b69-18cd-4a07-8c60-f39432b9f9df",
+      "state_token": "5b86e9e651cf884f4122e8cdbe20df83e2a00a2b9accc40bee507ee11617d2b7",
       "turn_ref": null,
       "turn_version": null
     }
@@ -37,11 +37,11 @@
     "display_name": "Target",
     "pinned_signature": "Target, Lifty",
     "pinned_version": 1,
-    "sender_id": "14856082-6594-4ca6-b477-02e0200ce85a",
+    "sender_id": "0b5b309d-1971-4e6f-9b0b-d3ce2cff8ecd",
     "signature": "Target, Lifty",
     "version": 1
   },
-  "revision": "c7861ae788a592c63faf449f19c7baa97eca6f2a6bfe348a2f2b9db33da7e0d6",
+  "revision": "a9d0054e8a2110ac39d0bf4ec828a3d4b70fd79fc8695c75c493eb1424c32685",
   "sample_complete": false,
   "sample_count": 1,
   "samples": [
@@ -103,35 +103,35 @@
           ]
         },
         "contract": "sender-email-handoff.v1",
-        "first_due_at": "2026-11-05T16:52:32.108734+00:00",
+        "first_due_at": "2026-11-05T18:29:05.481196+00:00",
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "ab9059c5-e276-46d4-ba28-a882634d2c8f"
+          "sender_id": "02a998cd-913e-4f7c-a124-e237fbce3b4c"
         },
         "history": [
           {
-            "accepted_at": "2026-11-02T16:52:31.868658+00:00",
-            "connection_ref": "e162e517-2f52-4928-9520-5c8d26024132",
-            "execution_ref": "cfb718f4-4910-4178-a239-11a8032552c8",
+            "accepted_at": "2026-11-02T18:29:05.404629+00:00",
+            "connection_ref": "270e4082-0afe-4da4-8c81-afb664a37282",
+            "execution_ref": "0efe9804-2c47-4da6-b59d-1f649649a2d5",
             "original_position": 1,
             "position": 1,
-            "provider_id": "397d2a08-98a2-47f9-9bc9-78a3e449a3b8",
-            "run_ref": "85b7a16b-20dd-4f80-8473-07f4e152452a",
-            "step_ref": "a2fc242f-c3e1-4cfd-877e-e1eaa1162b9f",
+            "provider_id": "cfe82f8d-78ff-433a-9c3c-2013170eb8aa",
+            "run_ref": "34298913-bd83-43e1-9dc0-1fd224869158",
+            "step_ref": "67ad4b57-5c62-42d6-9085-89aa9faab070",
             "subject": "Original subject",
             "text": "Original email 1"
           }
         ],
         "kind": "continue",
         "last_accepted_email": {
-          "accepted_at": "2026-11-02T16:52:31.868658+00:00",
-          "connection_ref": "e162e517-2f52-4928-9520-5c8d26024132",
-          "provider_id": "397d2a08-98a2-47f9-9bc9-78a3e449a3b8",
-          "step_ref": "a2fc242f-c3e1-4cfd-877e-e1eaa1162b9f",
+          "accepted_at": "2026-11-02T18:29:05.404629+00:00",
+          "connection_ref": "270e4082-0afe-4da4-8c81-afb664a37282",
+          "provider_id": "cfe82f8d-78ff-433a-9c3c-2013170eb8aa",
+          "step_ref": "67ad4b57-5c62-42d6-9085-89aa9faab070",
           "subject": "Original subject",
           "text": "Original email 1"
         },
-        "last_proactive_touch_at": "2026-11-02T16:52:31.868658+00:00",
+        "last_proactive_touch_at": "2026-11-02T18:29:05.404629+00:00",
         "original_next_position": 2,
         "original_positions": [
           2,
@@ -143,30 +143,30 @@
           "lane": null,
           "opener": null
         },
-        "source_campaign_ref": "2e6c9f2a-92d4-4549-91da-b9bde0cc860e",
-        "source_email_version_ref": "e8010395-3a82-4106-9bbd-8cbadd0a4123",
-        "source_executable_version_ref": "45636aeb-fe6c-46a9-b35b-7691a7e2aa51",
-        "source_execution_ref": "cfb718f4-4910-4178-a239-11a8032552c8",
-        "source_revision_ref": "02f60852-5fec-4588-b800-5a838370c2b8",
-        "source_run_ref": "85b7a16b-20dd-4f80-8473-07f4e152452a"
+        "source_campaign_ref": "d2ddc07b-92c0-48f4-abec-cb5694348ef8",
+        "source_email_version_ref": "6ac936de-3971-4a40-8fed-d9ad863d3ae3",
+        "source_executable_version_ref": "73b6c042-c704-459d-8256-44690473a042",
+        "source_execution_ref": "0efe9804-2c47-4da6-b59d-1f649649a2d5",
+        "source_revision_ref": "d24b54ea-d3de-4267-b3a2-cebc99c343eb",
+        "source_run_ref": "34298913-bd83-43e1-9dc0-1fd224869158"
       },
       "email_version_ref": null,
       "kind": "continue",
-      "lead_ref": "250e9b7f-f7ab-4db9-92f8-2349fff707a4",
+      "lead_ref": "1782d647-f974-477f-9d8e-f8a366c8d94c",
       "message_ref": null,
       "prepared": false,
-      "run_ref": "9d8bbbfc-02cb-4a60-ae40-d93efa856028",
-      "source_run_ref": "85b7a16b-20dd-4f80-8473-07f4e152452a",
+      "run_ref": "32d66b69-18cd-4a07-8c60-f39432b9f9df",
+      "source_run_ref": "34298913-bd83-43e1-9dc0-1fd224869158",
       "subject": null
     }
   ],
-  "scope_sha256": "6ff29a9e688e26d9052db227ceed77af452d5c1ea287ba4f010325c334527b5c",
+  "scope_sha256": "208fa18b1fc28197f69ddc65c5f450eb4d9086e483e8cc44f0dbbff9bf3a2b0c",
   "settings_revision": 1,
-  "settings_sha256": "4dad1b3619bc29f7f372bea46d5a32994bab2523ab5cb72228011771de759dfe",
-  "source_sender_id": "ab9059c5-e276-46d4-ba28-a882634d2c8f",
+  "settings_sha256": "d1a23186c97669b189784b04ffde8f5892e2467fde248a56d393c6d87905014a",
+  "source_sender_id": "02a998cd-913e-4f7c-a124-e237fbce3b4c",
   "state": "preparing",
   "transferred_count": 0,
   "untouched_transferred_count": 0,
   "waiting_count": 1,
-  "workspace_id": "dcfef75f-58ca-4764-ab54-92e607a57986"
+  "workspace_id": "bd87b481-231b-4a28-8270-79a4b1a952a2"
 }

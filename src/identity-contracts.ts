@@ -73,6 +73,9 @@ export const removalPending = (account: Account) =>
 // LIF-1764: how a person who is off hands over their admitted leads. continue
 // is stored by the database but refused until it ships.
 export const DrainMode = z.enum(["unused_channels", "continue"]);
+export const HandoffRef = z.string().regex(/^[0-9]{1,20}$/);
+/** LIF-1794: what notification #8 reads, and the way back to a pending handoff. Null once no member of a live handoff is left on this person. */
+export const PendingTransferSchema = z.object({ retired_at: Timestamp, leads_awaiting_transfer: Count, target_sender_id: Id, handoff_ref: HandoffRef.nullable() }).strict();
 // The database stores the reason trimmed, 1–500 characters (code points).
 const OffReason = z.string().min(1).refine(value => [...value].length <= 500);
 /** Absent for a person who sends normally: `off` is retired, `paused` keeps their leads. */
@@ -85,8 +88,7 @@ export const SenderSendingSchema = z.discriminatedUnion("state", [
     drain_mode: DrainMode,
     // Leads still owned by this person with an active or paused run.
     leads_remaining: Count,
-    // LIF-1794: what notification #8 reads 24 hours after retirement.
-    pending_transfer: z.object({ retired_at: Timestamp, leads_awaiting_transfer: Count }).strict().optional(),
+    pending_transfer: PendingTransferSchema.optional(),
   }).strict(),
   z.object({ state: z.literal("paused"), paused_at: Timestamp, reason: OffReason.nullable() }).strict(),
 ]);
@@ -125,7 +127,6 @@ const DrainOutcomes = z.object({
 // Raw database text never reaches a customer: the API drops `message`.
 const DrainLeadError = z.object({ lead_ref: Id, sqlstate: z.string().regex(/^[0-9A-Z]{5}$/) }).strict();
 const DrainLeadErrorReceipt = DrainLeadError.extend({ message: z.string() }).strict();
-export const HandoffRef = z.string().regex(/^[0-9]{1,20}$/);
 const drainTarget = { sender_id: Id, drain_to_sender_id: Id, mode: DrainMode };
 // A drain that ran, or one that waits as a whole: the target was deleted or
 // turned off meanwhile, or the customer list holds outreach. The function's

@@ -1,9 +1,14 @@
+import { readdirSync } from "node:fs";
+import type { z } from "zod";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp, type AppDependencies, type LogEvent } from "../src/app.js";
 import { STAGE_CLIENT_CONTRACT } from "../src/agent-context.js";
-import { executeIdentityOperation, type AccountConnector } from "../src/identity-operations.js";
+import { executeIdentityOperation, identityOperationDefinitions, type AccountConnector } from "../src/identity-operations.js";
 import { operationToolNames } from "../src/operation-names.js";
 import { receipt } from "./senders-fixtures.js";
+import * as identity from "../src/identity-contracts.js";
+import { ReplyTurnCountsSchema, ReplyTurnsSchema } from "../src/outreach-contracts.js";
+import * as controls from "../src/sender-control-contracts.js";
 
 // LIF-1182 Identity HTTP boundary: catalog routes call the documented member
 // RPCs with the database-resolved workspace, validate before any write, and
@@ -528,8 +533,9 @@ describe("participation causes", () => {
 
   it("reads a member's Lifty stop with its plain reason, review date and estimated since", async () => {
     const { participation } = await read(receipt("participation.stop"));
+    const { since, stop: { review_by: reviewBy } } = receipt("participation.stop");
     expect(participation.next_step).toEqual({ label: "Paused by Lifty · deliverability review · we review it by Nov 12", owner: "lifty",
-      action: "lifty_review", since: "2026-11-05T16:52:24.103126+00:00", since_estimated: false, review_by: "2026-11-12T16:52:24.103126+00:00" });
+      action: "lifty_review", since, since_estimated: false, review_by: reviewBy });
     expect(participation).toMatchObject({ status: "paused", cause: "paused_by_lift", category: "intentional", waiting_journeys: 0 });
     expect((await read({ ...receipt("participation.stop"), since_estimated: true })).participation.next_step.since_estimated).toBe(true);
   });
@@ -560,8 +566,9 @@ describe("participation causes", () => {
       .toMatchObject({ label: "On hold · too many bounces", owner: "lifty", action: "lifty_review" });
     const { participation } = await read(receipt("participation.also"));
     expect(participation.next_step).toMatchObject({ label: "Reconnect needed", owner: "member", action: "reconnect" });
-    expect(participation.also).toEqual([{ status: "paused", cause: "paused_by_member", category: "intentional", since: "2026-11-05T16:52:24.71373+00:00",
-      next_step: { label: "Paused", owner: "member", action: "resume_account", since: "2026-11-05T16:52:24.71373+00:00", since_estimated: null, review_by: null } }]);
+    const { since } = receipt("participation.also").also[0];
+    expect(participation.also).toEqual([{ status: "paused", cause: "paused_by_member", category: "intentional", since,
+      next_step: { label: "Paused", owner: "member", action: "resume_account", since, since_estimated: null, review_by: null } }]);
   });
 
   it("names the sender's pause first and a Lifty stop below it, which only Lifty releases", async () => {
@@ -570,6 +577,20 @@ describe("participation causes", () => {
     const { participation } = await read(linkedin.participation);
     expect(participation.next_step).toMatchObject({ label: "Sender paused", owner: "member", action: "resume_sender" });
     expect(participation.also[0].next_step).toMatchObject({ label: "Paused by Lifty", owner: "lifty", action: "lifty_review" });
+  });
+
+  it("reads a paused sender's own receipt", async () => {
+    expect((await read(receipt("participation.paused_sender"))).participation).toMatchObject({ status: "paused", cause: "sender_paused", category: "intentional", waiting_journeys: 0,
+      next_step: { label: "Sender paused", owner: "member", action: "resume_sender" } });
+  });
+
+  // A stale check never leads: it sits below whatever the account is doing.
+  it("keeps a stale check transient and secondary", async () => {
+    const { participation } = await read(receipt("participation.sending_stale"));
+    expect(participation.next_step).toMatchObject({ label: "Sending", owner: "none", action: "none" });
+    const stale = receipt("participation.stale_also");
+    expect(participation.also).toEqual([{ ...stale, next_step: { label: "Connection not verified yet", owner: "lifty", action: "wait", since: stale.since, since_estimated: null, review_by: null } }]);
+    expect(stale).toEqual({ status: "not_connected", cause: "unverified", category: "transient", since: stale.since });
   });
 
   it("keeps older participation readable and every other shape refused", async () => {
@@ -587,7 +608,7 @@ describe("participation causes", () => {
   });
 
   it("never lets a setter, a note or a vendor reach a member", async () => {
-    for (const leak of [{ note: "Bounce spike" }, { set_by: "52b3de44-9f5f-4dbf-b4e5-d52f2ea1cc38" }]) expect((await read(stopped(leak))).status).toBe(502);
+    for (const leak of [{ note: "Bounce spike" }, { set_by: receipt("stop.set").stop.set_by }]) expect((await read(stopped(leak))).status).toBe(502);
     const { participation } = await read(receipt("participation.stop"));
     expect(JSON.stringify(participation)).not.toMatch(/set_by|note|unipile|mailivery|smartlead/i);
   });
@@ -595,9 +616,25 @@ describe("participation causes", () => {
   it("passes the sender's paused state and the pending-transfer fact through senders", async () => {
     const paused = await harness(() => receipt("sender.pause")).request("POST", `/v1/workspace/senders/${senderId}/resume`, { expected_version: 2, confirm: true });
     expect(paused.status).toBe(200);
-    expect((await paused.json()).sender.sending).toEqual({ state: "paused", paused_at: "2026-11-05T16:52:25.182571+00:00", reason: "Leave" });
-    const roster = await harness(() => receipt("sender.pending_transfer")).request("GET", "/v1/workspace/senders");
-    expect((await roster.json()).senders[0].sending.pending_transfer).toEqual({ retired_at: "2026-11-05T16:52:25.523203+00:00", leads_awaiting_transfer: 0 });
+    expect((await paused.json()).sender.sending).toEqual({ ...receipt("sender.pause").sender.sending, state: "paused", reason: "Leave" });
+  });
+
+  it("passes pending_transfer through with its target and the way back to the handoff", async () => {
+    const sending = (body: { senders: { sending?: { state: string; pending_transfer?: unknown } }[] }) => body.senders.flatMap(item => item.sending?.pending_transfer ?? []);
+    const roster = await (await harness(() => receipt("sender.pending_transfer")).request("GET", "/v1/workspace/senders")).json();
+    expect(sending(roster)).toEqual(sending(receipt("sender.pending_transfer")));
+    const [closed, open] = sending(roster) as { handoff_ref: string | null; target_sender_id: string; leads_awaiting_transfer: number }[];
+    // An unused_channels retire has no handoff; a continue retire names its own.
+    expect(closed).toMatchObject({ handoff_ref: null, leads_awaiting_transfer: 0 });
+    expect(open).toMatchObject({ handoff_ref: expect.stringMatching(/^[0-9]+$/), leads_awaiting_transfer: 1, target_sender_id: closed!.target_sender_id });
+  });
+
+  it("keeps pending_transfer free of any setter or note", async () => {
+    const senders = receipt("sender.pending_transfer").senders as { sending?: { pending_transfer?: Record<string, unknown> } }[];
+    const withLeak = (leak: Record<string, unknown>) => ({ ...receipt("sender.pending_transfer"), senders: senders.map(item => item.sending ? { ...item, sending: { ...item.sending,
+      pending_transfer: { ...item.sending.pending_transfer, ...leak } } } : item) });
+    for (const leak of [{ set_by: "someone" }, { note: "Left" }, { handoff_ref: 1978 }, { target_sender_id: null }])
+      expect((await harness(() => withLeak(leak)).request("GET", "/v1/workspace/senders")).status, JSON.stringify(leak)).toBe(502);
   });
 });
 
@@ -654,8 +691,9 @@ describe("sender pause and retire", () => {
     const h = harness(() => receipt("sender.retired"));
     const response = await h.request("POST", `${path}/turn-off`, retire);
     expect(response.status).toBe(200);
-    expect((await response.json()).drain).toMatchObject({ handoff_ref: "119", outcomes: { waiting_sample_approval: 1 }, remaining: 1 });
-    expect(h.enqueueHandoffReplies).toHaveBeenCalledExactlyOnceWith({ workspaceId: "eb866d72-d75a-4897-ba42-3b722fa7be14", handoffRef: "119", settingsRevision: null });
+    const { drain: { handoff_ref: handoffRef }, workspace: { workspace_ref: workspaceId } } = receipt("sender.retired");
+    expect((await response.json()).drain).toMatchObject({ handoff_ref: handoffRef, outcomes: { waiting_sample_approval: 1 }, remaining: 1 });
+    expect(h.enqueueHandoffReplies).toHaveBeenCalledExactlyOnceWith({ workspaceId, handoffRef, settingsRevision: null });
     const failing = harness(() => receipt("sender.retired"), {}, "full", vi.fn(async () => { throw new Error("Trigger is down"); }));
     expect((await failing.request("POST", `${path}/turn-off`, retire)).status).toBe(200);
     expect(failing.logged).toEqual([expect.objectContaining({ event: "handoff_replies_enqueue_failed", error_code: "HANDOFF_REPLIES_ENQUEUE_FAILED" })]);
@@ -672,15 +710,16 @@ describe("sender pause and retire", () => {
 // LIF-1771 S-12, S-13, S-18: the database refuses members; these prove the API
 // relays that refusal, sends the exact payload and adds no write of its own.
 describe("LIFT stops", () => {
-  const scope = { scope: "account", account_id: "91fcb437-dab8-4f4f-84b7-f9e0e6177fba" };
-  const workspaceRef = "cf81841c-a5b7-4079-a85f-7a476697ee2b";
+  const scope = { scope: "account", account_id: receipt("stop.set").stop.account_id };
+  const workspaceRef = receipt("stop.set").workspace.workspace_ref;
   it("sets, lists, moves and releases a stop for an admin, who sees who set it and the note", async () => {
     const h = harness(name => receipt({ set_lifty_stop: "stop.set", get_lifty_stops: "stop.list", move_lifty_stop_review: "stop.move", release_lifty_stop: "stop.release" }[name]!));
     const named = `?workspace_id=${workspaceRef}`;
     const set = { ...scope, reason: "deliverability_review", note: "Bounce spike" };
-    const review = { ...scope, review_by: "2026-11-08T16:52:24.13946+00:00" };
+    const review = { ...scope, review_by: receipt("stop.move").stop.review_by };
     const stopped = await (await h.request("POST", `/v1/workspace/stops${named}`, set)).json();
-    expect(stopped.stop).toMatchObject({ set_by: "52b3de44-9f5f-4dbf-b4e5-d52f2ea1cc38", note: "Bounce spike", review_by: "2026-11-12T16:52:24.103126+00:00" });
+    expect(stopped.stop).toEqual(receipt("stop.set").stop);
+    expect(stopped.stop).toMatchObject({ set_by: expect.any(String), note: "Bounce spike" });
     expect((await (await h.request("GET", `/v1/workspace/stops${named}`)).json()).stops).toHaveLength(1);
     expect((await (await h.request("POST", `/v1/workspace/stops/review${named}`, review)).json()).stop.review_by).toBe(review.review_by);
     expect(await (await h.request("POST", `/v1/workspace/stops/release${named}`, scope)).json()).toMatchObject({ stop: null, released: true });
@@ -732,7 +771,7 @@ describe("workspace settings", () => {
     const h = harness(name => receipt(name === "get_lifty_workspace_settings" ? "settings.defaults" : "settings.update"));
     const read = await h.request("GET", "/v1/workspace/outreach-settings");
     expect((await read.json()).settings).toEqual(receipt("settings.defaults").settings);
-    const change = { expected_version: 0, assignment: { mode: "founder_weight", founder_sender_id: "974d0a9c-fb3b-4b0c-9f02-efb7f1de6654" }, handoff: { sample_size: 3 } };
+    const change = { expected_version: 0, assignment: { mode: "founder_weight", founder_sender_id: receipt("settings.update").settings.assignment.founder_sender_id }, handoff: { sample_size: 3 } };
     const saved = await h.request("PATCH", "/v1/workspace/outreach-settings", change);
     expect(await saved.json()).toEqual(receipt("settings.update"));
     expect(h.calls[1]).toEqual({ name: "update_lifty_workspace_settings", args: { p_workspace_id: null, p_payload: change } });
@@ -767,6 +806,7 @@ describe("workspace settings", () => {
 // the workspace, relays every refusal and keeps vendor facts private.
 describe("sender handoffs", () => {
   const ready = () => receipt("handoff.ready");
+  const heldReply = () => receipt("handoff.held").samples[0];
   const hashes = () => ({ scope_sha256: ready().scope_sha256, settings_sha256: ready().settings_sha256, context_sha256: ready().context_sha256, revision: ready().revision });
   const approval = () => ({ action: "approve_sample_and_transfer", confirm: true, source_sender_id: ready().source_sender_id, replacement_sender_id: ready().replacement.sender_id, ...hashes() });
   const selected = "332ede34-3993-453b-867e-4e9f8387bd89";
@@ -786,8 +826,8 @@ describe("sender handoffs", () => {
   it("shows what is held for a person and each member's dispatch reason", async () => {
     const body = await (await handoffs("handoff.held").request("GET", route("154"))).json();
     expect(body).toMatchObject({ held_for_human: 1, cohort_count: 6, sample_count: 5, remainder_count: 1, sample_complete: true });
-    expect(body.members.map((member: { dispatch_reason: string | null }) => member.dispatch_reason)).toEqual(["held_for_human", null, null, null, null, null]);
-    expect(body.samples[0]).toMatchObject({ kind: "current_reply", body: "Happy to help.\n\nTarget, Lifty", draft_event_ref: "679e8e69-b705-40cc-9982-79d3fc9a59cd", turn_version: 2 });
+    expect(body.members.map((member: { dispatch_reason: string | null }) => member.dispatch_reason).sort()).toEqual(["held_for_human", null, null, null, null, null]);
+    expect(body.samples[0]).toMatchObject({ kind: "current_reply", body: "Happy to help.\n\nTarget, Lifty", draft_event_ref: heldReply().draft_event_ref, turn_version: heldReply().turn_version });
   });
 
   it.each(["handoff.view", "handoff.ready", "handoff.held", "handoff.approve", "handoff.cancel", "recovery.handoff.reply"])("keeps vendor facts out of %s", async name => {
@@ -811,12 +851,12 @@ describe("sender handoffs", () => {
     const prepare = handoffs("handoff.ready");
     expect((await prepare.request("POST", `${route()}/prepare`, {})).status).toBe(200);
     expect(prepare.calls[1]).toEqual({ name: "prepare_lifty_sender_handoff", args: { p_workspace_id: selected, p_drain_ref: "163" } });
-    expect(prepare.enqueueHandoffReplies).toHaveBeenCalledExactlyOnceWith({ workspaceId: selected, handoffRef: "163", settingsRevision: null });
+    expect(prepare.enqueueHandoffReplies).toHaveBeenCalledExactlyOnceWith({ workspaceId: ready().workspace_id, handoffRef: ready().drain_ref, settingsRevision: null });
     const revise = handoffs("handoff.ready");
     const body = { revision: ready().revision, generation_settings: { instructions: "Keep it short." } };
     expect((await revise.request("POST", `${route()}/settings`, body)).status).toBe(200);
     expect(revise.calls[1]).toEqual({ name: "revise_lifty_sender_handoff_settings", args: { p_workspace_id: selected, p_drain_ref: "163", p_payload: body } });
-    expect(revise.enqueueHandoffReplies).toHaveBeenCalledExactlyOnceWith({ workspaceId: selected, handoffRef: "163", settingsRevision: 1 });
+    expect(revise.enqueueHandoffReplies).toHaveBeenCalledExactlyOnceWith({ workspaceId: ready().workspace_id, handoffRef: ready().drain_ref, settingsRevision: 1 });
   });
 
   it("keeps the member's action when the request for replies fails", async () => {
@@ -829,9 +869,9 @@ describe("sender handoffs", () => {
     const cancel = handoffs("handoff.cancel");
     const canceled = await (await cancel.request("POST", `${route("164")}/cancel`, { confirm: true, revision: receipt("handoff.cancel").revision })).json();
     expect(canceled).toMatchObject({ state: "canceled", authorization: { state: "canceled" } });
-    const edit = { turn_version: 2, draft_event_ref: "679e8e69-b705-40cc-9982-79d3fc9a59cd", text: "Happy to help." };
+    const edit = { turn_version: heldReply().turn_version, draft_event_ref: heldReply().draft_event_ref, text: "Happy to help." };
     const reply = handoffs("handoff.held");
-    const turn = "af2fb1fe-4500-4c85-9530-c1057944a747";
+    const turn = heldReply().turn_ref;
     expect((await reply.request("POST", `${route("154")}/replies/${turn}`, edit)).status).toBe(200);
     expect(reply.calls[1]).toEqual({ name: "revise_lifty_sender_handoff_reply", args: { p_workspace_id: selected, p_drain_ref: "154", p_turn_id: turn, p_payload: edit } });
   });
@@ -866,13 +906,30 @@ describe("sender handoffs", () => {
 
 // LIF-1771 S-06, S-07, S-16.
 describe("recovery incidents and notification links", () => {
-  it("reads open incidents for a member, with no mode or plan detail", async () => {
+  it("words each incident from the same causes, and reports no mode or plan detail", async () => {
     const response = await harness(() => receipt("recovery.incidents")).request("GET", "/v1/workspace/recovery-incidents");
     expect(response.status).toBe(200);
-    expect((await response.json()).incidents).toEqual(receipt("recovery.incidents").incidents);
     const [incident] = receipt("recovery.incidents").incidents;
+    expect((await response.json()).incidents).toEqual([{ ...incident, next_step: { label: "Disconnected", owner: "member", action: "reconnect", since: incident.since, since_estimated: null, review_by: null } }]);
     const leak = { ...receipt("recovery.incidents"), incidents: [{ ...incident, mode: "apply" }] };
     expect((await harness(() => leak).request("GET", "/v1/workspace/recovery-incidents")).status).toBe(502);
+  });
+
+  // While report-only the plan is null, and the mode never reaches a member, so
+  // the words must hold in both modes: they name the cause and promise no move.
+  it.each([
+    ["disconnected", "Disconnected", "member", "reconnect"], ["needs_reconnect", "Reconnect needed", "member", "reconnect"],
+    ["paused_by_lift", "Paused by Lifty", "lifty", "lifty_review"], ["health_hold", "On hold", "lifty", "lifty_review"],
+  ])("never promises a move for %s, reported or applied", async (cause, label, owner, action) => {
+    const [incident] = receipt("recovery.incidents").incidents;
+    const { counts, moved, handoff_ref: ref } = receipt("recovery.wake.apply");
+    const reported = { ...incident, cause, state: "open", counts: null, moved: null };
+    for (const item of [reported, { ...reported, state: "applied", counts, moved, handoff_ref: ref }]) {
+      const body = await (await harness(() => ({ ...receipt("recovery.incidents"), incidents: [item] })).request("GET", "/v1/workspace/recovery-incidents")).json();
+      expect(body.incidents[0]).toMatchObject({ counts: item.counts, moved: item.moved });
+      expect(body.incidents[0].next_step).toMatchObject({ label, owner, action });
+      expect(JSON.stringify(body.incidents[0].next_step)).not.toMatch(/mov|transfer|automatic|recover|inbox/i);
+    }
   });
 
   it("resolves a link to the authorized account and action, and opening it mutates nothing", async () => {
@@ -896,5 +953,66 @@ describe("recovery incidents and notification links", () => {
     expect(foreign.status).toBe(404);
     expect((await foreign.json()).error.code).toBe("ACCOUNT_NOT_FOUND");
     expect((await h.request("GET", `/v1/workspace/sending-accounts/${accountId}/action?action=disconnect`)).status).toBe(400);
+  });
+});
+
+// LIF-1771: what the groups mean is the database's. The API refuses to invent a
+// total or to answer for another person.
+describe("sender transfer scope", () => {
+  const scope = receipt("sender.transfer_scope");
+  const route = `/v1/workspace/senders/${scope.sender_id}/transfer-scope`;
+  it("reads the groups with the member's session, and reports no total", async () => {
+    const h = harness(() => scope);
+    const response = await h.request("GET", route);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(scope);
+    expect(h.calls).toEqual([{ name: "get_lifty_sender_transfer_scope", args: { p_workspace_id: null, p_sender_id: scope.sender_id } }]);
+    expect(h.enqueueHandoffReplies).not.toHaveBeenCalled();
+  });
+  it("refuses a total, a scope for someone else and replies outside the conversations", async () => {
+    for (const wrong of [{ ...scope, total: 7 }, { ...scope, sender_id: senderId }, { ...scope, replies: scope.conversations + 1 }])
+      expect((await harness(() => wrong).request("GET", route)).status, JSON.stringify(wrong)).toBe(502);
+  });
+  it("gives a foreign sender 404 and no data", async () => {
+    const response = await harness(() => { throw dbError("PT404", "SENDER_NOT_FOUND"); }).request("GET", route);
+    expect(response.status).toBe(404);
+    const text = await response.text();
+    expect(JSON.parse(text).error.code).toBe("SENDER_NOT_FOUND");
+    expect(text).not.toMatch(/not_contacted|conversations/);
+    expect((await harness(() => { throw new Error("must not call"); }).request("GET", "/v1/workspace/senders/not-an-id/transfer-scope")).status).toBe(400);
+  });
+  it("promises no exact outcome in the catalog or the guide", () => {
+    const { description } = identityOperationDefinitions.senders.transfer_scope;
+    expect(description).toMatch(/estimate/);
+    expect(description).toMatch(/assumes the replacement can send email/);
+    expect(description).toMatch(/in its receipt/);
+    expect(description).toMatch(/Never add the groups/);
+  });
+});
+
+// LIF-1771: every receipt the API reads, through the strict parser that reads it.
+describe("authentic receipts", () => {
+  const parsers: Record<string, z.ZodType> = {
+    "participation.also": identity.ParticipationSchema, "participation.health_hold": identity.ParticipationSchema, "participation.paused_sender": identity.ParticipationSchema,
+    "participation.sending_stale": identity.ParticipationSchema, "participation.stale_also": identity.ParticipationSchema, "participation.stop": identity.ParticipationSchema,
+    "sender.pause": identity.SenderResultSchema, "sender.resume": identity.SenderResultSchema, "sender.retired": identity.SenderTurnOffReceiptSchema,
+    "sender.pending_transfer": identity.SendersGetSchema, "sender.pending_transfer.handoff": identity.PendingTransferSchema, "sender.transfer_scope": controls.TransferScopeSchema,
+    "settings.defaults": controls.WorkspaceSettingsResultSchema, "settings.update": controls.WorkspaceSettingsResultSchema,
+    "stop.list": controls.StopsResultSchema, "stop.set": controls.StopResultSchema, "stop.move": controls.StopResultSchema, "stop.release": controls.StopReleaseResultSchema,
+    "handoff.view": controls.HandoffSchema, "handoff.ready": controls.HandoffSchema, "handoff.held": controls.HandoffSchema, "handoff.approve": controls.HandoffSchema,
+    "handoff.cancel": controls.HandoffSchema, "recovery.handoff.reply": controls.HandoffSchema,
+    "recovery.incidents": controls.RecoveryIncidentsSchema,
+    "review.page": ReplyTurnsSchema, "review.original": ReplyTurnsSchema, "review.counts": ReplyTurnCountsSchema, "review.counts.sender": ReplyTurnCountsSchema,
+  };
+  it.each(Object.keys(parsers))("%s", name => {
+    expect(parsers[name]!.safeParse(receipt(name)).error?.issues).toBeUndefined();
+  });
+  it("leaves no fixture without a parser, and every fixture from one Functions head", () => {
+    // held.outcome is what Jobs reads, and recovery.wake.apply only supplies an applied incident's values.
+    const fixtures = readdirSync(new URL("./fixtures/senders/", import.meta.url)).map(name => name.replace(/\.json$/, ""));
+    expect(fixtures.filter(name => !["MANIFEST", "held.outcome", "recovery.wake.apply"].includes(name)).sort()).toEqual(Object.keys(parsers).sort());
+    const manifest = receipt("MANIFEST");
+    expect(manifest.assertions.not_ok).toBe(0);
+    expect(fixtures.filter(name => name !== "MANIFEST").every(name => manifest.receipts.includes(name))).toBe(true);
   });
 });

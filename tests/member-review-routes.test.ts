@@ -284,7 +284,9 @@ describe("member Review transport", () => {
 describe("Review by sender", () => {
   const route = "/v1/workspace/reply-turns";
   const page = receipt("review.page");
-  const answering = "34361067-d375-43dd-ae73-02bea44d49f1";
+  const routed = page.turns.find((turn: { route_unavailable: boolean }) => !turn.route_unavailable);
+  const unrouted = page.turns.find((turn: { route_unavailable: boolean }) => turn.route_unavailable);
+  const answering = routed.answering_sender_id;
   const queue = (result: (name: string, args: Record<string, unknown>) => unknown) => {
     const rpc = vi.fn(async (name: string, args: Record<string, unknown>) => {
       try { return { data: result(name, args), error: null }; } catch (error) { return { data: null, error }; }
@@ -296,26 +298,29 @@ describe("Review by sender", () => {
 
   it("filters by the answering sender on the server and keeps its cursor", async () => {
     const h = queue(() => page);
-    const response = await h.request(`${route}?sender_id=${answering}&limit=25&after=048cf14a-da64-4203-a96b-a4772857534b`);
+    const response = await h.request(`${route}?sender_id=${answering}&limit=25&after=${routed.turn_ref}`);
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body.next_after).toBe("2798136f-4ca7-48e6-a9e7-78b5e53a7020");
+    expect(body.next_after).toBe(page.next_after);
     expect(h.rpc).toHaveBeenCalledExactlyOnceWith("get_lifty_reply_turns", { p_workspace_id: null,
-      p_query: { sender_id: answering, limit: 25, after: "048cf14a-da64-4203-a96b-a4772857534b" } });
+      p_query: { sender_id: answering, limit: 25, after: routed.turn_ref } });
   });
 
   it("keeps the answering sender, an unavailable route and the original sender apart", async () => {
-    const [routed, unrouted] = (await (await queue(() => page).request(route)).json()).turns;
-    expect(routed).toMatchObject({ answering_sender_id: answering, route_unavailable: false, original_sender_id: answering, original_sender_name: "Target" });
-    expect(unrouted).toMatchObject({ answering_sender_id: answering, route_unavailable: true, sender_id: null, original_sender_id: null, original_sender_name: null,
+    const turns = (await (await queue(() => page).request(route)).json()).turns as { turn_ref: string }[];
+    const read = (ref: string) => turns.find(turn => turn.turn_ref === ref);
+    expect(read(routed.turn_ref)).toMatchObject({ answering_sender_id: answering, route_unavailable: false, original_sender_id: answering, original_sender_name: "Target" });
+    expect(read(unrouted.turn_ref)).toMatchObject({ answering_sender_id: answering, route_unavailable: true, sender_id: null, original_sender_id: null, original_sender_name: null,
       view: { cause: "reply_route_unavailable", actions: ["suppress"] } });
     const [moved] = (await (await queue(() => receipt("review.original")).request(route)).json()).turns;
-    expect(moved).toMatchObject({ answering_sender_id: "52eea89c-19a0-4b36-990c-cd2b23b5d4e4", sender_name: "Target",
-      original_sender_id: "ac69ca9b-9630-4381-8df3-d572eed12f00", original_sender_name: "Source" });
+    const original = receipt("review.original").turns[0];
+    expect(original.answering_sender_id).not.toBe(original.original_sender_id);
+    expect(moved).toMatchObject({ answering_sender_id: original.answering_sender_id, sender_name: "Target",
+      original_sender_id: original.original_sender_id, original_sender_name: "Source" });
   });
 
   it("refuses a page that answers for another sender", async () => {
-    const response = await queue(() => page).request(`${route}?sender_id=8012602d-8a35-453f-9ae1-0184c006a6be`);
+    const response = await queue(() => page).request(`${route}?sender_id=${receipt("review.original").turns[0].original_sender_id}`);
     expect(response.status).toBe(502);
   });
 

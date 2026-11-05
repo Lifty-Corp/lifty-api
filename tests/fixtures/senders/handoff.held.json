@@ -5,10 +5,10 @@
   "cohort_count": 6,
   "configured_sample_size": 5,
   "confirmation_action": "approve_sample_and_transfer",
-  "context_sha256": "39856f8549a0df7d5c98e2eaccf69a6aab94070926e4b67ef323f2e6bbaf61b0",
+  "context_sha256": "372c16db35b6081f5d011801a62a76187db486bc95a3f2c32f17a1e7ff3d9e25",
   "contract": "sender-handoff-approval.v2",
   "current_reply_count": 6,
-  "drain_ref": "154",
+  "drain_ref": "2013",
   "generation_settings": {
     "instructions": ""
   },
@@ -17,205 +17,205 @@
     {
       "dispatch_reason": "held_for_human",
       "kind": "current_reply",
-      "lead_ref": "0bfb481b-f759-47aa-933e-9d4919770ba9",
-      "owner": "7bc8b47f-0cd1-4469-becc-28ac6cb29198",
+      "lead_ref": "2e598e0e-c066-407a-9133-85db08a2dc09",
+      "owner": "290ac797-aa0a-4316-bd5a-0d4026f4f62b",
       "prepared": false,
       "reason": null,
       "route": {
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "7bc8b47f-0cd1-4469-becc-28ac6cb29198"
+          "sender_id": "290ac797-aa0a-4316-bd5a-0d4026f4f62b"
         },
-        "inbound_event_id": "7ecd342d-c7bc-4262-a938-ff5329029f8b",
+        "inbound_event_id": "2f221861-3469-4044-8b67-8225d7e6b7f4",
         "native_email_authority": null,
-        "provider_conversation_id": "inbound-7ecd342d-c7bc-4262-a938-ff5329029f8b",
+        "provider_conversation_id": "inbound-2f221861-3469-4044-8b67-8225d7e6b7f4",
         "route": {
-          "account_id": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
+          "account_id": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
           "channel": "email",
-          "connection_ref": "5fcc7201-ed40-4687-a193-c031e52c399a",
+          "connection_ref": "be301e84-3122-40c7-aad7-3308ee9a2018",
           "inbound_channel": "email",
           "provider": "unipile",
-          "recipient_email": "0bfb481b-f759-47aa-933e-9d4919770ba9@prospect.test",
+          "recipient_email": "2e598e0e-c066-407a-9133-85db08a2dc09@prospect.test",
           "rerouted": true,
           "subject": "Re: Original subject"
         },
-        "sender_account_ref": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
-        "sender_id": "f96fb280-fa0c-4dfa-9c55-8d3b4ef69212",
-        "turn_id": "7ecd342d-c7bc-4262-a938-ff5329029f8b"
+        "sender_account_ref": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
+        "sender_id": "d2df6ad3-bba6-4b9c-ad70-c76a7a89a874",
+        "turn_id": "2f221861-3469-4044-8b67-8225d7e6b7f4"
       },
       "run_ref": null,
-      "state_token": "d5dd240589d4390863af52e6ffa4412a85bc9f6eebdeab38a80b477f258de37b",
-      "turn_ref": "7ecd342d-c7bc-4262-a938-ff5329029f8b",
+      "state_token": "781f4e02c0124812190dc1e0a4d60260611309e14d6fef1b2f316dd25028a22a",
+      "turn_ref": "2f221861-3469-4044-8b67-8225d7e6b7f4",
       "turn_version": 0
     },
     {
       "dispatch_reason": null,
       "kind": "current_reply",
-      "lead_ref": "2d7235be-627d-4d21-b01d-8d44fedca265",
-      "owner": "7bc8b47f-0cd1-4469-becc-28ac6cb29198",
+      "lead_ref": "41986714-575d-445f-b9ea-623438b8e3cd",
+      "owner": "290ac797-aa0a-4316-bd5a-0d4026f4f62b",
       "prepared": true,
       "reason": null,
       "route": {
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "7bc8b47f-0cd1-4469-becc-28ac6cb29198"
+          "sender_id": "290ac797-aa0a-4316-bd5a-0d4026f4f62b"
         },
-        "inbound_event_id": "af2fb1fe-4500-4c85-9530-c1057944a747",
+        "inbound_event_id": "8e86ce7a-6b8c-4bc3-91d0-d6553115bcb8",
         "native_email_authority": null,
-        "provider_conversation_id": "inbound-af2fb1fe-4500-4c85-9530-c1057944a747",
+        "provider_conversation_id": "inbound-8e86ce7a-6b8c-4bc3-91d0-d6553115bcb8",
         "route": {
-          "account_id": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
+          "account_id": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
           "channel": "email",
-          "connection_ref": "5fcc7201-ed40-4687-a193-c031e52c399a",
+          "connection_ref": "be301e84-3122-40c7-aad7-3308ee9a2018",
           "inbound_channel": "email",
           "provider": "unipile",
-          "recipient_email": "2d7235be-627d-4d21-b01d-8d44fedca265@prospect.test",
+          "recipient_email": "41986714-575d-445f-b9ea-623438b8e3cd@prospect.test",
           "rerouted": true,
           "subject": "Re: Original subject"
         },
-        "sender_account_ref": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
-        "sender_id": "f96fb280-fa0c-4dfa-9c55-8d3b4ef69212",
-        "turn_id": "af2fb1fe-4500-4c85-9530-c1057944a747"
+        "sender_account_ref": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
+        "sender_id": "d2df6ad3-bba6-4b9c-ad70-c76a7a89a874",
+        "turn_id": "8e86ce7a-6b8c-4bc3-91d0-d6553115bcb8"
       },
       "run_ref": null,
-      "state_token": "092ef68cb85400ee3fa4fa151277c66b4c484ee99febe1a932c09d64ecd71d63",
-      "turn_ref": "af2fb1fe-4500-4c85-9530-c1057944a747",
+      "state_token": "31e97b35465d888ca72f66750bd2a68c0ae76fd61abfc1400ffd44c590f9fca4",
+      "turn_ref": "8e86ce7a-6b8c-4bc3-91d0-d6553115bcb8",
       "turn_version": 2
     },
     {
       "dispatch_reason": null,
       "kind": "current_reply",
-      "lead_ref": "6d81cae1-4e4b-4d0e-9dc2-5b38ca6f66ae",
-      "owner": "7bc8b47f-0cd1-4469-becc-28ac6cb29198",
+      "lead_ref": "5d19fc7d-a469-429d-bba7-4209b963e7d2",
+      "owner": "290ac797-aa0a-4316-bd5a-0d4026f4f62b",
       "prepared": true,
       "reason": null,
       "route": {
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "7bc8b47f-0cd1-4469-becc-28ac6cb29198"
+          "sender_id": "290ac797-aa0a-4316-bd5a-0d4026f4f62b"
         },
-        "inbound_event_id": "4fb2ccc2-0312-486b-888b-722aebdec19e",
+        "inbound_event_id": "5362558a-e717-432c-8fdc-29858d035dba",
         "native_email_authority": null,
-        "provider_conversation_id": "inbound-4fb2ccc2-0312-486b-888b-722aebdec19e",
+        "provider_conversation_id": "inbound-5362558a-e717-432c-8fdc-29858d035dba",
         "route": {
-          "account_id": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
+          "account_id": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
           "channel": "email",
-          "connection_ref": "5fcc7201-ed40-4687-a193-c031e52c399a",
+          "connection_ref": "be301e84-3122-40c7-aad7-3308ee9a2018",
           "inbound_channel": "email",
           "provider": "unipile",
-          "recipient_email": "6d81cae1-4e4b-4d0e-9dc2-5b38ca6f66ae@prospect.test",
+          "recipient_email": "5d19fc7d-a469-429d-bba7-4209b963e7d2@prospect.test",
           "rerouted": true,
           "subject": "Re: Original subject"
         },
-        "sender_account_ref": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
-        "sender_id": "f96fb280-fa0c-4dfa-9c55-8d3b4ef69212",
-        "turn_id": "4fb2ccc2-0312-486b-888b-722aebdec19e"
+        "sender_account_ref": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
+        "sender_id": "d2df6ad3-bba6-4b9c-ad70-c76a7a89a874",
+        "turn_id": "5362558a-e717-432c-8fdc-29858d035dba"
       },
       "run_ref": null,
-      "state_token": "a37dc041f24adcc359c95fa2203d8ed11db45d1735b78521eef9f4719953bb72",
-      "turn_ref": "4fb2ccc2-0312-486b-888b-722aebdec19e",
+      "state_token": "b81f598dbe89e63c4ab08a6c6fd1300d0fdfbdb1b25edd4d1d8cb5dcd6647b39",
+      "turn_ref": "5362558a-e717-432c-8fdc-29858d035dba",
       "turn_version": 2
     },
     {
       "dispatch_reason": null,
       "kind": "current_reply",
-      "lead_ref": "6f67fff9-f166-4697-a3ff-b5481130122c",
-      "owner": "7bc8b47f-0cd1-4469-becc-28ac6cb29198",
+      "lead_ref": "77bd2c8a-8acd-4d40-9c05-75e095a01156",
+      "owner": "290ac797-aa0a-4316-bd5a-0d4026f4f62b",
       "prepared": true,
       "reason": null,
       "route": {
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "7bc8b47f-0cd1-4469-becc-28ac6cb29198"
+          "sender_id": "290ac797-aa0a-4316-bd5a-0d4026f4f62b"
         },
-        "inbound_event_id": "dd016de1-1d04-4675-be4e-818e90fa4d28",
+        "inbound_event_id": "463f42fc-0d91-42e7-9145-e8fe117a3356",
         "native_email_authority": null,
-        "provider_conversation_id": "inbound-dd016de1-1d04-4675-be4e-818e90fa4d28",
+        "provider_conversation_id": "inbound-463f42fc-0d91-42e7-9145-e8fe117a3356",
         "route": {
-          "account_id": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
+          "account_id": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
           "channel": "email",
-          "connection_ref": "5fcc7201-ed40-4687-a193-c031e52c399a",
+          "connection_ref": "be301e84-3122-40c7-aad7-3308ee9a2018",
           "inbound_channel": "email",
           "provider": "unipile",
-          "recipient_email": "6f67fff9-f166-4697-a3ff-b5481130122c@prospect.test",
+          "recipient_email": "77bd2c8a-8acd-4d40-9c05-75e095a01156@prospect.test",
           "rerouted": true,
           "subject": "Re: Original subject"
         },
-        "sender_account_ref": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
-        "sender_id": "f96fb280-fa0c-4dfa-9c55-8d3b4ef69212",
-        "turn_id": "dd016de1-1d04-4675-be4e-818e90fa4d28"
+        "sender_account_ref": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
+        "sender_id": "d2df6ad3-bba6-4b9c-ad70-c76a7a89a874",
+        "turn_id": "463f42fc-0d91-42e7-9145-e8fe117a3356"
       },
       "run_ref": null,
-      "state_token": "8169914d2d4bbc37eb6465e4866ec1cdc32e5d0a6c6e6a0e86544a2ddfaa6820",
-      "turn_ref": "dd016de1-1d04-4675-be4e-818e90fa4d28",
+      "state_token": "edfbb25efead17bf45a5aab20c42789727faf03ca6707f30dc08bcd1f0ef5b54",
+      "turn_ref": "463f42fc-0d91-42e7-9145-e8fe117a3356",
       "turn_version": 2
     },
     {
       "dispatch_reason": null,
       "kind": "current_reply",
-      "lead_ref": "b2443f98-39fc-4c59-985d-f33807253fa0",
-      "owner": "7bc8b47f-0cd1-4469-becc-28ac6cb29198",
+      "lead_ref": "a3d23afe-5893-4bce-967f-5b782cc044b0",
+      "owner": "290ac797-aa0a-4316-bd5a-0d4026f4f62b",
       "prepared": true,
       "reason": null,
       "route": {
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "7bc8b47f-0cd1-4469-becc-28ac6cb29198"
+          "sender_id": "290ac797-aa0a-4316-bd5a-0d4026f4f62b"
         },
-        "inbound_event_id": "41c513fb-40d1-45cf-8a47-90776622bff2",
+        "inbound_event_id": "1880b62f-ceb4-46fa-a73e-f19ef473c7df",
         "native_email_authority": null,
-        "provider_conversation_id": "inbound-41c513fb-40d1-45cf-8a47-90776622bff2",
+        "provider_conversation_id": "inbound-1880b62f-ceb4-46fa-a73e-f19ef473c7df",
         "route": {
-          "account_id": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
+          "account_id": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
           "channel": "email",
-          "connection_ref": "5fcc7201-ed40-4687-a193-c031e52c399a",
+          "connection_ref": "be301e84-3122-40c7-aad7-3308ee9a2018",
           "inbound_channel": "email",
           "provider": "unipile",
-          "recipient_email": "b2443f98-39fc-4c59-985d-f33807253fa0@prospect.test",
+          "recipient_email": "a3d23afe-5893-4bce-967f-5b782cc044b0@prospect.test",
           "rerouted": true,
           "subject": "Re: Original subject"
         },
-        "sender_account_ref": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
-        "sender_id": "f96fb280-fa0c-4dfa-9c55-8d3b4ef69212",
-        "turn_id": "41c513fb-40d1-45cf-8a47-90776622bff2"
+        "sender_account_ref": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
+        "sender_id": "d2df6ad3-bba6-4b9c-ad70-c76a7a89a874",
+        "turn_id": "1880b62f-ceb4-46fa-a73e-f19ef473c7df"
       },
       "run_ref": null,
-      "state_token": "595bec7b47435652610fd2807975dbe6d8425e8b92f2dfd83e2f0a31ebdfd38f",
-      "turn_ref": "41c513fb-40d1-45cf-8a47-90776622bff2",
+      "state_token": "0b9a5332ddef4186b8827f5aaa75fc8314d6b68e9bb1f1692a992c775f946350",
+      "turn_ref": "1880b62f-ceb4-46fa-a73e-f19ef473c7df",
       "turn_version": 2
     },
     {
       "dispatch_reason": null,
       "kind": "current_reply",
-      "lead_ref": "f70b03d8-b818-411b-b158-7abfa16a9f27",
-      "owner": "7bc8b47f-0cd1-4469-becc-28ac6cb29198",
+      "lead_ref": "ef6abdae-3ec2-468d-986a-d33707e981b9",
+      "owner": "290ac797-aa0a-4316-bd5a-0d4026f4f62b",
       "prepared": true,
       "reason": null,
       "route": {
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "7bc8b47f-0cd1-4469-becc-28ac6cb29198"
+          "sender_id": "290ac797-aa0a-4316-bd5a-0d4026f4f62b"
         },
-        "inbound_event_id": "39ea11fb-1bc6-4d28-9785-606d1d72695a",
+        "inbound_event_id": "adf60de2-ada8-466f-a275-3768416bd00f",
         "native_email_authority": null,
-        "provider_conversation_id": "inbound-39ea11fb-1bc6-4d28-9785-606d1d72695a",
+        "provider_conversation_id": "inbound-adf60de2-ada8-466f-a275-3768416bd00f",
         "route": {
-          "account_id": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
+          "account_id": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
           "channel": "email",
-          "connection_ref": "5fcc7201-ed40-4687-a193-c031e52c399a",
+          "connection_ref": "be301e84-3122-40c7-aad7-3308ee9a2018",
           "inbound_channel": "email",
           "provider": "unipile",
-          "recipient_email": "f70b03d8-b818-411b-b158-7abfa16a9f27@prospect.test",
+          "recipient_email": "ef6abdae-3ec2-468d-986a-d33707e981b9@prospect.test",
           "rerouted": true,
           "subject": "Re: Original subject"
         },
-        "sender_account_ref": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
-        "sender_id": "f96fb280-fa0c-4dfa-9c55-8d3b4ef69212",
-        "turn_id": "39ea11fb-1bc6-4d28-9785-606d1d72695a"
+        "sender_account_ref": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
+        "sender_id": "d2df6ad3-bba6-4b9c-ad70-c76a7a89a874",
+        "turn_id": "adf60de2-ada8-466f-a275-3768416bd00f"
       },
       "run_ref": null,
-      "state_token": "9e9d0509220965e960f44507efd31f1ea0a1a51d5411acafe9b1344aea0f1d5e",
-      "turn_ref": "39ea11fb-1bc6-4d28-9785-606d1d72695a",
+      "state_token": "72afdd9ba8e4b1b9d7ec8bf3e9778f2164c9852e73b3db2031fac419f6a96a9b",
+      "turn_ref": "adf60de2-ada8-466f-a275-3768416bd00f",
       "turn_version": 2
     }
   ],
@@ -228,11 +228,11 @@
     "display_name": "Target",
     "pinned_signature": "Target, Lifty",
     "pinned_version": 1,
-    "sender_id": "f96fb280-fa0c-4dfa-9c55-8d3b4ef69212",
+    "sender_id": "d2df6ad3-bba6-4b9c-ad70-c76a7a89a874",
     "signature": "Target, Lifty",
     "version": 1
   },
-  "revision": "3e8ef070db469c266f87e1014b6d647dd58f205e311ff649ec3cf0e2e0e75a56",
+  "revision": "0c5ce0697899b107d846eae4d7175811369159fcd24a139377a9872e1b069f54",
   "sample_complete": true,
   "sample_count": 5,
   "samples": [
@@ -240,210 +240,210 @@
       "answering_route": {
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "7bc8b47f-0cd1-4469-becc-28ac6cb29198"
+          "sender_id": "290ac797-aa0a-4316-bd5a-0d4026f4f62b"
         },
-        "inbound_event_id": "af2fb1fe-4500-4c85-9530-c1057944a747",
+        "inbound_event_id": "8e86ce7a-6b8c-4bc3-91d0-d6553115bcb8",
         "native_email_authority": null,
-        "provider_conversation_id": "inbound-af2fb1fe-4500-4c85-9530-c1057944a747",
+        "provider_conversation_id": "inbound-8e86ce7a-6b8c-4bc3-91d0-d6553115bcb8",
         "route": {
-          "account_id": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
+          "account_id": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
           "channel": "email",
-          "connection_ref": "5fcc7201-ed40-4687-a193-c031e52c399a",
+          "connection_ref": "be301e84-3122-40c7-aad7-3308ee9a2018",
           "inbound_channel": "email",
           "provider": "unipile",
-          "recipient_email": "2d7235be-627d-4d21-b01d-8d44fedca265@prospect.test",
+          "recipient_email": "41986714-575d-445f-b9ea-623438b8e3cd@prospect.test",
           "rerouted": true,
           "subject": "Re: Original subject"
         },
-        "sender_account_ref": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
-        "sender_id": "f96fb280-fa0c-4dfa-9c55-8d3b4ef69212",
-        "turn_id": "af2fb1fe-4500-4c85-9530-c1057944a747"
+        "sender_account_ref": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
+        "sender_id": "d2df6ad3-bba6-4b9c-ad70-c76a7a89a874",
+        "turn_id": "8e86ce7a-6b8c-4bc3-91d0-d6553115bcb8"
       },
       "body": "Happy to help.\n\nTarget, Lifty",
       "context": {
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "7bc8b47f-0cd1-4469-becc-28ac6cb29198"
+          "sender_id": "290ac797-aa0a-4316-bd5a-0d4026f4f62b"
         },
-        "inbound_event_ref": "af2fb1fe-4500-4c85-9530-c1057944a747"
+        "inbound_event_ref": "8e86ce7a-6b8c-4bc3-91d0-d6553115bcb8"
       },
-      "draft_batch_id": "handoff/154/af2fb1fe-4500-4c85-9530-c1057944a747/1",
-      "draft_event_ref": "679e8e69-b705-40cc-9982-79d3fc9a59cd",
+      "draft_batch_id": "handoff/2013/8e86ce7a-6b8c-4bc3-91d0-d6553115bcb8/1",
+      "draft_event_ref": "12acddf4-2aac-48b4-9f83-e688005c1dca",
       "kind": "current_reply",
-      "lead_ref": "2d7235be-627d-4d21-b01d-8d44fedca265",
+      "lead_ref": "41986714-575d-445f-b9ea-623438b8e3cd",
       "prepared": true,
       "subject": "Re: Original subject",
-      "turn_ref": "af2fb1fe-4500-4c85-9530-c1057944a747",
+      "turn_ref": "8e86ce7a-6b8c-4bc3-91d0-d6553115bcb8",
       "turn_version": 2
     },
     {
       "answering_route": {
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "7bc8b47f-0cd1-4469-becc-28ac6cb29198"
+          "sender_id": "290ac797-aa0a-4316-bd5a-0d4026f4f62b"
         },
-        "inbound_event_id": "4fb2ccc2-0312-486b-888b-722aebdec19e",
+        "inbound_event_id": "5362558a-e717-432c-8fdc-29858d035dba",
         "native_email_authority": null,
-        "provider_conversation_id": "inbound-4fb2ccc2-0312-486b-888b-722aebdec19e",
+        "provider_conversation_id": "inbound-5362558a-e717-432c-8fdc-29858d035dba",
         "route": {
-          "account_id": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
+          "account_id": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
           "channel": "email",
-          "connection_ref": "5fcc7201-ed40-4687-a193-c031e52c399a",
+          "connection_ref": "be301e84-3122-40c7-aad7-3308ee9a2018",
           "inbound_channel": "email",
           "provider": "unipile",
-          "recipient_email": "6d81cae1-4e4b-4d0e-9dc2-5b38ca6f66ae@prospect.test",
+          "recipient_email": "5d19fc7d-a469-429d-bba7-4209b963e7d2@prospect.test",
           "rerouted": true,
           "subject": "Re: Original subject"
         },
-        "sender_account_ref": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
-        "sender_id": "f96fb280-fa0c-4dfa-9c55-8d3b4ef69212",
-        "turn_id": "4fb2ccc2-0312-486b-888b-722aebdec19e"
+        "sender_account_ref": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
+        "sender_id": "d2df6ad3-bba6-4b9c-ad70-c76a7a89a874",
+        "turn_id": "5362558a-e717-432c-8fdc-29858d035dba"
       },
       "body": "Happy to help.\n\nTarget, Lifty",
       "context": {
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "7bc8b47f-0cd1-4469-becc-28ac6cb29198"
+          "sender_id": "290ac797-aa0a-4316-bd5a-0d4026f4f62b"
         },
-        "inbound_event_ref": "4fb2ccc2-0312-486b-888b-722aebdec19e"
+        "inbound_event_ref": "5362558a-e717-432c-8fdc-29858d035dba"
       },
-      "draft_batch_id": "handoff/154/4fb2ccc2-0312-486b-888b-722aebdec19e/1",
-      "draft_event_ref": "add5b87c-53ae-4f21-a496-75544111f8bc",
+      "draft_batch_id": "handoff/2013/5362558a-e717-432c-8fdc-29858d035dba/1",
+      "draft_event_ref": "38b155aa-40a5-46d7-a907-3d64d6fe64f2",
       "kind": "current_reply",
-      "lead_ref": "6d81cae1-4e4b-4d0e-9dc2-5b38ca6f66ae",
+      "lead_ref": "5d19fc7d-a469-429d-bba7-4209b963e7d2",
       "prepared": true,
       "subject": "Re: Original subject",
-      "turn_ref": "4fb2ccc2-0312-486b-888b-722aebdec19e",
+      "turn_ref": "5362558a-e717-432c-8fdc-29858d035dba",
       "turn_version": 2
     },
     {
       "answering_route": {
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "7bc8b47f-0cd1-4469-becc-28ac6cb29198"
+          "sender_id": "290ac797-aa0a-4316-bd5a-0d4026f4f62b"
         },
-        "inbound_event_id": "dd016de1-1d04-4675-be4e-818e90fa4d28",
+        "inbound_event_id": "463f42fc-0d91-42e7-9145-e8fe117a3356",
         "native_email_authority": null,
-        "provider_conversation_id": "inbound-dd016de1-1d04-4675-be4e-818e90fa4d28",
+        "provider_conversation_id": "inbound-463f42fc-0d91-42e7-9145-e8fe117a3356",
         "route": {
-          "account_id": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
+          "account_id": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
           "channel": "email",
-          "connection_ref": "5fcc7201-ed40-4687-a193-c031e52c399a",
+          "connection_ref": "be301e84-3122-40c7-aad7-3308ee9a2018",
           "inbound_channel": "email",
           "provider": "unipile",
-          "recipient_email": "6f67fff9-f166-4697-a3ff-b5481130122c@prospect.test",
+          "recipient_email": "77bd2c8a-8acd-4d40-9c05-75e095a01156@prospect.test",
           "rerouted": true,
           "subject": "Re: Original subject"
         },
-        "sender_account_ref": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
-        "sender_id": "f96fb280-fa0c-4dfa-9c55-8d3b4ef69212",
-        "turn_id": "dd016de1-1d04-4675-be4e-818e90fa4d28"
+        "sender_account_ref": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
+        "sender_id": "d2df6ad3-bba6-4b9c-ad70-c76a7a89a874",
+        "turn_id": "463f42fc-0d91-42e7-9145-e8fe117a3356"
       },
       "body": "Happy to help.\n\nTarget, Lifty",
       "context": {
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "7bc8b47f-0cd1-4469-becc-28ac6cb29198"
+          "sender_id": "290ac797-aa0a-4316-bd5a-0d4026f4f62b"
         },
-        "inbound_event_ref": "dd016de1-1d04-4675-be4e-818e90fa4d28"
+        "inbound_event_ref": "463f42fc-0d91-42e7-9145-e8fe117a3356"
       },
-      "draft_batch_id": "handoff/154/dd016de1-1d04-4675-be4e-818e90fa4d28/1",
-      "draft_event_ref": "af9fee8e-dde0-4d49-8057-06343be0ec4e",
+      "draft_batch_id": "handoff/2013/463f42fc-0d91-42e7-9145-e8fe117a3356/1",
+      "draft_event_ref": "65ac49e6-5cfb-4fb8-8aaf-3fce95453ab8",
       "kind": "current_reply",
-      "lead_ref": "6f67fff9-f166-4697-a3ff-b5481130122c",
+      "lead_ref": "77bd2c8a-8acd-4d40-9c05-75e095a01156",
       "prepared": true,
       "subject": "Re: Original subject",
-      "turn_ref": "dd016de1-1d04-4675-be4e-818e90fa4d28",
+      "turn_ref": "463f42fc-0d91-42e7-9145-e8fe117a3356",
       "turn_version": 2
     },
     {
       "answering_route": {
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "7bc8b47f-0cd1-4469-becc-28ac6cb29198"
+          "sender_id": "290ac797-aa0a-4316-bd5a-0d4026f4f62b"
         },
-        "inbound_event_id": "41c513fb-40d1-45cf-8a47-90776622bff2",
+        "inbound_event_id": "1880b62f-ceb4-46fa-a73e-f19ef473c7df",
         "native_email_authority": null,
-        "provider_conversation_id": "inbound-41c513fb-40d1-45cf-8a47-90776622bff2",
+        "provider_conversation_id": "inbound-1880b62f-ceb4-46fa-a73e-f19ef473c7df",
         "route": {
-          "account_id": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
+          "account_id": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
           "channel": "email",
-          "connection_ref": "5fcc7201-ed40-4687-a193-c031e52c399a",
+          "connection_ref": "be301e84-3122-40c7-aad7-3308ee9a2018",
           "inbound_channel": "email",
           "provider": "unipile",
-          "recipient_email": "b2443f98-39fc-4c59-985d-f33807253fa0@prospect.test",
+          "recipient_email": "a3d23afe-5893-4bce-967f-5b782cc044b0@prospect.test",
           "rerouted": true,
           "subject": "Re: Original subject"
         },
-        "sender_account_ref": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
-        "sender_id": "f96fb280-fa0c-4dfa-9c55-8d3b4ef69212",
-        "turn_id": "41c513fb-40d1-45cf-8a47-90776622bff2"
+        "sender_account_ref": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
+        "sender_id": "d2df6ad3-bba6-4b9c-ad70-c76a7a89a874",
+        "turn_id": "1880b62f-ceb4-46fa-a73e-f19ef473c7df"
       },
       "body": "Happy to help.\n\nTarget, Lifty",
       "context": {
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "7bc8b47f-0cd1-4469-becc-28ac6cb29198"
+          "sender_id": "290ac797-aa0a-4316-bd5a-0d4026f4f62b"
         },
-        "inbound_event_ref": "41c513fb-40d1-45cf-8a47-90776622bff2"
+        "inbound_event_ref": "1880b62f-ceb4-46fa-a73e-f19ef473c7df"
       },
-      "draft_batch_id": "handoff/154/41c513fb-40d1-45cf-8a47-90776622bff2/1",
-      "draft_event_ref": "fa4291d4-b3f4-4503-8668-4601a598f817",
+      "draft_batch_id": "handoff/2013/1880b62f-ceb4-46fa-a73e-f19ef473c7df/1",
+      "draft_event_ref": "570c55d5-1b0b-4292-93b2-095904eddf84",
       "kind": "current_reply",
-      "lead_ref": "b2443f98-39fc-4c59-985d-f33807253fa0",
+      "lead_ref": "a3d23afe-5893-4bce-967f-5b782cc044b0",
       "prepared": true,
       "subject": "Re: Original subject",
-      "turn_ref": "41c513fb-40d1-45cf-8a47-90776622bff2",
+      "turn_ref": "1880b62f-ceb4-46fa-a73e-f19ef473c7df",
       "turn_version": 2
     },
     {
       "answering_route": {
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "7bc8b47f-0cd1-4469-becc-28ac6cb29198"
+          "sender_id": "290ac797-aa0a-4316-bd5a-0d4026f4f62b"
         },
-        "inbound_event_id": "39ea11fb-1bc6-4d28-9785-606d1d72695a",
+        "inbound_event_id": "adf60de2-ada8-466f-a275-3768416bd00f",
         "native_email_authority": null,
-        "provider_conversation_id": "inbound-39ea11fb-1bc6-4d28-9785-606d1d72695a",
+        "provider_conversation_id": "inbound-adf60de2-ada8-466f-a275-3768416bd00f",
         "route": {
-          "account_id": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
+          "account_id": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
           "channel": "email",
-          "connection_ref": "5fcc7201-ed40-4687-a193-c031e52c399a",
+          "connection_ref": "be301e84-3122-40c7-aad7-3308ee9a2018",
           "inbound_channel": "email",
           "provider": "unipile",
-          "recipient_email": "f70b03d8-b818-411b-b158-7abfa16a9f27@prospect.test",
+          "recipient_email": "ef6abdae-3ec2-468d-986a-d33707e981b9@prospect.test",
           "rerouted": true,
           "subject": "Re: Original subject"
         },
-        "sender_account_ref": "account-5fcc7201-ed40-4687-a193-c031e52c399a",
-        "sender_id": "f96fb280-fa0c-4dfa-9c55-8d3b4ef69212",
-        "turn_id": "39ea11fb-1bc6-4d28-9785-606d1d72695a"
+        "sender_account_ref": "account-be301e84-3122-40c7-aad7-3308ee9a2018",
+        "sender_id": "d2df6ad3-bba6-4b9c-ad70-c76a7a89a874",
+        "turn_id": "adf60de2-ada8-466f-a275-3768416bd00f"
       },
       "body": "Happy to help.\n\nTarget, Lifty",
       "context": {
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "7bc8b47f-0cd1-4469-becc-28ac6cb29198"
+          "sender_id": "290ac797-aa0a-4316-bd5a-0d4026f4f62b"
         },
-        "inbound_event_ref": "39ea11fb-1bc6-4d28-9785-606d1d72695a"
+        "inbound_event_ref": "adf60de2-ada8-466f-a275-3768416bd00f"
       },
-      "draft_batch_id": "handoff/154/39ea11fb-1bc6-4d28-9785-606d1d72695a/1",
-      "draft_event_ref": "06dbf4ee-cf8f-4c2d-8f2f-8935d5f9864c",
+      "draft_batch_id": "handoff/2013/adf60de2-ada8-466f-a275-3768416bd00f/1",
+      "draft_event_ref": "2bd664e1-24d3-4a52-91af-27c91e4873aa",
       "kind": "current_reply",
-      "lead_ref": "f70b03d8-b818-411b-b158-7abfa16a9f27",
+      "lead_ref": "ef6abdae-3ec2-468d-986a-d33707e981b9",
       "prepared": true,
       "subject": "Re: Original subject",
-      "turn_ref": "39ea11fb-1bc6-4d28-9785-606d1d72695a",
+      "turn_ref": "adf60de2-ada8-466f-a275-3768416bd00f",
       "turn_version": 2
     }
   ],
-  "scope_sha256": "a59bdae141eea1b7f2841356292d2a0843301190dcdcf81c3859ce9204acd015",
+  "scope_sha256": "d5245b1a8cdc079b533d5cf50e240a846ef6d2c9ef89ce274229fb5da4766234",
   "settings_revision": 1,
-  "settings_sha256": "69ee04d2ca547f2b7bae9ae0e9417e13a3511806a47e50df82b7c6d01c5e99a2",
-  "source_sender_id": "7bc8b47f-0cd1-4469-becc-28ac6cb29198",
+  "settings_sha256": "e0dee5f3725b1a9753f6663ef02b200cf11f79a43e18c35e2d166d482657a090",
+  "source_sender_id": "290ac797-aa0a-4316-bd5a-0d4026f4f62b",
   "state": "preparing",
   "transferred_count": 0,
   "untouched_transferred_count": 0,
   "waiting_count": 6,
-  "workspace_id": "132d08c4-f5d3-4eb7-84ee-57187e984ee0"
+  "workspace_id": "2f62521c-5ac7-40dd-958f-00baaef243df"
 }

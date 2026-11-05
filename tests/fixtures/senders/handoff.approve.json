@@ -1,17 +1,17 @@
 {
   "authorization": {
-    "actor_id": "3d01c413-994e-43b5-990b-e4c6d6a5aa18",
-    "approved_at": "2026-11-05T16:54:08.396112+00:00",
-    "revision": "7b040a894a0fbfa5c128afce6f4b5fa1bf78410f155b5b75c757d5344151ffdf",
+    "actor_id": "6af2c662-2aa7-4477-a930-eaf0d37944b4",
+    "approved_at": "2026-11-05T18:29:12.587063+00:00",
+    "revision": "44a0c68ebdaf5913d10d94592bf5c2b2748ce89d71aef8a0178596359f936842",
     "state": "authorized"
   },
   "cohort_count": 1,
   "configured_sample_size": 5,
   "confirmation_action": "approve_sample_and_transfer",
-  "context_sha256": "d98bd91af70bb37f26b87b89c98888354896ead30a1207735bc2037f2ddffa86",
+  "context_sha256": "259cfc20dc27469d6c9db27089e98d00b48c7e4c275c8ffd40593feaffa45a38",
   "contract": "sender-handoff-approval.v2",
   "current_reply_count": 0,
-  "drain_ref": "163",
+  "drain_ref": "2025",
   "generation_settings": {
     "instructions": ""
   },
@@ -20,13 +20,13 @@
     {
       "dispatch_reason": null,
       "kind": "proactive",
-      "lead_ref": "72e91021-d303-48da-9c3f-005933a744f9",
-      "owner": "34619cf9-d919-4fbf-a2cb-6c78a06504c4",
+      "lead_ref": "0ad3b392-1f27-4997-897a-7a5d7b197fad",
+      "owner": "09732c3d-e915-43f1-b16e-c33d2d4962c1",
       "prepared": true,
       "reason": null,
       "route": null,
-      "run_ref": "82a4e546-03f4-4187-899e-3b3709aa7abc",
-      "state_token": "358cf1ca70463f8cac5e9665b655c844c3e7fe88eab5c9d971c217034259ef3a",
+      "run_ref": "8f142574-175d-42e0-bf8d-6fe560d9c103",
+      "state_token": "02a47ab99d09527a8d8ac9896a15d84a53ee775d616af34184e4dce7a1e8f3d4",
       "turn_ref": null,
       "turn_version": null
     }
@@ -40,21 +40,21 @@
     "display_name": "Target",
     "pinned_signature": "Target, Lifty",
     "pinned_version": 1,
-    "sender_id": "34619cf9-d919-4fbf-a2cb-6c78a06504c4",
+    "sender_id": "09732c3d-e915-43f1-b16e-c33d2d4962c1",
     "signature": "Target, Lifty",
     "version": 1
   },
-  "revision": "7b040a894a0fbfa5c128afce6f4b5fa1bf78410f155b5b75c757d5344151ffdf",
+  "revision": "44a0c68ebdaf5913d10d94592bf5c2b2748ce89d71aef8a0178596359f936842",
   "sample_complete": true,
   "sample_count": 1,
   "samples": [
     {
       "answering_route": {
-        "account_id": "account-992f8209-aac0-4fde-a0fb-9b892a8d7771",
+        "account_id": "account-11826641-578c-41bb-a995-c7b94c8e929d",
         "channel": "email",
-        "connection_ref": "992f8209-aac0-4fde-a0fb-9b892a8d7771",
-        "mailbox_email": "992f8209-aac0-4fde-a0fb-9b892a8d7771@lif1771.test",
-        "sender_id": "34619cf9-d919-4fbf-a2cb-6c78a06504c4"
+        "connection_ref": "11826641-578c-41bb-a995-c7b94c8e929d",
+        "mailbox_email": "11826641-578c-41bb-a995-c7b94c8e929d@lif1771.test",
+        "sender_id": "09732c3d-e915-43f1-b16e-c33d2d4962c1"
       },
       "body": "Target handoff fixture\n\nTarget, Lifty",
       "context": {
@@ -112,35 +112,35 @@
           ]
         },
         "contract": "sender-email-handoff.v1",
-        "first_due_at": "2026-11-05T16:54:07.028271+00:00",
+        "first_due_at": "2026-11-05T18:29:12.506313+00:00",
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "ef5bb8ca-6127-4aa7-a75c-a243d5f7a122"
+          "sender_id": "37a4f47b-a50e-4502-b1e3-fc3e4d0183ba"
         },
         "history": [
           {
-            "accepted_at": "2026-11-02T16:54:06.884124+00:00",
-            "connection_ref": "77bd1cd4-43a7-48ea-b3e8-a8b91bc72708",
-            "execution_ref": "090f6326-d68b-4f82-9c7c-250b5374ffc8",
+            "accepted_at": "2026-11-02T18:29:12.431557+00:00",
+            "connection_ref": "2ca62ce5-a03c-4882-9eed-c10b4eecfbdf",
+            "execution_ref": "6c7c83ec-0fdb-4bef-87db-141483b9f135",
             "original_position": 1,
             "position": 1,
-            "provider_id": "55eef7fb-757f-4f4d-ac5e-ecf85fd1b644",
-            "run_ref": "8d297d6f-7630-4dec-b3cb-8966a0e8e8bb",
-            "step_ref": "79310d95-c7f0-4076-8bcd-63ebbe9c23fe",
+            "provider_id": "e13feba5-29ee-4c15-8cc6-100e53438e6a",
+            "run_ref": "2de215ba-59ef-4fbf-8062-9f73c6e4bf79",
+            "step_ref": "9b95d18c-ce56-4857-bb7b-b4d748f51551",
             "subject": "Original subject",
             "text": "Original email 1"
           }
         ],
         "kind": "continue",
         "last_accepted_email": {
-          "accepted_at": "2026-11-02T16:54:06.884124+00:00",
-          "connection_ref": "77bd1cd4-43a7-48ea-b3e8-a8b91bc72708",
-          "provider_id": "55eef7fb-757f-4f4d-ac5e-ecf85fd1b644",
-          "step_ref": "79310d95-c7f0-4076-8bcd-63ebbe9c23fe",
+          "accepted_at": "2026-11-02T18:29:12.431557+00:00",
+          "connection_ref": "2ca62ce5-a03c-4882-9eed-c10b4eecfbdf",
+          "provider_id": "e13feba5-29ee-4c15-8cc6-100e53438e6a",
+          "step_ref": "9b95d18c-ce56-4857-bb7b-b4d748f51551",
           "subject": "Original subject",
           "text": "Original email 1"
         },
-        "last_proactive_touch_at": "2026-11-02T16:54:06.884124+00:00",
+        "last_proactive_touch_at": "2026-11-02T18:29:12.431557+00:00",
         "original_next_position": 2,
         "original_positions": [
           2,
@@ -152,30 +152,30 @@
           "lane": null,
           "opener": null
         },
-        "source_campaign_ref": "b53de2e0-3df9-4306-91da-424fc48a1a7d",
-        "source_email_version_ref": "0b3b1770-d33f-4d32-bbdf-4c405fe6c3c3",
-        "source_executable_version_ref": "13f26345-c567-4584-8ec4-c5f0788386d9",
-        "source_execution_ref": "090f6326-d68b-4f82-9c7c-250b5374ffc8",
-        "source_revision_ref": "c3bc77f2-6268-4020-abba-344c75b126a3",
-        "source_run_ref": "8d297d6f-7630-4dec-b3cb-8966a0e8e8bb"
+        "source_campaign_ref": "623c72f3-8fe3-4091-a69e-bb57b35ceb75",
+        "source_email_version_ref": "d583aca1-8a6d-43e0-94a9-f09628d0665e",
+        "source_executable_version_ref": "1132d9e3-7b8a-494d-8ca7-612caf5eb42b",
+        "source_execution_ref": "6c7c83ec-0fdb-4bef-87db-141483b9f135",
+        "source_revision_ref": "c508d573-8a13-4005-976b-98b2a1351277",
+        "source_run_ref": "2de215ba-59ef-4fbf-8062-9f73c6e4bf79"
       },
-      "email_version_ref": "d7d5b925-10db-4947-845d-34c0df7a4949",
+      "email_version_ref": "09cbb50d-b0c9-4f9e-a287-08fcec8215a7",
       "kind": "continue",
-      "lead_ref": "72e91021-d303-48da-9c3f-005933a744f9",
-      "message_ref": "4b27ebad-f3f7-4040-acaf-80b65987e8ad",
+      "lead_ref": "0ad3b392-1f27-4997-897a-7a5d7b197fad",
+      "message_ref": "c04728ab-6519-4f95-aa40-c0a502d7f303",
       "prepared": true,
-      "run_ref": "82a4e546-03f4-4187-899e-3b3709aa7abc",
-      "source_run_ref": "8d297d6f-7630-4dec-b3cb-8966a0e8e8bb",
+      "run_ref": "8f142574-175d-42e0-bf8d-6fe560d9c103",
+      "source_run_ref": "2de215ba-59ef-4fbf-8062-9f73c6e4bf79",
       "subject": "Re: Original subject"
     }
   ],
-  "scope_sha256": "54ef26359de597378480913c65cf916b84af894d1eef4f1c8244334044cdd2d0",
+  "scope_sha256": "73f265279f17f3e95e5dc74f2d54f2478d3cbb5e63cbba808aac946368083ee7",
   "settings_revision": 1,
-  "settings_sha256": "c0f676c58d2273aebdafe51e3e66fae3c736956d818ff6627952db58c7a0ea4e",
-  "source_sender_id": "ef5bb8ca-6127-4aa7-a75c-a243d5f7a122",
+  "settings_sha256": "899020b4f00a61f5243301e290ebeb22639d56cdf42ca8d949be24c71e9a3df4",
+  "source_sender_id": "37a4f47b-a50e-4502-b1e3-fc3e4d0183ba",
   "state": "approved",
   "transferred_count": 1,
   "untouched_transferred_count": 0,
   "waiting_count": 0,
-  "workspace_id": "332ede34-3993-453b-867e-4e9f8387bd89"
+  "workspace_id": "a8f6d1d6-8408-4df7-8f0d-3aed0aab6993"
 }

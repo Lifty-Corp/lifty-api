@@ -1,8 +1,15 @@
 {
-  "also": [],
+  "also": [
+    {
+      "category": "transient",
+      "cause": "unverified",
+      "since": "2026-11-05T15:29:11.592538+00:00",
+      "status": "not_connected"
+    }
+  ],
   "category": null,
-  "cause": "no_lead_yet",
+  "cause": "active_journeys",
   "since": null,
   "since_estimated": false,
-  "status": "waiting_for_first_lead"
+  "status": "sending"
 }

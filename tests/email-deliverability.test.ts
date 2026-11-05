@@ -350,7 +350,7 @@ describe("member verdict and next step (LIF-1603)", () => {
   });
 
   it("shows the same primary cause and the other one below it", () => {
-    const paused = receipt("sender.pause").sender.accounts.find((item: Account) => item.identity?.startsWith("a1c9dcc0"));
+    const paused = receipt("sender.pause").sender.accounts.find((item: Account) => item.channel === "email" && item.participation.also?.[0]?.cause === "paused_by_member");
     const mailbox = verdict(null, noCampaigns, { participation: paused.participation });
     expect(mailbox.status).toMatchObject({ code: "paused", label: "Sender paused" });
     expect(mailbox.next_step).toMatchObject({ code: "turn_on", owner: "member", label: "Resume the person" });

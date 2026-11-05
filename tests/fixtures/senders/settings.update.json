@@ -1,7 +1,7 @@
 {
   "settings": {
     "assignment": {
-      "founder_sender_id": "974d0a9c-fb3b-4b0c-9f02-efb7f1de6654",
+      "founder_sender_id": "20216300-68ef-4ac9-af2b-20cbfbec4c62",
       "mode": "founder_weight"
     },
     "handoff": {
@@ -23,6 +23,6 @@
   "workspace": {
     "name": "Synthetic handoff",
     "state": "ready_for_connections",
-    "workspace_ref": "5bc9b518-e5be-44f2-a9a8-f765d8819cca"
+    "workspace_ref": "019bccdc-3722-4e50-975d-d577d38e9cfc"
   }
 }

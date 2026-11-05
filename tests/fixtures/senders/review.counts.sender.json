@@ -6,7 +6,7 @@
       {
         "pending": 11,
         "route_unavailable": 1,
-        "sender_id": "34361067-d375-43dd-ae73-02bea44d49f1",
+        "sender_id": "2f0d1ad5-4e07-4ec8-a4b4-aa423f27ffb5",
         "sending": 0,
         "total": 11,
         "uncertain": 0
@@ -19,6 +19,6 @@
   "workspace": {
     "name": "Synthetic handoff",
     "state": "ready_for_connections",
-    "workspace_ref": "1bd419da-e867-4d47-a477-00b323b4fc65"
+    "workspace_ref": "2321e0e2-c8d4-4950-bd69-ac0d95c35bb2"
   }
 }

@@ -25,7 +25,9 @@ const handoff = receipt("handoff.ready");
 const settings = receipt("settings.defaults");
 const approve = { action: "approve_sample_and_transfer", confirm: true, source_sender_id: handoff.source_sender_id, replacement_sender_id: handoff.replacement.sender_id,
   scope_sha256: handoff.scope_sha256, settings_sha256: handoff.settings_sha256, context_sha256: handoff.context_sha256, revision: handoff.revision };
-const stopTarget = { scope: "account", account_id: "91fcb437-dab8-4f4f-84b7-f9e0e6177fba" };
+const stopTarget = { scope: "account", account_id: receipt("stop.set").stop.account_id };
+const reply = receipt("handoff.held").samples[0];
+const scope = receipt("sender.transfer_scope");
 const controls: readonly { stage: string; command: string; path?: Record<string, string>; query?: Record<string, string>; body?: unknown; rpc: string; fixture: string }[] = [
   { stage: "senders", command: "POST pause", path: { id: senderId }, body: { expected_version: 2, confirm: true }, rpc: "pause_lifty_sender", fixture: "sender.pause" },
   { stage: "senders", command: "POST resume", path: { id: senderId }, body: { expected_version: 3, confirm: true }, rpc: "resume_lifty_sender", fixture: "sender.resume" },
@@ -36,13 +38,14 @@ const controls: readonly { stage: string; command: string; path?: Record<string,
   { stage: "senders", command: "POST handoff-approve", path: { handoff_ref: "163" }, body: approve, rpc: "approve_lifty_sender_handoff", fixture: "handoff.approve" },
   { stage: "senders", command: "POST handoff-cancel", path: { handoff_ref: "164" }, body: { confirm: true, revision: handoff.revision }, rpc: "cancel_lifty_sender_handoff", fixture: "handoff.cancel" },
   { stage: "senders", command: "POST handoff-settings-revise", path: { handoff_ref: "163" }, body: { revision: handoff.revision, generation_settings: { instructions: "Short." } }, rpc: "revise_lifty_sender_handoff_settings", fixture: "handoff.ready" },
-  { stage: "senders", command: "POST handoff-reply-revise", path: { handoff_ref: "154", turn_ref: "af2fb1fe-4500-4c85-9530-c1057944a747" }, body: { turn_version: 2, draft_event_ref: "679e8e69-b705-40cc-9982-79d3fc9a59cd", text: "Hi." }, rpc: "revise_lifty_sender_handoff_reply", fixture: "handoff.held" },
+  { stage: "senders", command: "POST handoff-reply-revise", path: { handoff_ref: "154", turn_ref: reply.turn_ref }, body: { turn_version: reply.turn_version, draft_event_ref: reply.draft_event_ref, text: "Hi." }, rpc: "revise_lifty_sender_handoff_reply", fixture: "handoff.held" },
+  { stage: "senders", command: "GET transfer-scope", path: { id: scope.sender_id }, rpc: "get_lifty_sender_transfer_scope", fixture: "sender.transfer_scope" },
   { stage: "senders", command: "GET stops-get", rpc: "get_lifty_stops", fixture: "stop.list" },
   { stage: "senders", command: "POST stop-set", body: { ...stopTarget, reason: "setup" }, rpc: "set_lifty_stop", fixture: "stop.set" },
   { stage: "senders", command: "POST stop-release", body: stopTarget, rpc: "release_lifty_stop", fixture: "stop.release" },
   { stage: "senders", command: "POST stop-review", body: { ...stopTarget, review_by: "2026-11-30T00:00:00Z" }, rpc: "move_lifty_stop_review", fixture: "stop.move" },
   { stage: "sending-accounts", command: "GET incidents-get", rpc: "get_lifty_recovery_incidents", fixture: "recovery.incidents" },
-  { stage: "campaigns", command: "GET reply_counts_get", query: { sender_id: "34361067-d375-43dd-ae73-02bea44d49f1" }, rpc: "get_lifty_reply_turn_counts", fixture: "review.counts.sender" },
+  { stage: "campaigns", command: "GET reply_counts_get", query: { sender_id: receipt("review.counts.sender").counts.senders[0].sender_id }, rpc: "get_lifty_reply_turn_counts", fixture: "review.counts.sender" },
 ];
 
 describe("installed clients", () => {

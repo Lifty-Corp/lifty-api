@@ -4,9 +4,17 @@
     "route_unavailable": 1,
     "senders": [
       {
+        "pending": 10,
+        "route_unavailable": 0,
+        "sender_id": "27c1a0f8-5b92-4003-9db1-e890b9394d0f",
+        "sending": 0,
+        "total": 10,
+        "uncertain": 0
+      },
+      {
         "pending": 11,
         "route_unavailable": 1,
-        "sender_id": "34361067-d375-43dd-ae73-02bea44d49f1",
+        "sender_id": "2f0d1ad5-4e07-4ec8-a4b4-aa423f27ffb5",
         "sending": 0,
         "total": 11,
         "uncertain": 0
@@ -14,15 +22,7 @@
       {
         "pending": 10,
         "route_unavailable": 0,
-        "sender_id": "8012602d-8a35-453f-9ae1-0184c006a6be",
-        "sending": 0,
-        "total": 10,
-        "uncertain": 0
-      },
-      {
-        "pending": 10,
-        "route_unavailable": 0,
-        "sender_id": "933cb89d-f2e7-4ef9-b9d5-e86ca3324de9",
+        "sender_id": "eedb98e2-9f68-4d3b-abc9-56340a51b35b",
         "sending": 0,
         "total": 10,
         "uncertain": 0
@@ -35,6 +35,6 @@
   "workspace": {
     "name": "Synthetic handoff",
     "state": "ready_for_connections",
-    "workspace_ref": "1bd419da-e867-4d47-a477-00b323b4fc65"
+    "workspace_ref": "2321e0e2-c8d4-4950-bd69-ac0d95c35bb2"
   }
 }

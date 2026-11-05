@@ -47,6 +47,7 @@ describe("runtime context discovery and connection handoff", () => {
       turn_on: "POST /v1/workspace/senders/{id}/turn-on",
       pause: "POST /v1/workspace/senders/{id}/pause",
       resume: "POST /v1/workspace/senders/{id}/resume",
+      transfer_scope: "GET /v1/workspace/senders/{id}/transfer-scope",
       settings_get: "GET /v1/workspace/outreach-settings",
       settings_patch: "PATCH /v1/workspace/outreach-settings",
       handoff_get: "GET /v1/workspace/sender-handoffs/{handoff_ref}",
@@ -278,6 +279,15 @@ describe("customer surfaces name no provider or retired volume knob", () => {
     expect(getAgentContext("linkedin")!.instructions).toMatch(/`paused_by_lift`: Lifty stopped this account\. Only LIFT releases it, so never\s+offer to resume it\./);
     for (const operation of [getAgentContext("senders")!.operations!.resume!, getAgentContext("sending-accounts")!.operations!.resume!])
       expect(operation.description).toMatch(/Lifty stop.*stay|separate sending holds/i);
+  });
+
+  // LIF-1771: recovery can be report-only and members never see that mode.
+  it("promises no recovery move, and takes only moved as proof of one", () => {
+    const guide = getAgentContext("senders")!.instructions.replace(/\s+/g, " ");
+    expect(guide).toContain("Never promise that work will move");
+    expect(guide).toContain("only `moved` says work moved");
+    expect(guide).not.toMatch(/Lifty (?:moves|will move|can move)/);
+    expect(getAgentContext("sending-accounts")!.operations!.incidents_get!.description).toMatch(/only moved says work moved/);
   });
 
   it("keeps the sample's operations to get, post, progress and the founder's confirmation", () => {
