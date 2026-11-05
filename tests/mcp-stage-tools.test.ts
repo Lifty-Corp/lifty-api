@@ -52,9 +52,10 @@ describe("generated MCP stage operations", () => {
     // LIF-1694 publishes the industry label enum in targeting_patch (twice) and
     // setup_patch_draft: about 9,200 characters for 147 labels. The NAICS list
     // is never published; codes carry only a pattern. LIF-1764 adds
-    // senders_turn_off and senders_turn_on (about 3,600 characters).
+    // senders_turn_off and senders_turn_on (about 3,600 characters). LIF-1800
+    // adds search lane and research field lane rules (about 900 characters).
     // LIF-1265 adds timing read/write schemas (about 4,500 characters).
-    expect(JSON.stringify(tools).length).toBeLessThan(213_000);
+    expect(JSON.stringify(tools).length).toBeLessThan(214_000);
     expect(tools.find(tool => tool.name === "crm_mapping_sources")!.annotations.readOnlyHint).toBe(true);
     expect(tools.find(tool => tool.name === "sending_accounts_deliverability")!.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
     expect(tools.find(tool => tool.name === "sending_accounts_disconnect")!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: true });

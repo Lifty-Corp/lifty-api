@@ -74,8 +74,9 @@ A failed sample's `error_code` is one of these customer reasons:
   material change with the founder, then start a new sample.
 - `research_failed`: a technical failure. Retry once with POST; it reuses the
   saved people and completed research.
-- `calibration_sample_incomplete`: some people lack current research, a valid
-  profile URL or a rationale. Explain the gap, then retry once.
+- `calibration_sample_incomplete`: some people lack current research or a
+  rationale. Explain the gap, then retry once. A historical failure caused only
+  by a missing LinkedIn URL can also be retried using the same saved people.
 - `calibration_review_required`: an older sample stopped for a grade check
   that no longer applies; POST reviews the same people again.
 
@@ -93,15 +94,19 @@ A saved shortfall requires diagnosis before more work.
 
 For `researched_v1`, all five researched profiles count regardless of tier,
 including C. Three A, one B and one C is a complete sample, as is an all-C
-cohort with complete evidence. Show person, company, actual grade, LinkedIn
-profile URL, fit rationale and evidence gaps. Readiness to review is distinct
+cohort with current research and fit rationales. Show person, company, actual
+grade, fit rationale and evidence gaps. LinkedIn is optional contact enrichment:
+show the returned profile URL when available, otherwise "Not available". Never
+invent a URL or acquire replacements just to fill it. Readiness to review is distinct
 from targeting quality, founder acceptance and outreach eligibility.
 
 Preserve historical policies and actual grades. An explicit POST retry of a
 failed `tier_a_v1` or `qualified_ab_v1` run adopts the current review policy
 using its saved cohort. Do not acquire replacements to chase A/B grades.
-Missing current research, a valid profile or rationale still needs a retry;
-`calibration_sample_incomplete` reports that evidence gap. Respect the weekly
+Missing current research or a rationale still needs a retry;
+`calibration_sample_incomplete` reports that evidence gap. Missing LinkedIn,
+phone, or other optional enrichment does not make completed research incomplete.
+Do not retry a complete sample to fill those fields. Respect the weekly
 research limit. A status error is not a failed
 run. No new discovery is required merely to connect an account or draft outreach
 with chosen saved leads; exact sending approval remains separate.
