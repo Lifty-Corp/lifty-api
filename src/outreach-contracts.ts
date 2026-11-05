@@ -288,15 +288,27 @@ export const ExactRevisionSchema = z.object({ revision_ref: Ref, digest: Digest 
 export const PublishSchema = ExactRevisionSchema.extend({ expected_version: Version }).strict();
 export const ActivateSchema = PublishSchema;
 export const CampaignPauseSchema = z.object({ expected_version: Version }).strict();
-const Approval = z.object({ actor_ref: Ref, approved_at: Timestamp }).strict();
-const revision = <T extends z.ZodType>(content: T) => ExactRevisionSchema.extend({ content, created_at: Timestamp, approval: Approval.nullable() }).strict();
-export const JourneyRevisionSchema = revision(JourneyPolicySchema);
+const MemberApproval = z.object({ actor_ref: Ref, approved_at: Timestamp }).strict();
+const SlackIdentity = z.string().min(1);
+// LIF-1760: a nonmember approved this Campaign revision in Slack. actor_ref is
+// null because no member did, never because nothing was approved: an unapproved
+// revision has a null approval. The Slack identity is all that is known of them.
+const SlackApproval = z.object({ actor_ref: z.null(), approved_at: Timestamp, origin: z.literal("slack"),
+  decision_ref: Ref, source_decision_ref: Ref, proposal_ref: Ref, option_ref: Ref,
+  slack: z.object({ user_id: SlackIdentity, team_id: SlackIdentity, channel_id: SlackIdentity, message_ts: SlackIdentity }).strict(),
+}).strict();
+const CampaignApproval = z.union([MemberApproval, SlackApproval]);
+const revision = <T extends z.ZodType, A extends z.ZodType>(content: T, approval: A) =>
+  ExactRevisionSchema.extend({ content, created_at: Timestamp, approval: approval.nullable() }).strict();
+// Journey authoring stays member-only; only Campaign revisions take a Slack approval.
+export const JourneyRevisionSchema = revision(JourneyPolicySchema, MemberApproval);
 // Stored history remains readable when a newer authoring/readiness rule rejects
 // it. Writes and exact publication are validated authoritatively in Functions;
 // response parsing checks source shape without reinterpreting saved policy.
 // Persons follow the workspace's Journeys, so no revision names senders (LIF-1670).
-export const CampaignRevisionSchema = revision(CampaignPolicyFields.strict());
-export const RevisionSummarySchema = ExactRevisionSchema.extend({ approval: Approval.nullable() }).strict();
+export const CampaignRevisionSchema = revision(CampaignPolicyFields.strict(), CampaignApproval);
+const JourneyRevisionSummarySchema = ExactRevisionSchema.extend({ approval: MemberApproval.nullable() }).strict();
+export const RevisionSummarySchema = ExactRevisionSchema.extend({ approval: CampaignApproval.nullable() }).strict();
 // One executable Journey version: the exact sources selected for new Journey
 // starts and whether its automatically derived graph is installed.
 export const ExecutableVersionSchema = z.object({ executable_version_ref: Ref, digest: Digest, created_at: Timestamp,
@@ -326,8 +338,8 @@ export const JourneyResultSchema = z.object({ ...Workspace, journey: JourneySche
 export const CampaignResultSchema = z.object({ ...Workspace, campaign: CampaignSchema,
   slots_spec_warnings: SlotsSpecWarningsSchema.optional().describe("Placeholders a template's slots_spec names that its own subject and text do not use, in the published revision for publish and the draft otherwise. Warnings only; absent when there are none."),
 }).strict();
-export const JourneySummarySchema = z.object({ journey_ref: Ref, version: Version, name: Name, active_revision: RevisionSummarySchema.nullable(),
-  draft_revision: RevisionSummarySchema, executable_version: ExecutableVersionSchema.nullable() }).strict();
+export const JourneySummarySchema = z.object({ journey_ref: Ref, version: Version, name: Name, active_revision: JourneyRevisionSummarySchema.nullable(),
+  draft_revision: JourneyRevisionSummarySchema, executable_version: ExecutableVersionSchema.nullable() }).strict();
 export const JourneysSchema = z.object({ ...Workspace, journeys: z.array(JourneySummarySchema).max(100), next_cursor: Ref.nullable() }).strict();
 export const CampaignsSchema = z.object({ ...Workspace, campaigns: z.array(CampaignSummarySchema).max(100), next_cursor: Ref.nullable() }).strict();
 // LIF-1128: the CRM customer-list decision the activation was accepted under.
