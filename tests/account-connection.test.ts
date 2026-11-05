@@ -328,7 +328,8 @@ describe("shared confirmation for sending accounts", () => {
     const confirmed = await server.request("/connect/email/return/status", status("email", state, "canceled"));
     expect(await confirmed.json()).toEqual({ status: "connected", account: null, reference: attemptId, next: "warmup" });
     expect(db.payloads.complete).toEqual({ attempt_id: attemptId, verified: { api_version: "v2", application_id: "app_test",
-      account_scope_id: null, account_id: "acc_new", user_id: "user-1", email: "ana@example.test" } });
+      account_scope_id: null, account_id: "acc_new", user_id: "user-1", email: "ana@example.test",
+      mailbox_provider: mailboxProvider === "outlook" ? "microsoft" : "google" } });
     expect(provider.calls).toEqual(["GET /v2/accounts/acc_new", "GET /v2/acc_new/email-senders"]);
   });
 
