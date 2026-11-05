@@ -55,7 +55,10 @@ describe("generated MCP stage operations", () => {
     // senders_turn_off and senders_turn_on (about 3,600 characters). LIF-1800
     // adds search lane and research field lane rules (about 900 characters).
     // LIF-1265 adds timing read/write schemas (about 4,500 characters).
-    expect(JSON.stringify(tools).length).toBeLessThan(214_000);
+    // LIF-1255 adds DNS status and recheck (about 4,000 characters).
+    expect(JSON.stringify(tools).length).toBeLessThan(216_000);
+    expect(tools.find(tool => tool.name === "sending_accounts_dns_status")!.annotations.readOnlyHint).toBe(true);
+    expect(tools.find(tool => tool.name === "sending_accounts_dns_recheck")!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, openWorldHint: false });
     expect(tools.find(tool => tool.name === "crm_mapping_sources")!.annotations.readOnlyHint).toBe(true);
     expect(tools.find(tool => tool.name === "sending_accounts_deliverability")!.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
     expect(tools.find(tool => tool.name === "sending_accounts_disconnect")!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: true });

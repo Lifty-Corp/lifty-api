@@ -26,6 +26,7 @@ import { CompanyMappingContextSchema, CompanyMappingReceiptSchema } from "./comp
 import { CompanyPlanSchema } from "./company-mapping/contract.js";
 import { WarmupWorkspaceRequest, WarmupStatus, WarmupStartResult } from "./email-warmup-contracts.js";
 import { ConnectionPlacementStatus, PlacementStartRequest, PlacementStatusRequest } from "./email-connection-placement.js";
+import { EmailDnsRequest, EmailDnsStatus } from "./email-dns-contracts.js";
 import { DeliverabilityQueryParams, DeliverabilityResponse } from "./email-deliverability-contracts.js";
 
 const JsonSchema = z.record(z.string(), z.unknown());
@@ -194,6 +195,8 @@ export const stageOperations: Record<string, Record<string, StageOperation>> = {
     warmup_start: operation("POST","/v1/email/warmup/start","Start warmup for a verified mailbox (connection_ref = sending account id, required when the workspace has several email accounts) through Lifty's setup link for Google or Microsoft, the owner's second sign-in after connecting; no password fallback. connect_url is null when this mailbox's warmup is already set up, and a new call replaces an unused link. A dedicated mailbox needs a healthy check after 21 active warmup days before it can send. Starting warmup never pauses or resumes campaigns.",WarmupStartResult,WarmupWorkspaceRequest),
     placement_status: operation("GET","/v1/email/placement","Read the latest Mailivery placement test for one warmed mailbox (connection_ref when the workspace has several), whether a new one can be requested, and whether its result gates sending. Read-only.",ConnectionPlacementStatus,null,PlacementStatusRequest),
     placement_start: operation("POST","/v1/email/placement/start","Queue one Mailivery placement test for a warmed mailbox only after the user explicitly agrees: Mailivery sends the given subject/body from that mailbox to roughly 20-40 of its seed inboxes and uses one test credit. Use the first email of the real sequence. A retried start returns the open test. The result never releases a mailbox or starts campaigns.",ConnectionPlacementStatus,PlacementStartRequest),
+    dns_status: operation("GET","/v1/email/dns","Read the open DNS issue for one email account: which records fail, what to do about each one, and whether a requested check is pending. connection_ref is the sending account id. Read-only.",EmailDnsStatus,null,EmailDnsRequest),
+    dns_recheck: operation("POST","/v1/email/dns/recheck","Ask Lifty to check this account's DNS again after the founder says the records are fixed. Only passing evidence closes the issue. A repeated request returns the check already pending. It changes no DNS, sender or campaign.",EmailDnsStatus,EmailDnsRequest),
     ...Object.fromEntries((["pause","resume","remove"] as const).map(action=>[`warmup_${action}`,operation("POST",`/v1/email/warmup/${action}`,`${action[0]!.toUpperCase()+action.slice(1)} warmup for the explicit workspace and mailbox (connection_ref = sending account id). Warmup pause, resume and remove never pause or resume outreach campaigns.`,WarmupStatus,WarmupWorkspaceRequest)])),
   },
   ...outreachCatalog,
