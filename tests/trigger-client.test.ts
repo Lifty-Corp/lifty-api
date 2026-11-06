@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";import { createCrmSyncTrigger, createCrmMappingTrigger, createFirstRunTrigger, createNotificationTestTrigger } from "../src/trigger-client.js";
+import { describe, expect, it } from "vitest";import { createHandoffRepliesTrigger, createCrmSyncTrigger, createCrmMappingTrigger, createFirstRunTrigger, createNotificationTestTrigger } from "../src/trigger-client.js";
 
 const settings = {
   apiUrl: "https://api.trigger.test",
@@ -128,5 +128,30 @@ describe("notification test trigger client", () => {
         },
       },
     }]);
+  });
+});
+
+describe("handoff replies trigger client", () => {
+  const capture = () => {
+    const calls: Array<{ url: string; body: { payload: unknown; options: unknown }; signal: unknown }> = [];
+    return { calls, fetchImpl: (async (url, init) => {
+      calls.push({ url: String(url), body: JSON.parse(String(init?.body)), signal: init?.signal });
+      return jsonResponse(200, { id: "run" });
+    }) as typeof fetch };
+  };
+  it("asks for one handoff with a burst key that follows its settings, for fifteen minutes", async () => {
+    const { calls, fetchImpl } = capture();
+    const enqueue = createHandoffRepliesTrigger({ ...settings, fetchImpl });
+    await enqueue({ workspaceId: "workspace", handoffRef: "119", settingsRevision: null });
+    await enqueue({ workspaceId: "workspace", handoffRef: "119", settingsRevision: 2 });
+    expect(calls[0]!.url).toBe("https://api.trigger.test/api/v1/tasks/lifty-sender-handoff-replies/trigger");
+    expect(calls.map(call => call.body)).toEqual([
+      { payload: { workspaceId: "workspace", handoffRef: "119" }, options: { idempotencyKey: "handoff-replies:119:current", idempotencyKeyTTL: "15m" } },
+      { payload: { workspaceId: "workspace", handoffRef: "119" }, options: { idempotencyKey: "handoff-replies:119:2", idempotencyKeyTTL: "15m" } },
+    ]);
+    expect(calls[0]!.signal).toBeInstanceOf(AbortSignal);
+  });
+  it("reports an unavailable environment to its caller", async () => {
+    await expect(createHandoffRepliesTrigger(null)({ workspaceId: "workspace", handoffRef: "119", settingsRevision: null })).rejects.toMatchObject({ code: "BACKGROUND_UNAVAILABLE" });
   });
 });

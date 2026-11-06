@@ -14,6 +14,8 @@ const INTEGRATION_REVOKE_TASK_ID = "lifty-integration-revoke";
 const NOTIFICATIONS_TEST_TASK_ID = "notifications-test";
 const WARMUP_VERIFY_TASK_ID = "lifty-email-warmup-verify";
 const WARMUP_VERIFY_TIMEOUT_MS = 5000;
+const HANDOFF_REPLIES_TASK_ID = "lifty-sender-handoff-replies";
+const HANDOFF_REPLIES_TIMEOUT_MS = 5000;
 const IDEMPOTENCY_TTL = "1h";
 
 export interface TriggerClientSettings {
@@ -27,6 +29,7 @@ async function triggerTask(
   taskId: string,
   payload: unknown,
   idempotencyKey: string,
+  idempotencyKeyTTL: string = IDEMPOTENCY_TTL,
 ): Promise<{ id: string }> {
   if (!settings) throw new PublicError({ status: 503, code: "BACKGROUND_UNAVAILABLE", message: "Background work is unavailable in this environment." });
   const fetchImpl = settings.fetchImpl ?? fetch;
@@ -42,7 +45,7 @@ async function triggerTask(
       },
       body: JSON.stringify({
         payload,
-        options: { idempotencyKey, idempotencyKeyTTL: IDEMPOTENCY_TTL },
+        options: { idempotencyKey, idempotencyKeyTTL },
       }),
     });
   } catch (error) {
@@ -144,6 +147,21 @@ export function createWarmupVerifyTrigger(settings: TriggerClientSettings | null
     fetchImpl: (input, init) => fetchImpl(input, { ...init, signal: AbortSignal.timeout(WARMUP_VERIFY_TIMEOUT_MS) }) };
   return async (senderRef, attempt) =>
     triggerTask(bounded, WARMUP_VERIFY_TASK_ID, { senderRef }, `${WARMUP_VERIFY_TASK_ID}:${attempt}`);
+}
+
+export interface HandoffRepliesRequest { workspaceId: string; handoffRef: string; settingsRevision: number | null }
+export type EnqueueHandoffReplies = (request: HandoffRepliesRequest) => Promise<{ id: string }>;
+
+/** LIF-1769: asks Jobs for a handoff's current-reply drafts. SQL's lease decides
+ * what is claimable, so the key only collapses a burst, and the scheduled drain
+ * asks for the same drafts within the hour. Bounded: it runs in the member's request. */
+export function createHandoffRepliesTrigger(settings: TriggerClientSettings | null): EnqueueHandoffReplies {
+  if (!settings) return async () => { throw new PublicError({ status: 503, code: "BACKGROUND_UNAVAILABLE", message: "Background work is unavailable in this environment." }); };
+  const fetchImpl = connectionFetch(settings.fetchImpl ?? fetch);
+  const bounded: TriggerClientSettings = { ...settings,
+    fetchImpl: (input, init) => fetchImpl(input, { ...init, signal: AbortSignal.timeout(HANDOFF_REPLIES_TIMEOUT_MS) }) };
+  return ({ workspaceId, handoffRef, settingsRevision }) => triggerTask(bounded, HANDOFF_REPLIES_TASK_ID, { workspaceId, handoffRef },
+    `handoff-replies:${handoffRef}:${settingsRevision ?? "current"}`, "15m");
 }
 
 function enqueueFailed(cause: unknown): PublicError {

@@ -43,7 +43,7 @@ import { readWorkspaceWritingRules } from "./writing-rules.js";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { DisconnectResponseSchema, IntegrationConnectionStatusSchema, NotificationConfigSchema, NotificationDestinationSchema, NotificationTestResultSchema, SetNotificationRouteRequestSchema, SlackNotificationChannelsSchema, UpsertNotificationDestinationRequestSchema, ProviderConnectStartSchema, LegacyProviderConnectStartSchema, SlackConnectLinkSchema, type SlackConnectLink, ProviderSchema, StartCrmSyncResultSchema, CrmSyncStatusSchema, type DisconnectResult, type HubspotConnectStart, type HubspotConnectionStatus, type AttioConnectStart, type AttioConnectionStatus, type NotificationConfig, type NotificationDestination, type NotificationTestResult, type SetNotificationRouteRequest, type SlackNotificationChannels, type UpsertNotificationDestinationRequest, type Provider, type SlackConnectStart, type SlackConnectionStatus, type RunStatus, type StartRunResult, type StartCrmSyncResult, type CrmSyncStatus, WorkspaceStatusSchema, type WorkspaceStatus } from "./contracts.js";
-import { type EnqueueCrmSync, type EnqueueFirstRun, type EnqueueIntegrationRevocation } from "./trigger-client.js";
+import { type EnqueueCrmSync, type EnqueueFirstRun, type EnqueueHandoffReplies, type EnqueueIntegrationRevocation } from "./trigger-client.js";
 import { PublicError } from "./errors.js";
 import { listAdminWorkspaces, type AdminWorkspace } from "./admin-onboarding.js";
 import {
@@ -154,6 +154,8 @@ export interface AppDependencies {
   getCrmSyncStatus(session: AuthSession): Promise<CrmSyncStatus>;
   runCrmMapping: CrmMappingOperation;
   enqueueCrmSync: EnqueueCrmSync;
+  /** Current-reply drafts of a sender handoff (LIF-1769). */
+  enqueueHandoffReplies: EnqueueHandoffReplies;
   disconnectIntegration(session: AuthSession, provider: Provider): Promise<DisconnectResult>;
   enqueueIntegrationRevocation: EnqueueIntegrationRevocation;
   /** Notification configuration in the notifications schema (LIF-1464). */
@@ -218,7 +220,7 @@ export interface AppDependencies {
 
 export interface LogEvent {
   level: "warn" | "error";
-  event: "request_failed" | "revocation_enqueue_failed" | "connection_confirmation";
+  event: "request_failed" | "revocation_enqueue_failed" | "connection_confirmation" | "handoff_replies_enqueue_failed";
   request_id: string;
   method: string;
   path: string;
@@ -792,6 +794,9 @@ const defaultDependencies: AppDependencies = {
   },
   enqueueCrmSync: async () => {
     throw new Error("enqueueCrmSync is not configured");
+  },
+  enqueueHandoffReplies: async () => {
+    throw new Error("enqueueHandoffReplies is not configured");
   },
   disconnectIntegration: async () => {
     throw new Error("disconnectIntegration is not configured");

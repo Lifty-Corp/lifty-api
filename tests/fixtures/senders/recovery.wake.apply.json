@@ -1,0 +1,27 @@
+{
+  "applied": true,
+  "cause": "disconnected",
+  "connection_ref": "2cad055e-3189-4e19-8f6a-727de1d692ed",
+  "counts": {
+    "move_inbox": 2
+  },
+  "failed": 0,
+  "generation": 2,
+  "handoff_ref": null,
+  "incident_ref": "bb855a8e-92f1-4ffd-840c-85180c05b516",
+  "mode": "apply",
+  "more": false,
+  "moved": 2,
+  "note": null,
+  "outcome": "applied",
+  "prepared": 0,
+  "severity": "severe",
+  "target": {
+    "connection_ref": "e412ea7e-5fc9-48a7-8d2c-5c693069dfb3",
+    "kind": "same_person_inbox"
+  },
+  "total": 2,
+  "truncated": false,
+  "waiting": 0,
+  "workspace_id": "20a95ad6-8b26-43dc-8230-45ad197bf412"
+}

@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { WorkspaceIdentitySchema } from "./business-contracts.js";
+import { ParticipationSchema, SendingScope, type Participation } from "./participation.js";
+
+export { ParticipationSchema, SendingScope, type Participation };
 
 // LIF-1182 Identity resources: senders (people) and the sending accounts they
 // own. The database owns validation, versions, observation freshness and send
@@ -33,7 +36,6 @@ export const SendingReason = z.enum([
   "needs_reconnect", "status_unconfirmed", "connection_unavailable", "sender_deleted", "mailbox_not_ready",
   "previous_automation_active", "blocked",
 ]);
-export const SendingScope = z.enum(["account", "sender", "channel", "workspace", "all_workspaces"]);
 const Sending = z.object({ allowed: z.boolean(), reason: SendingReason.nullable(), scope: SendingScope.nullable() }).strict();
 const Limit = z.number().int().nonnegative();
 // The limits the send budgets enforce; null when no Lifty budget governs the account.
@@ -41,27 +43,6 @@ const Limits = z.union([
   z.object({ emails_per_day: Limit }).strict(),
   z.object({ invitations_per_day: Limit, messages_per_day: Limit, invitations_per_7_days: Limit }).strict(),
 ]);
-// LIF-1672: whether the account takes part in new Journeys now, and why not.
-// Each status has its own causes; waiting_journeys counts the started
-// Journeys a paused account holds.
-// LIF-1764: sender_off is a connected account whose person is turned off.
-const PARTICIPATION = {
-  sending: ["active_journeys"],
-  no_active_campaign: ["no_active_campaign_on_channel"],
-  waiting_for_first_lead: ["no_lead_yet"],
-  paused: ["paused_by_member", "paused_by_disconnect", "campaign_paused", "workspace_suspended", "sender_off"],
-  not_connected: ["disconnected", "needs_reconnect", "unverified"],
-  email_not_ready: ["warming", "placement_required", "declaration_required", "signature_missing", "mailbox_not_ready"],
-} as const;
-type ParticipationStatus = keyof typeof PARTICIPATION;
-const participationStatuses = Object.keys(PARTICIPATION) as [ParticipationStatus, ...ParticipationStatus[]];
-type ParticipationCause = (typeof PARTICIPATION)[ParticipationStatus][number];
-const participationCauses = Object.values(PARTICIPATION).flat() as [ParticipationCause, ...ParticipationCause[]];
-export const ParticipationSchema = z.object({
-  status: z.enum(participationStatuses), cause: z.enum(participationCauses), waiting_journeys: Count.optional(),
-}).strict().refine(value => (PARTICIPATION[value.status] as readonly string[]).includes(value.cause), "The cause belongs to another status.")
-  .refine(value => value.status === "paused" || value.waiting_journeys === undefined, "Only a paused account reports waiting Journeys.");
-export type Participation = z.infer<typeof ParticipationSchema>;
 export const AccountSchema = z.object({
   id: Id,
   sender_id: Id,
@@ -92,18 +73,25 @@ export const removalPending = (account: Account) =>
 // LIF-1764: how a person who is off hands over their admitted leads. continue
 // is stored by the database but refused until it ships.
 export const DrainMode = z.enum(["unused_channels", "continue"]);
+export const HandoffRef = z.string().regex(/^[0-9]{1,20}$/);
+/** LIF-1794: what notification #8 reads, and the way back to a pending handoff. Null once no member of a live handoff is left on this person. */
+export const PendingTransferSchema = z.object({ retired_at: Timestamp, leads_awaiting_transfer: Count, target_sender_id: Id, handoff_ref: HandoffRef.nullable() }).strict();
 // The database stores the reason trimmed, 1–500 characters (code points).
 const OffReason = z.string().min(1).refine(value => [...value].length <= 500);
-/** Present only while the person is off; a person who is on has no `sending`. */
-export const SenderSendingSchema = z.object({
-  state: z.literal("off"),
-  off_at: Timestamp,
-  reason: OffReason,
-  drain_to_sender_id: Id,
-  drain_mode: DrainMode,
-  // Leads still owned by this person with an active or paused run.
-  leads_remaining: Count,
-}).strict();
+/** Absent for a person who sends normally: `off` is retired, `paused` keeps their leads. */
+export const SenderSendingSchema = z.discriminatedUnion("state", [
+  z.object({
+    state: z.literal("off"),
+    off_at: Timestamp,
+    reason: OffReason,
+    drain_to_sender_id: Id,
+    drain_mode: DrainMode,
+    // Leads still owned by this person with an active or paused run.
+    leads_remaining: Count,
+    pending_transfer: PendingTransferSchema.optional(),
+  }).strict(),
+  z.object({ state: z.literal("paused"), paused_at: Timestamp, reason: OffReason.nullable() }).strict(),
+]);
 export const SenderSchema = z.object({
   id: Id,
   version: Version,
@@ -127,11 +115,14 @@ export const SenderDeleteResultSchema = z.object({ ...Workspace,
 // outcome that did not happen is absent: moved (the target started a run),
 // closed (nothing left to send), skipped (the lead or its run changed
 // meanwhile), waiting_send (a send is in flight), waiting_customer_list,
+// waiting_sample_approval (the lead waits for its handoff's sample),
 // error (rolled back and retried by the scheduled drain).
 const Positive = z.number().int().positive();
 const DrainOutcomes = z.object({
   moved: Positive.optional(), closed: Positive.optional(), skipped: Positive.optional(),
   waiting_send: Positive.optional(), waiting_customer_list: Positive.optional(), error: Positive.optional(),
+  // LIF-1769: contacted leads stay with this person until the handoff is approved.
+  waiting_sample_approval: Positive.optional(), handoff_canceled: Positive.optional(), handoff_context_changed: Positive.optional(),
 }).strict();
 // Raw database text never reaches a customer: the API drops `message`.
 const DrainLeadError = z.object({ lead_ref: Id, sqlstate: z.string().regex(/^[0-9A-Z]{5}$/) }).strict();
@@ -141,7 +132,7 @@ const drainTarget = { sender_id: Id, drain_to_sender_id: Id, mode: DrainMode };
 // turned off meanwhile, or the customer list holds outreach. The function's
 // state "on" cannot follow a turn-off in the same transaction.
 const drainShapes = <E extends z.ZodType>(error: E) => z.union([
-  z.object({ ...drainTarget, outcomes: DrainOutcomes, errors: z.array(error).max(10), remaining: Count }).strict(),
+  z.object({ ...drainTarget, outcomes: DrainOutcomes, errors: z.array(error).max(10), remaining: Count, handoff_ref: HandoffRef.nullable().optional() }).strict(),
   z.object({ ...drainTarget, state: z.enum(["target_unavailable", "waiting_customer_list"]) }).strict(),
 ]);
 export const SenderDrainSchema = drainShapes(DrainLeadError);
@@ -260,12 +251,21 @@ export const SenderTurnOffSchema = z.object({
   reason: z.string().refine(value => { const length = [...value.trim()].length; return length >= 1 && length <= 500; },
     "Give the founder's reason in 1–500 characters."),
   // Another person in the roster who is on. The database refuses this person,
-  // a deleted one or one who is off with DRAIN_TARGET_INVALID.
+  // a deleted one, a foreign one, one who is off or one who is paused with
+  // DRAIN_TARGET_INVALID. A person with no replacement is paused instead.
   drain_to_sender_id: Id,
   // Omitted uses the workspace's mode, normally unused_channels.
   drain_mode: DrainMode.optional(),
 }).strict();
 export const SenderTurnOnSchema = z.object({ expected_version: Version, confirm: z.literal(true) }).strict();
+/** LIF-1794: pause keeps every lead with the person, so it needs no target. */
+export const SenderPauseSchema = z.object({
+  expected_version: Version,
+  confirm: z.literal(true),
+  reason: z.string().refine(value => { const length = [...value.trim()].length; return length >= 1 && length <= 500; },
+    "Give the reason in 1–500 characters, or omit it.").optional(),
+}).strict();
+export const SenderResumeSchema = z.object({ expected_version: Version, confirm: z.literal(true) }).strict();
 export const AccountsQuerySchema = z.object({ sender_id: Id.optional(), channel: Channel.optional() }).strict();
 export const ConnectSchema = z.object({ sender_id: Id, channel: Channel }).strict();
 export const DisconnectSchema = z.object({ confirm: z.literal(true) }).strict();

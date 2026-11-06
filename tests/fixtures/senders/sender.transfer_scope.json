@@ -1,0 +1,11 @@
+{
+  "conversations": 4,
+  "not_contacted": 3,
+  "replies": 2,
+  "sender_id": "a6ed4d23-084e-4721-9eb3-ed80de8a8bb7",
+  "workspace": {
+    "name": "Synthetic handoff",
+    "state": "ready_for_connections",
+    "workspace_ref": "dca0377b-0f5b-4e24-b885-2aa127489b15"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "also": [],
+  "category": "intentional",
+  "cause": "paused_by_lift",
+  "since": "2026-11-06T01:51:17.663283+00:00",
+  "since_estimated": false,
+  "status": "paused",
+  "stop": {
+    "origin": "person",
+    "reason": "deliverability_review",
+    "review_by": "2026-11-13T01:51:17.663283+00:00",
+    "scope": "account"
+  },
+  "waiting_journeys": 0
+}

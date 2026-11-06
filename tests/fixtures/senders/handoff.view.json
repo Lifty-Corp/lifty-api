@@ -1,0 +1,172 @@
+{
+  "authorization": {
+    "state": "waiting_sample_approval"
+  },
+  "cohort_count": 1,
+  "configured_sample_size": 5,
+  "confirmation_action": "approve_sample_and_transfer",
+  "context_sha256": "3ba0adce7467156fd826512e144e0cf3f1866344589680f1173340e8a85bb51b",
+  "contract": "sender-handoff-approval.v2",
+  "current_reply_count": 0,
+  "drain_ref": "5533",
+  "generation_settings": {
+    "instructions": ""
+  },
+  "held_for_human": 0,
+  "members": [
+    {
+      "dispatch_reason": "preparation_pending",
+      "kind": "proactive",
+      "lead_ref": "12dc44f6-e8cb-4c83-87c2-6fa1b1611646",
+      "owner": "56fe4735-4685-4056-828c-fe8b0d1b571c",
+      "prepared": false,
+      "reason": null,
+      "route": null,
+      "run_ref": "c8213377-fe16-49b4-a069-87f81ac895e5",
+      "state_token": "55ae5c6229f6bec4fe28dc519497ff268db614468571254409ebb8c959a8f7e7",
+      "turn_ref": null,
+      "turn_version": null
+    }
+  ],
+  "prepared_count": 0,
+  "preparing_count": 1,
+  "queued_count": 0,
+  "remainder_count": 0,
+  "replacement": {
+    "available": true,
+    "display_name": "Third",
+    "pinned_signature": "Third, Lifty",
+    "pinned_version": 1,
+    "sender_id": "45fa8f21-b320-40b6-8f45-8a9120bf73ef",
+    "signature": "Third, Lifty",
+    "version": 1
+  },
+  "revision": "323f0e6ef91aefdcd5543648bc6e453baaa65e7d93aa83274cabbcda1e7f941c",
+  "sample_complete": false,
+  "sample_count": 1,
+  "samples": [
+    {
+      "answering_route": null,
+      "body": null,
+      "context": {
+        "approved_policy": {
+          "compose_mode": "instructions",
+          "instructions": "Approved original instructions",
+          "schedule": {
+            "end": "23:59",
+            "start": "00:00",
+            "timezone": "UTC",
+            "weekdays": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ]
+          },
+          "start": [
+            {
+              "type": "linkedin_accepted"
+            }
+          ],
+          "steps": [
+            {
+              "delay": {
+                "days": 0
+              },
+              "instructions": "Original opener",
+              "position": 1
+            },
+            {
+              "delay": {
+                "days": 2
+              },
+              "instructions": "Original proof",
+              "position": 2
+            },
+            {
+              "delay": {
+                "days": 3
+              },
+              "instructions": "Original example",
+              "position": 3
+            },
+            {
+              "delay": {
+                "days": 4
+              },
+              "instructions": "Original close",
+              "position": 4
+            }
+          ]
+        },
+        "contract": "sender-email-handoff.v1",
+        "first_due_at": "2026-11-06T01:51:20.104899+00:00",
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "56fe4735-4685-4056-828c-fe8b0d1b571c"
+        },
+        "history": [
+          {
+            "accepted_at": "2026-11-03T01:51:20.023786+00:00",
+            "connection_ref": "955d4c4e-68b0-4b85-8077-48ef51353d0a",
+            "execution_ref": "0ff4c4c6-303a-408a-9db0-6a165dd34687",
+            "original_position": 1,
+            "position": 1,
+            "provider_id": "4b9959be-bfa9-491b-ab7a-19fad5113c78",
+            "run_ref": "48a3bd73-9a75-4655-9afa-0eba0203abcf",
+            "step_ref": "061bb354-95b0-462f-8ef0-b27a32bdf40e",
+            "subject": "Original subject",
+            "text": "Original email 1"
+          }
+        ],
+        "kind": "continue",
+        "last_accepted_email": {
+          "accepted_at": "2026-11-03T01:51:20.023786+00:00",
+          "connection_ref": "955d4c4e-68b0-4b85-8077-48ef51353d0a",
+          "provider_id": "4b9959be-bfa9-491b-ab7a-19fad5113c78",
+          "step_ref": "061bb354-95b0-462f-8ef0-b27a32bdf40e",
+          "subject": "Original subject",
+          "text": "Original email 1"
+        },
+        "last_proactive_touch_at": "2026-11-03T01:51:20.023786+00:00",
+        "original_next_position": 2,
+        "original_positions": [
+          2,
+          3,
+          4
+        ],
+        "original_total_steps": 4,
+        "selection": {
+          "lane": null,
+          "opener": null
+        },
+        "source_campaign_ref": "f86b31a6-f2cb-4c77-86dc-148b1a598666",
+        "source_email_version_ref": "877f4ef1-2dfe-4b0a-96e8-d70ed5d556dd",
+        "source_executable_version_ref": "977fd4f5-f78a-4636-b125-0aa4eb79d5c6",
+        "source_execution_ref": "0ff4c4c6-303a-408a-9db0-6a165dd34687",
+        "source_revision_ref": "f4114c56-8d21-425f-b990-2fd69c15c9b5",
+        "source_run_ref": "48a3bd73-9a75-4655-9afa-0eba0203abcf"
+      },
+      "email_version_ref": null,
+      "kind": "continue",
+      "lead_ref": "12dc44f6-e8cb-4c83-87c2-6fa1b1611646",
+      "message_ref": null,
+      "prepared": false,
+      "run_ref": "c8213377-fe16-49b4-a069-87f81ac895e5",
+      "source_run_ref": "48a3bd73-9a75-4655-9afa-0eba0203abcf",
+      "subject": null
+    }
+  ],
+  "scope_sha256": "fb64ce6eeed2ce3c929c44cd747049488875c879e757eda73de29d7d7f9bdd66",
+  "settings_revision": 1,
+  "settings_sha256": "2e97ad2a4695f084b303edbd7c9855c0e144d284af315d4a265923e96a46d95f",
+  "source_sender_id": "56fe4735-4685-4056-828c-fe8b0d1b571c",
+  "state": "preparing",
+  "transferred_count": 0,
+  "untouched_transferred_count": 0,
+  "waiting_count": 1,
+  "workspace_id": "a9cd1406-a821-43e6-a8b7-39046e9cc1d1"
+}
