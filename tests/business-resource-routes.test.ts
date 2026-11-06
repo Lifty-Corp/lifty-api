@@ -1,6 +1,7 @@
 import { campaignSummary as canonicalCampaign } from "./outreach-fixtures.js";
 import { describe, it, expect, vi } from "vitest";
 import crmSyncControls from "./crm-sync-controls-sql-fixture.json" with { type: "json" };
+import slackApproved from "./outreach-slack-approval-sql-fixtures.json" with { type: "json" };
 import { PublicError } from "../src/errors.js";
 import { createApp, type AppDependencies } from "../src/app.js";
 import {
@@ -1541,6 +1542,13 @@ describe("summary keeps independent tenant-scoped state", () => {
     expect(result).not.toHaveProperty("config_update");
     expect(result).not.toHaveProperty("onboarding");
     expect(result.run.value).not.toHaveProperty("leads");
+  });
+  it("reports a Campaign draft approved through Slack as approved", async () => {
+    const approved = { ...canonicalCampaign, draft_revision: { ...canonicalCampaign.draft_revision, approval: slackApproved.campaign_slack.campaign.active_revision.approval } };
+    const h = harness(undefined, null, { ...summaryReads,
+      outreachOperation: async (_session, key) => ({ ...emptyOutreach(key), ...(key === "campaigns.get" ? { campaigns: [approved] } : {}) }) });
+    const result = await (await h.request("/v1/workspace/summary")).json();
+    expect(result.campaign.value.campaigns).toEqual([expect.objectContaining({ campaign_ref: approved.campaign_ref, draft_approved: true })]);
   });
   it("keeps unrelated reads available when research, schedule, email ownership or voice cannot be read", async () => {
     const h = harness(undefined, null, {

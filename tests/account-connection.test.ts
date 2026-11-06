@@ -328,7 +328,8 @@ describe("shared confirmation for sending accounts", () => {
     const confirmed = await server.request("/connect/email/return/status", status("email", state, "canceled"));
     expect(await confirmed.json()).toEqual({ status: "connected", account: null, reference: attemptId, next: "warmup" });
     expect(db.payloads.complete).toEqual({ attempt_id: attemptId, verified: { api_version: "v2", application_id: "app_test",
-      account_scope_id: null, account_id: "acc_new", user_id: "user-1", email: "ana@example.test" } });
+      account_scope_id: null, account_id: "acc_new", user_id: "user-1", email: "ana@example.test",
+      mailbox_provider: mailboxProvider === "outlook" ? "microsoft" : "google" } });
     expect(provider.calls).toEqual(["GET /v2/accounts/acc_new", "GET /v2/acc_new/email-senders"]);
   });
 
@@ -504,6 +505,14 @@ describe("server recovery of received authorizations (LIF-1629)", () => {
     expect(events).toEqual([expect.objectContaining({ event: "connection_recovery", channel: "email", outcome: "connected",
       reference: attemptId, attempt: 1, final: false })]);
     expect(JSON.stringify(events)).not.toMatch(/acc_new|ana@example|connect\.lifty/);
+  });
+
+  it("sends the proved mailbox type only to the owner that accepts it", async () => {
+    const db = attemptDb(); authorized(db); db.claim = [{ attempt_id: attemptId, attempts: 1, final: false }];
+    stub(db);
+    await createAccountConnection({ ...loadConfig(env).accounts!, serverKeys: { email: emailKey }, connectionOnly: true }).recover();
+    expect(db.payloads.complete).toEqual({ attempt_id: attemptId, verified: { api_version: "v2", application_id: "app_test",
+      account_scope_id: null, account_id: "acc_new", user_id: "user-1", email: "ana@example.test" } });
   });
 
   it("keeps an unready or unreachable provider for the next retry and ends it only at the final check", async () => {

@@ -1,0 +1,1492 @@
+{
+  "campaign_activate_slack": {
+    "campaign": {
+      "active_revision": {
+        "approval": {
+          "actor_ref": null,
+          "approved_at": "2026-11-05T16:48:10.700717+00:00",
+          "decision_ref": "15710000-0000-4000-8000-000000000073",
+          "option_ref": "15710000-0000-4000-8000-000000000071",
+          "origin": "slack",
+          "proposal_ref": "15710000-0000-4000-8000-000000000070",
+          "slack": {
+            "channel_id": "C_FIXTURE",
+            "message_ts": "1793836800.001",
+            "team_id": "T_FIXTURE",
+            "user_id": "U_NONMEMBER"
+          },
+          "source_decision_ref": "15710000-0000-4000-8000-000000000072"
+        },
+        "content": {
+          "compose_mode": "templates",
+          "instructions": "Preserve the founder voice.",
+          "profile_version": 1,
+          "schedule": {
+            "end": "17:00",
+            "start": "09:00",
+            "timezone": "UTC",
+            "weekdays": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "start": [
+            {
+              "type": "journey_start"
+            }
+          ],
+          "steps": [
+            {
+              "delay": {
+                "days": 0
+              },
+              "position": 1,
+              "template": {
+                "subject": "A useful question",
+                "text": "Slack approved complete copy."
+              }
+            },
+            {
+              "delay": {
+                "days": 1
+              },
+              "position": 2,
+              "template": {
+                "text": "Original follow-up template."
+              }
+            }
+          ],
+          "voice_version": 0
+        },
+        "created_at": "2026-11-05T16:48:10.675713+00:00",
+        "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+        "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+      },
+      "campaign_ref": "15710000-0000-4000-8000-000000000014",
+      "channel": "email",
+      "draft_revision": {
+        "approval": {
+          "actor_ref": null,
+          "approved_at": "2026-11-05T16:48:10.700717+00:00",
+          "decision_ref": "15710000-0000-4000-8000-000000000073",
+          "option_ref": "15710000-0000-4000-8000-000000000071",
+          "origin": "slack",
+          "proposal_ref": "15710000-0000-4000-8000-000000000070",
+          "slack": {
+            "channel_id": "C_FIXTURE",
+            "message_ts": "1793836800.001",
+            "team_id": "T_FIXTURE",
+            "user_id": "U_NONMEMBER"
+          },
+          "source_decision_ref": "15710000-0000-4000-8000-000000000072"
+        },
+        "content": {
+          "compose_mode": "templates",
+          "instructions": "Preserve the founder voice.",
+          "profile_version": 1,
+          "schedule": {
+            "end": "17:00",
+            "start": "09:00",
+            "timezone": "UTC",
+            "weekdays": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "start": [
+            {
+              "type": "journey_start"
+            }
+          ],
+          "steps": [
+            {
+              "delay": {
+                "days": 0
+              },
+              "position": 1,
+              "template": {
+                "subject": "A useful question",
+                "text": "Slack approved complete copy."
+              }
+            },
+            {
+              "delay": {
+                "days": 1
+              },
+              "position": 2,
+              "template": {
+                "text": "Original follow-up template."
+              }
+            }
+          ],
+          "voice_version": 0
+        },
+        "created_at": "2026-11-05T16:48:10.675713+00:00",
+        "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+        "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+      },
+      "journey_ref": "15710000-0000-4000-8000-000000000012",
+      "name": "Email",
+      "revisions": [
+        {
+          "approval": null,
+          "content": {
+            "compose_mode": "templates",
+            "instructions": "Preserve the founder voice.",
+            "profile_version": 1,
+            "schedule": {
+              "end": "17:00",
+              "start": "10:00",
+              "timezone": "UTC",
+              "weekdays": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            },
+            "start": [
+              {
+                "type": "journey_start"
+              }
+            ],
+            "steps": [
+              {
+                "delay": {
+                  "days": 0
+                },
+                "position": 1,
+                "template": {
+                  "subject": "A useful question",
+                  "text": "Reviewed complete template."
+                }
+              },
+              {
+                "delay": {
+                  "days": 1
+                },
+                "position": 2,
+                "template": {
+                  "text": "Original follow-up template."
+                }
+              }
+            ],
+            "voice_version": 0
+          },
+          "created_at": "2026-11-05T16:48:10.685672+00:00",
+          "digest": "746dadc74fa880889ea2efb8e9642b30047dbbaafab026aa7fac8fdb5b4d8f62",
+          "revision_ref": "6aa64f13-28a3-4b67-9966-d8a8b1192601"
+        },
+        {
+          "approval": {
+            "actor_ref": null,
+            "approved_at": "2026-11-05T16:48:10.700717+00:00",
+            "decision_ref": "15710000-0000-4000-8000-000000000073",
+            "option_ref": "15710000-0000-4000-8000-000000000071",
+            "origin": "slack",
+            "proposal_ref": "15710000-0000-4000-8000-000000000070",
+            "slack": {
+              "channel_id": "C_FIXTURE",
+              "message_ts": "1793836800.001",
+              "team_id": "T_FIXTURE",
+              "user_id": "U_NONMEMBER"
+            },
+            "source_decision_ref": "15710000-0000-4000-8000-000000000072"
+          },
+          "content": {
+            "compose_mode": "templates",
+            "instructions": "Preserve the founder voice.",
+            "profile_version": 1,
+            "schedule": {
+              "end": "17:00",
+              "start": "09:00",
+              "timezone": "UTC",
+              "weekdays": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            },
+            "start": [
+              {
+                "type": "journey_start"
+              }
+            ],
+            "steps": [
+              {
+                "delay": {
+                  "days": 0
+                },
+                "position": 1,
+                "template": {
+                  "subject": "A useful question",
+                  "text": "Slack approved complete copy."
+                }
+              },
+              {
+                "delay": {
+                  "days": 1
+                },
+                "position": 2,
+                "template": {
+                  "text": "Original follow-up template."
+                }
+              }
+            ],
+            "voice_version": 0
+          },
+          "created_at": "2026-11-05T16:48:10.675713+00:00",
+          "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+          "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+        },
+        {
+          "approval": {
+            "actor_ref": "15710000-0000-4000-8000-000000000091",
+            "approved_at": "2026-11-05T16:48:10.639019+00:00"
+          },
+          "content": {
+            "compose_mode": "templates",
+            "instructions": "Preserve the founder voice.",
+            "profile_version": 1,
+            "schedule": {
+              "end": "17:00",
+              "start": "09:00",
+              "timezone": "UTC",
+              "weekdays": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            },
+            "start": [
+              {
+                "type": "journey_start"
+              }
+            ],
+            "steps": [
+              {
+                "delay": {
+                  "days": 0
+                },
+                "position": 1,
+                "template": {
+                  "subject": "A useful question",
+                  "text": "Reviewed complete template."
+                }
+              },
+              {
+                "delay": {
+                  "days": 1
+                },
+                "position": 2,
+                "template": {
+                  "text": "Original follow-up template."
+                }
+              }
+            ],
+            "voice_version": 0
+          },
+          "created_at": "2026-11-05T16:48:10.529877+00:00",
+          "digest": "f80f37f27dcaf4025a5523225202c0d7ff26b2ec9d95d9832cf28b8273af6c26",
+          "revision_ref": "ff97d91a-a6d6-4359-b8e7-164182cc1d30"
+        },
+        {
+          "approval": {
+            "actor_ref": "15710000-0000-4000-8000-000000000091",
+            "approved_at": "2026-11-05T16:48:10.494637+00:00"
+          },
+          "content": {
+            "compose_mode": "templates",
+            "instructions": "Preserve the founder voice.",
+            "profile_version": 1,
+            "schedule": {
+              "end": "17:00",
+              "start": "09:00",
+              "timezone": "UTC",
+              "weekdays": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            },
+            "start": [
+              {
+                "type": "journey_start"
+              }
+            ],
+            "steps": [
+              {
+                "delay": {
+                  "days": 0
+                },
+                "position": 1,
+                "template": {
+                  "subject": "A useful question",
+                  "text": "Original complete template."
+                }
+              },
+              {
+                "delay": {
+                  "days": 1
+                },
+                "position": 2,
+                "template": {
+                  "text": "Original follow-up template."
+                }
+              }
+            ],
+            "voice_version": 0
+          },
+          "created_at": "2026-11-05T16:48:10.491695+00:00",
+          "digest": "3edb3dc8343b2f1879eddab0cd686e70b7e73ef40b0ca1044dfa80393c65d3b0",
+          "revision_ref": "05fa46db-38cb-4f5d-8a4b-1d37369b61ab"
+        }
+      ],
+      "state": "active",
+      "version": 9
+    },
+    "customer_list": {
+      "checked_at": "2026-11-05T16:48:10.290915+00:00",
+      "reason": null,
+      "state": "not_required"
+    },
+    "journey": {
+      "active_revision": {
+        "approval": {
+          "actor_ref": "15710000-0000-4000-8000-000000000091",
+          "approved_at": "2026-11-05T16:48:10.476141+00:00"
+        },
+        "content": {
+          "audience": {
+            "kind": "qualified"
+          },
+          "stops": [
+            "reply",
+            "meeting_booked",
+            "suppression",
+            "manual_stop"
+          ]
+        },
+        "created_at": "2026-11-05T16:48:10.475741+00:00",
+        "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "revision_ref": "15710000-0000-4000-8000-000000000013"
+      },
+      "campaigns": [
+        {
+          "active_revision": {
+            "approval": {
+              "actor_ref": null,
+              "approved_at": "2026-11-05T16:48:10.700717+00:00",
+              "decision_ref": "15710000-0000-4000-8000-000000000073",
+              "option_ref": "15710000-0000-4000-8000-000000000071",
+              "origin": "slack",
+              "proposal_ref": "15710000-0000-4000-8000-000000000070",
+              "slack": {
+                "channel_id": "C_FIXTURE",
+                "message_ts": "1793836800.001",
+                "team_id": "T_FIXTURE",
+                "user_id": "U_NONMEMBER"
+              },
+              "source_decision_ref": "15710000-0000-4000-8000-000000000072"
+            },
+            "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+            "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+          },
+          "campaign_ref": "15710000-0000-4000-8000-000000000014",
+          "channel": "email",
+          "draft_revision": {
+            "approval": {
+              "actor_ref": null,
+              "approved_at": "2026-11-05T16:48:10.700717+00:00",
+              "decision_ref": "15710000-0000-4000-8000-000000000073",
+              "option_ref": "15710000-0000-4000-8000-000000000071",
+              "origin": "slack",
+              "proposal_ref": "15710000-0000-4000-8000-000000000070",
+              "slack": {
+                "channel_id": "C_FIXTURE",
+                "message_ts": "1793836800.001",
+                "team_id": "T_FIXTURE",
+                "user_id": "U_NONMEMBER"
+              },
+              "source_decision_ref": "15710000-0000-4000-8000-000000000072"
+            },
+            "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+            "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+          },
+          "journey_ref": "15710000-0000-4000-8000-000000000012",
+          "name": "Email",
+          "state": "active",
+          "version": 9
+        }
+      ],
+      "draft_revision": {
+        "approval": {
+          "actor_ref": "15710000-0000-4000-8000-000000000091",
+          "approved_at": "2026-11-05T16:48:10.476141+00:00"
+        },
+        "content": {
+          "audience": {
+            "kind": "qualified"
+          },
+          "stops": [
+            "reply",
+            "meeting_booked",
+            "suppression",
+            "manual_stop"
+          ]
+        },
+        "created_at": "2026-11-05T16:48:10.475741+00:00",
+        "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "revision_ref": "15710000-0000-4000-8000-000000000013"
+      },
+      "executable_version": {
+        "campaigns": [
+          {
+            "campaign_ref": "15710000-0000-4000-8000-000000000014",
+            "channel": "email",
+            "revision": {
+              "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+              "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+            }
+          }
+        ],
+        "created_at": "2026-11-05T16:48:10.702221+00:00",
+        "digest": "9ef2731d73e4cb7ace476f4d34440ee83d6479b141603102aa0eeff7511bd260",
+        "executable_version_ref": "636cb41e-1d3c-4d6e-ad24-ad67738f0c80",
+        "graph": {
+          "status": "compiling"
+        },
+        "journey": {
+          "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+          "revision_ref": "15710000-0000-4000-8000-000000000013"
+        }
+      },
+      "journey_ref": "15710000-0000-4000-8000-000000000012",
+      "name": "Copy journey",
+      "revisions": [
+        {
+          "approval": {
+            "actor_ref": "15710000-0000-4000-8000-000000000091",
+            "approved_at": "2026-11-05T16:48:10.476141+00:00"
+          },
+          "content": {
+            "audience": {
+              "kind": "qualified"
+            },
+            "stops": [
+              "reply",
+              "meeting_booked",
+              "suppression",
+              "manual_stop"
+            ]
+          },
+          "created_at": "2026-11-05T16:48:10.475741+00:00",
+          "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+          "revision_ref": "15710000-0000-4000-8000-000000000013"
+        }
+      ],
+      "version": 2
+    },
+    "workspace": {
+      "name": "Copy",
+      "state": "ready_for_connections",
+      "workspace_ref": "15710000-0000-4000-8000-000000000001"
+    }
+  },
+  "campaign_pause_slack": {
+    "campaign": {
+      "active_revision": {
+        "approval": {
+          "actor_ref": null,
+          "approved_at": "2026-11-05T16:48:10.700717+00:00",
+          "decision_ref": "15710000-0000-4000-8000-000000000073",
+          "option_ref": "15710000-0000-4000-8000-000000000071",
+          "origin": "slack",
+          "proposal_ref": "15710000-0000-4000-8000-000000000070",
+          "slack": {
+            "channel_id": "C_FIXTURE",
+            "message_ts": "1793836800.001",
+            "team_id": "T_FIXTURE",
+            "user_id": "U_NONMEMBER"
+          },
+          "source_decision_ref": "15710000-0000-4000-8000-000000000072"
+        },
+        "content": {
+          "compose_mode": "templates",
+          "instructions": "Preserve the founder voice.",
+          "profile_version": 1,
+          "schedule": {
+            "end": "17:00",
+            "start": "09:00",
+            "timezone": "UTC",
+            "weekdays": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "start": [
+            {
+              "type": "journey_start"
+            }
+          ],
+          "steps": [
+            {
+              "delay": {
+                "days": 0
+              },
+              "position": 1,
+              "template": {
+                "subject": "A useful question",
+                "text": "Slack approved complete copy."
+              }
+            },
+            {
+              "delay": {
+                "days": 1
+              },
+              "position": 2,
+              "template": {
+                "text": "Original follow-up template."
+              }
+            }
+          ],
+          "voice_version": 0
+        },
+        "created_at": "2026-11-05T16:48:10.675713+00:00",
+        "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+        "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+      },
+      "campaign_ref": "15710000-0000-4000-8000-000000000014",
+      "channel": "email",
+      "draft_revision": {
+        "approval": {
+          "actor_ref": null,
+          "approved_at": "2026-11-05T16:48:10.700717+00:00",
+          "decision_ref": "15710000-0000-4000-8000-000000000073",
+          "option_ref": "15710000-0000-4000-8000-000000000071",
+          "origin": "slack",
+          "proposal_ref": "15710000-0000-4000-8000-000000000070",
+          "slack": {
+            "channel_id": "C_FIXTURE",
+            "message_ts": "1793836800.001",
+            "team_id": "T_FIXTURE",
+            "user_id": "U_NONMEMBER"
+          },
+          "source_decision_ref": "15710000-0000-4000-8000-000000000072"
+        },
+        "content": {
+          "compose_mode": "templates",
+          "instructions": "Preserve the founder voice.",
+          "profile_version": 1,
+          "schedule": {
+            "end": "17:00",
+            "start": "09:00",
+            "timezone": "UTC",
+            "weekdays": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "start": [
+            {
+              "type": "journey_start"
+            }
+          ],
+          "steps": [
+            {
+              "delay": {
+                "days": 0
+              },
+              "position": 1,
+              "template": {
+                "subject": "A useful question",
+                "text": "Slack approved complete copy."
+              }
+            },
+            {
+              "delay": {
+                "days": 1
+              },
+              "position": 2,
+              "template": {
+                "text": "Original follow-up template."
+              }
+            }
+          ],
+          "voice_version": 0
+        },
+        "created_at": "2026-11-05T16:48:10.675713+00:00",
+        "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+        "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+      },
+      "journey_ref": "15710000-0000-4000-8000-000000000012",
+      "name": "Email",
+      "revisions": [
+        {
+          "approval": null,
+          "content": {
+            "compose_mode": "templates",
+            "instructions": "Preserve the founder voice.",
+            "profile_version": 1,
+            "schedule": {
+              "end": "17:00",
+              "start": "10:00",
+              "timezone": "UTC",
+              "weekdays": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            },
+            "start": [
+              {
+                "type": "journey_start"
+              }
+            ],
+            "steps": [
+              {
+                "delay": {
+                  "days": 0
+                },
+                "position": 1,
+                "template": {
+                  "subject": "A useful question",
+                  "text": "Reviewed complete template."
+                }
+              },
+              {
+                "delay": {
+                  "days": 1
+                },
+                "position": 2,
+                "template": {
+                  "text": "Original follow-up template."
+                }
+              }
+            ],
+            "voice_version": 0
+          },
+          "created_at": "2026-11-05T16:48:10.685672+00:00",
+          "digest": "746dadc74fa880889ea2efb8e9642b30047dbbaafab026aa7fac8fdb5b4d8f62",
+          "revision_ref": "6aa64f13-28a3-4b67-9966-d8a8b1192601"
+        },
+        {
+          "approval": {
+            "actor_ref": null,
+            "approved_at": "2026-11-05T16:48:10.700717+00:00",
+            "decision_ref": "15710000-0000-4000-8000-000000000073",
+            "option_ref": "15710000-0000-4000-8000-000000000071",
+            "origin": "slack",
+            "proposal_ref": "15710000-0000-4000-8000-000000000070",
+            "slack": {
+              "channel_id": "C_FIXTURE",
+              "message_ts": "1793836800.001",
+              "team_id": "T_FIXTURE",
+              "user_id": "U_NONMEMBER"
+            },
+            "source_decision_ref": "15710000-0000-4000-8000-000000000072"
+          },
+          "content": {
+            "compose_mode": "templates",
+            "instructions": "Preserve the founder voice.",
+            "profile_version": 1,
+            "schedule": {
+              "end": "17:00",
+              "start": "09:00",
+              "timezone": "UTC",
+              "weekdays": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            },
+            "start": [
+              {
+                "type": "journey_start"
+              }
+            ],
+            "steps": [
+              {
+                "delay": {
+                  "days": 0
+                },
+                "position": 1,
+                "template": {
+                  "subject": "A useful question",
+                  "text": "Slack approved complete copy."
+                }
+              },
+              {
+                "delay": {
+                  "days": 1
+                },
+                "position": 2,
+                "template": {
+                  "text": "Original follow-up template."
+                }
+              }
+            ],
+            "voice_version": 0
+          },
+          "created_at": "2026-11-05T16:48:10.675713+00:00",
+          "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+          "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+        },
+        {
+          "approval": {
+            "actor_ref": "15710000-0000-4000-8000-000000000091",
+            "approved_at": "2026-11-05T16:48:10.639019+00:00"
+          },
+          "content": {
+            "compose_mode": "templates",
+            "instructions": "Preserve the founder voice.",
+            "profile_version": 1,
+            "schedule": {
+              "end": "17:00",
+              "start": "09:00",
+              "timezone": "UTC",
+              "weekdays": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            },
+            "start": [
+              {
+                "type": "journey_start"
+              }
+            ],
+            "steps": [
+              {
+                "delay": {
+                  "days": 0
+                },
+                "position": 1,
+                "template": {
+                  "subject": "A useful question",
+                  "text": "Reviewed complete template."
+                }
+              },
+              {
+                "delay": {
+                  "days": 1
+                },
+                "position": 2,
+                "template": {
+                  "text": "Original follow-up template."
+                }
+              }
+            ],
+            "voice_version": 0
+          },
+          "created_at": "2026-11-05T16:48:10.529877+00:00",
+          "digest": "f80f37f27dcaf4025a5523225202c0d7ff26b2ec9d95d9832cf28b8273af6c26",
+          "revision_ref": "ff97d91a-a6d6-4359-b8e7-164182cc1d30"
+        },
+        {
+          "approval": {
+            "actor_ref": "15710000-0000-4000-8000-000000000091",
+            "approved_at": "2026-11-05T16:48:10.494637+00:00"
+          },
+          "content": {
+            "compose_mode": "templates",
+            "instructions": "Preserve the founder voice.",
+            "profile_version": 1,
+            "schedule": {
+              "end": "17:00",
+              "start": "09:00",
+              "timezone": "UTC",
+              "weekdays": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            },
+            "start": [
+              {
+                "type": "journey_start"
+              }
+            ],
+            "steps": [
+              {
+                "delay": {
+                  "days": 0
+                },
+                "position": 1,
+                "template": {
+                  "subject": "A useful question",
+                  "text": "Original complete template."
+                }
+              },
+              {
+                "delay": {
+                  "days": 1
+                },
+                "position": 2,
+                "template": {
+                  "text": "Original follow-up template."
+                }
+              }
+            ],
+            "voice_version": 0
+          },
+          "created_at": "2026-11-05T16:48:10.491695+00:00",
+          "digest": "3edb3dc8343b2f1879eddab0cd686e70b7e73ef40b0ca1044dfa80393c65d3b0",
+          "revision_ref": "05fa46db-38cb-4f5d-8a4b-1d37369b61ab"
+        }
+      ],
+      "state": "paused",
+      "version": 8
+    },
+    "workspace": {
+      "name": "Copy",
+      "state": "ready_for_connections",
+      "workspace_ref": "15710000-0000-4000-8000-000000000001"
+    }
+  },
+  "campaign_slack": {
+    "campaign": {
+      "active_revision": {
+        "approval": {
+          "actor_ref": null,
+          "approved_at": "2026-11-05T16:48:10.700717+00:00",
+          "decision_ref": "15710000-0000-4000-8000-000000000073",
+          "option_ref": "15710000-0000-4000-8000-000000000071",
+          "origin": "slack",
+          "proposal_ref": "15710000-0000-4000-8000-000000000070",
+          "slack": {
+            "channel_id": "C_FIXTURE",
+            "message_ts": "1793836800.001",
+            "team_id": "T_FIXTURE",
+            "user_id": "U_NONMEMBER"
+          },
+          "source_decision_ref": "15710000-0000-4000-8000-000000000072"
+        },
+        "content": {
+          "compose_mode": "templates",
+          "instructions": "Preserve the founder voice.",
+          "profile_version": 1,
+          "schedule": {
+            "end": "17:00",
+            "start": "09:00",
+            "timezone": "UTC",
+            "weekdays": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "start": [
+            {
+              "type": "journey_start"
+            }
+          ],
+          "steps": [
+            {
+              "delay": {
+                "days": 0
+              },
+              "position": 1,
+              "template": {
+                "subject": "A useful question",
+                "text": "Slack approved complete copy."
+              }
+            },
+            {
+              "delay": {
+                "days": 1
+              },
+              "position": 2,
+              "template": {
+                "text": "Original follow-up template."
+              }
+            }
+          ],
+          "voice_version": 0
+        },
+        "created_at": "2026-11-05T16:48:10.675713+00:00",
+        "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+        "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+      },
+      "campaign_ref": "15710000-0000-4000-8000-000000000014",
+      "channel": "email",
+      "draft_revision": {
+        "approval": {
+          "actor_ref": null,
+          "approved_at": "2026-11-05T16:48:10.700717+00:00",
+          "decision_ref": "15710000-0000-4000-8000-000000000073",
+          "option_ref": "15710000-0000-4000-8000-000000000071",
+          "origin": "slack",
+          "proposal_ref": "15710000-0000-4000-8000-000000000070",
+          "slack": {
+            "channel_id": "C_FIXTURE",
+            "message_ts": "1793836800.001",
+            "team_id": "T_FIXTURE",
+            "user_id": "U_NONMEMBER"
+          },
+          "source_decision_ref": "15710000-0000-4000-8000-000000000072"
+        },
+        "content": {
+          "compose_mode": "templates",
+          "instructions": "Preserve the founder voice.",
+          "profile_version": 1,
+          "schedule": {
+            "end": "17:00",
+            "start": "09:00",
+            "timezone": "UTC",
+            "weekdays": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ]
+          },
+          "start": [
+            {
+              "type": "journey_start"
+            }
+          ],
+          "steps": [
+            {
+              "delay": {
+                "days": 0
+              },
+              "position": 1,
+              "template": {
+                "subject": "A useful question",
+                "text": "Slack approved complete copy."
+              }
+            },
+            {
+              "delay": {
+                "days": 1
+              },
+              "position": 2,
+              "template": {
+                "text": "Original follow-up template."
+              }
+            }
+          ],
+          "voice_version": 0
+        },
+        "created_at": "2026-11-05T16:48:10.675713+00:00",
+        "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+        "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+      },
+      "journey_ref": "15710000-0000-4000-8000-000000000012",
+      "name": "Email",
+      "revisions": [
+        {
+          "approval": null,
+          "content": {
+            "compose_mode": "templates",
+            "instructions": "Preserve the founder voice.",
+            "profile_version": 1,
+            "schedule": {
+              "end": "17:00",
+              "start": "10:00",
+              "timezone": "UTC",
+              "weekdays": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            },
+            "start": [
+              {
+                "type": "journey_start"
+              }
+            ],
+            "steps": [
+              {
+                "delay": {
+                  "days": 0
+                },
+                "position": 1,
+                "template": {
+                  "subject": "A useful question",
+                  "text": "Reviewed complete template."
+                }
+              },
+              {
+                "delay": {
+                  "days": 1
+                },
+                "position": 2,
+                "template": {
+                  "text": "Original follow-up template."
+                }
+              }
+            ],
+            "voice_version": 0
+          },
+          "created_at": "2026-11-05T16:48:10.685672+00:00",
+          "digest": "746dadc74fa880889ea2efb8e9642b30047dbbaafab026aa7fac8fdb5b4d8f62",
+          "revision_ref": "6aa64f13-28a3-4b67-9966-d8a8b1192601"
+        },
+        {
+          "approval": {
+            "actor_ref": null,
+            "approved_at": "2026-11-05T16:48:10.700717+00:00",
+            "decision_ref": "15710000-0000-4000-8000-000000000073",
+            "option_ref": "15710000-0000-4000-8000-000000000071",
+            "origin": "slack",
+            "proposal_ref": "15710000-0000-4000-8000-000000000070",
+            "slack": {
+              "channel_id": "C_FIXTURE",
+              "message_ts": "1793836800.001",
+              "team_id": "T_FIXTURE",
+              "user_id": "U_NONMEMBER"
+            },
+            "source_decision_ref": "15710000-0000-4000-8000-000000000072"
+          },
+          "content": {
+            "compose_mode": "templates",
+            "instructions": "Preserve the founder voice.",
+            "profile_version": 1,
+            "schedule": {
+              "end": "17:00",
+              "start": "09:00",
+              "timezone": "UTC",
+              "weekdays": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            },
+            "start": [
+              {
+                "type": "journey_start"
+              }
+            ],
+            "steps": [
+              {
+                "delay": {
+                  "days": 0
+                },
+                "position": 1,
+                "template": {
+                  "subject": "A useful question",
+                  "text": "Slack approved complete copy."
+                }
+              },
+              {
+                "delay": {
+                  "days": 1
+                },
+                "position": 2,
+                "template": {
+                  "text": "Original follow-up template."
+                }
+              }
+            ],
+            "voice_version": 0
+          },
+          "created_at": "2026-11-05T16:48:10.675713+00:00",
+          "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+          "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+        },
+        {
+          "approval": {
+            "actor_ref": "15710000-0000-4000-8000-000000000091",
+            "approved_at": "2026-11-05T16:48:10.639019+00:00"
+          },
+          "content": {
+            "compose_mode": "templates",
+            "instructions": "Preserve the founder voice.",
+            "profile_version": 1,
+            "schedule": {
+              "end": "17:00",
+              "start": "09:00",
+              "timezone": "UTC",
+              "weekdays": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            },
+            "start": [
+              {
+                "type": "journey_start"
+              }
+            ],
+            "steps": [
+              {
+                "delay": {
+                  "days": 0
+                },
+                "position": 1,
+                "template": {
+                  "subject": "A useful question",
+                  "text": "Reviewed complete template."
+                }
+              },
+              {
+                "delay": {
+                  "days": 1
+                },
+                "position": 2,
+                "template": {
+                  "text": "Original follow-up template."
+                }
+              }
+            ],
+            "voice_version": 0
+          },
+          "created_at": "2026-11-05T16:48:10.529877+00:00",
+          "digest": "f80f37f27dcaf4025a5523225202c0d7ff26b2ec9d95d9832cf28b8273af6c26",
+          "revision_ref": "ff97d91a-a6d6-4359-b8e7-164182cc1d30"
+        },
+        {
+          "approval": {
+            "actor_ref": "15710000-0000-4000-8000-000000000091",
+            "approved_at": "2026-11-05T16:48:10.494637+00:00"
+          },
+          "content": {
+            "compose_mode": "templates",
+            "instructions": "Preserve the founder voice.",
+            "profile_version": 1,
+            "schedule": {
+              "end": "17:00",
+              "start": "09:00",
+              "timezone": "UTC",
+              "weekdays": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ]
+            },
+            "start": [
+              {
+                "type": "journey_start"
+              }
+            ],
+            "steps": [
+              {
+                "delay": {
+                  "days": 0
+                },
+                "position": 1,
+                "template": {
+                  "subject": "A useful question",
+                  "text": "Original complete template."
+                }
+              },
+              {
+                "delay": {
+                  "days": 1
+                },
+                "position": 2,
+                "template": {
+                  "text": "Original follow-up template."
+                }
+              }
+            ],
+            "voice_version": 0
+          },
+          "created_at": "2026-11-05T16:48:10.491695+00:00",
+          "digest": "3edb3dc8343b2f1879eddab0cd686e70b7e73ef40b0ca1044dfa80393c65d3b0",
+          "revision_ref": "05fa46db-38cb-4f5d-8a4b-1d37369b61ab"
+        }
+      ],
+      "state": "active",
+      "version": 7
+    },
+    "workspace": {
+      "name": "Copy",
+      "state": "ready_for_connections",
+      "workspace_ref": "15710000-0000-4000-8000-000000000001"
+    }
+  },
+  "campaigns_slack": {
+    "campaigns": [
+      {
+        "active_revision": {
+          "approval": {
+            "actor_ref": null,
+            "approved_at": "2026-11-05T16:48:10.700717+00:00",
+            "decision_ref": "15710000-0000-4000-8000-000000000073",
+            "option_ref": "15710000-0000-4000-8000-000000000071",
+            "origin": "slack",
+            "proposal_ref": "15710000-0000-4000-8000-000000000070",
+            "slack": {
+              "channel_id": "C_FIXTURE",
+              "message_ts": "1793836800.001",
+              "team_id": "T_FIXTURE",
+              "user_id": "U_NONMEMBER"
+            },
+            "source_decision_ref": "15710000-0000-4000-8000-000000000072"
+          },
+          "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+          "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+        },
+        "campaign_ref": "15710000-0000-4000-8000-000000000014",
+        "channel": "email",
+        "draft_revision": {
+          "approval": {
+            "actor_ref": null,
+            "approved_at": "2026-11-05T16:48:10.700717+00:00",
+            "decision_ref": "15710000-0000-4000-8000-000000000073",
+            "option_ref": "15710000-0000-4000-8000-000000000071",
+            "origin": "slack",
+            "proposal_ref": "15710000-0000-4000-8000-000000000070",
+            "slack": {
+              "channel_id": "C_FIXTURE",
+              "message_ts": "1793836800.001",
+              "team_id": "T_FIXTURE",
+              "user_id": "U_NONMEMBER"
+            },
+            "source_decision_ref": "15710000-0000-4000-8000-000000000072"
+          },
+          "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+          "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+        },
+        "journey_ref": "15710000-0000-4000-8000-000000000012",
+        "name": "Email",
+        "state": "active",
+        "version": 7
+      }
+    ],
+    "next_cursor": null,
+    "workspace": {
+      "name": "Copy",
+      "state": "ready_for_connections",
+      "workspace_ref": "15710000-0000-4000-8000-000000000001"
+    }
+  },
+  "journey_slack": {
+    "journey": {
+      "active_revision": {
+        "approval": {
+          "actor_ref": "15710000-0000-4000-8000-000000000091",
+          "approved_at": "2026-11-05T16:48:10.476141+00:00"
+        },
+        "content": {
+          "audience": {
+            "kind": "qualified"
+          },
+          "stops": [
+            "reply",
+            "meeting_booked",
+            "suppression",
+            "manual_stop"
+          ]
+        },
+        "created_at": "2026-11-05T16:48:10.475741+00:00",
+        "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "revision_ref": "15710000-0000-4000-8000-000000000013"
+      },
+      "campaigns": [
+        {
+          "active_revision": {
+            "approval": {
+              "actor_ref": null,
+              "approved_at": "2026-11-05T16:48:10.700717+00:00",
+              "decision_ref": "15710000-0000-4000-8000-000000000073",
+              "option_ref": "15710000-0000-4000-8000-000000000071",
+              "origin": "slack",
+              "proposal_ref": "15710000-0000-4000-8000-000000000070",
+              "slack": {
+                "channel_id": "C_FIXTURE",
+                "message_ts": "1793836800.001",
+                "team_id": "T_FIXTURE",
+                "user_id": "U_NONMEMBER"
+              },
+              "source_decision_ref": "15710000-0000-4000-8000-000000000072"
+            },
+            "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+            "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+          },
+          "campaign_ref": "15710000-0000-4000-8000-000000000014",
+          "channel": "email",
+          "draft_revision": {
+            "approval": {
+              "actor_ref": null,
+              "approved_at": "2026-11-05T16:48:10.700717+00:00",
+              "decision_ref": "15710000-0000-4000-8000-000000000073",
+              "option_ref": "15710000-0000-4000-8000-000000000071",
+              "origin": "slack",
+              "proposal_ref": "15710000-0000-4000-8000-000000000070",
+              "slack": {
+                "channel_id": "C_FIXTURE",
+                "message_ts": "1793836800.001",
+                "team_id": "T_FIXTURE",
+                "user_id": "U_NONMEMBER"
+              },
+              "source_decision_ref": "15710000-0000-4000-8000-000000000072"
+            },
+            "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+            "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+          },
+          "journey_ref": "15710000-0000-4000-8000-000000000012",
+          "name": "Email",
+          "state": "active",
+          "version": 7
+        }
+      ],
+      "draft_revision": {
+        "approval": {
+          "actor_ref": "15710000-0000-4000-8000-000000000091",
+          "approved_at": "2026-11-05T16:48:10.476141+00:00"
+        },
+        "content": {
+          "audience": {
+            "kind": "qualified"
+          },
+          "stops": [
+            "reply",
+            "meeting_booked",
+            "suppression",
+            "manual_stop"
+          ]
+        },
+        "created_at": "2026-11-05T16:48:10.475741+00:00",
+        "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+        "revision_ref": "15710000-0000-4000-8000-000000000013"
+      },
+      "executable_version": {
+        "campaigns": [
+          {
+            "campaign_ref": "15710000-0000-4000-8000-000000000014",
+            "channel": "email",
+            "revision": {
+              "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+              "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+            }
+          }
+        ],
+        "created_at": "2026-11-05T16:48:10.702221+00:00",
+        "digest": "9ef2731d73e4cb7ace476f4d34440ee83d6479b141603102aa0eeff7511bd260",
+        "executable_version_ref": "636cb41e-1d3c-4d6e-ad24-ad67738f0c80",
+        "graph": {
+          "status": "compiling"
+        },
+        "journey": {
+          "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+          "revision_ref": "15710000-0000-4000-8000-000000000013"
+        }
+      },
+      "journey_ref": "15710000-0000-4000-8000-000000000012",
+      "name": "Copy journey",
+      "revisions": [
+        {
+          "approval": {
+            "actor_ref": "15710000-0000-4000-8000-000000000091",
+            "approved_at": "2026-11-05T16:48:10.476141+00:00"
+          },
+          "content": {
+            "audience": {
+              "kind": "qualified"
+            },
+            "stops": [
+              "reply",
+              "meeting_booked",
+              "suppression",
+              "manual_stop"
+            ]
+          },
+          "created_at": "2026-11-05T16:48:10.475741+00:00",
+          "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+          "revision_ref": "15710000-0000-4000-8000-000000000013"
+        }
+      ],
+      "version": 2
+    },
+    "workspace": {
+      "name": "Copy",
+      "state": "ready_for_connections",
+      "workspace_ref": "15710000-0000-4000-8000-000000000001"
+    }
+  },
+  "journeys_slack": {
+    "journeys": [
+      {
+        "active_revision": {
+          "approval": {
+            "actor_ref": "15710000-0000-4000-8000-000000000091",
+            "approved_at": "2026-11-05T16:48:10.476141+00:00"
+          },
+          "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+          "revision_ref": "15710000-0000-4000-8000-000000000013"
+        },
+        "draft_revision": {
+          "approval": {
+            "actor_ref": "15710000-0000-4000-8000-000000000091",
+            "approved_at": "2026-11-05T16:48:10.476141+00:00"
+          },
+          "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+          "revision_ref": "15710000-0000-4000-8000-000000000013"
+        },
+        "executable_version": {
+          "campaigns": [
+            {
+              "campaign_ref": "15710000-0000-4000-8000-000000000014",
+              "channel": "email",
+              "revision": {
+                "digest": "d0160a94ba318bcffae441566328cf7b14cf1ef1e16586536f31e45e8745cf1a",
+                "revision_ref": "7839d03e-b6da-43c0-9e10-3c72c44799db"
+              }
+            }
+          ],
+          "created_at": "2026-11-05T16:48:10.702221+00:00",
+          "digest": "9ef2731d73e4cb7ace476f4d34440ee83d6479b141603102aa0eeff7511bd260",
+          "executable_version_ref": "636cb41e-1d3c-4d6e-ad24-ad67738f0c80",
+          "graph": {
+            "status": "compiling"
+          },
+          "journey": {
+            "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+            "revision_ref": "15710000-0000-4000-8000-000000000013"
+          }
+        },
+        "journey_ref": "15710000-0000-4000-8000-000000000012",
+        "name": "Copy journey",
+        "version": 2
+      }
+    ],
+    "next_cursor": null,
+    "workspace": {
+      "name": "Copy",
+      "state": "ready_for_connections",
+      "workspace_ref": "15710000-0000-4000-8000-000000000001"
+    }
+  }
+}

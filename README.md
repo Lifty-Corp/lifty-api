@@ -114,6 +114,8 @@ complete through the same-cohort retry; founder confirmation remains separate.
 - `POST /v1/workspace/sample-review`, `GET …/sample-review`, `GET /v1/workspace/runs/progress` — five-person calibration sample, its results and bounded progress
 - `GET /v1/workspace/research-schedule`, `PATCH …/research-schedule`, `POST …/research-schedule/activate`, `POST …/research-schedule/pause`, `GET …/research-schedule/status` — weekly research schedule and weekly status
 - `GET /v1/workspace/leads` — researched leads, newest first, with grade/week filters and an opaque cursor
+- `GET /v1/workspace/reports?start=&end=`, `GET …/reports/{week}/details?metric=&offset=&limit=&calculated_at=` — stored weekly reports, the same rows the digest reads, and one page of the contributors behind a metric; read `public.get_workspace_reports` and `public.get_workspace_report_details`
+- `GET /v1/workspace/measurements?start=&end=` — shared live measurement for the week in progress and arbitrary ranges of at most 731 days; reads `public.get_workspace_measurements`
 - `GET /v1/workspace/senders`, `POST …/senders`, `PATCH …/senders/{id}`, `POST …/senders/{id}/delete`, `POST …/senders/{id}/turn-off|turn-on` — senders (people) with versioned name, signature and booking link; soft delete; turning a person off drains their admitted leads to another person and keeps their accounts connected
 - `GET /v1/workspace/sending-accounts`, `POST …/sending-accounts/connect`, `GET …/sending-accounts/attempts/{id}`, `POST …/sending-accounts/{id}/reconnect|pause|resume|disconnect` — accounts each sender owns
 - `GET /v1/workspace/crm/preferences`, `PATCH …/crm/preferences` — the selected CRM's research-note, conversation and channel choices with expected_version; reads `public.get_lifty_crm_preferences` and writes through `public.patch_lifty_crm_preferences`
@@ -294,6 +296,11 @@ with a healthy check from the last 24 hours. Paused days do not count.
 
 Routes, all bound to the caller's session and an explicit workspace:
 
+- `GET /v1/email/dns?workspace=<slug-or-id>&connection_ref=<id>` returns the open
+  DNS issue for that account's domain, provider-correct fixes and the latest
+  recheck. `POST /v1/email/dns/recheck` with the same fields records one fresh
+  check after the founder fixes the records; the database authorizes the member,
+  workspace and exact account.
 - `GET /v1/email/warmup?workspace=<slug-or-id>` returns state, active days
   N of 21, today's warmup volume and ramp target, SPF/DMARC/MX, last check
   time, a plain-words blocking reason and `recommended_go_live`.

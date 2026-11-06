@@ -43,6 +43,8 @@ export const RPC_ERROR_MESSAGES: Record<string, string> = {
   RESEARCH_NOT_CONFIGURED:
     "Save targeting and research criteria before activating weekly research.",
   WEEK_NOT_MONDAY: "Choose a week by its Monday (UTC) in YYYY-MM-DD form.",
+  // Weekly reports and measurement (LIF-1571).
+  MEASUREMENT_PERIOD_INVALID: "Choose an end after start, at most 731 days later.",
   RESEARCH_LIMIT_REACHED:
     "This week's research limit, or the plan's total, has fewer than five people left for a sample. A weekly limit resets at the returned time; a used total only returns with a paid plan.",
   // Senders and sending accounts (LIF-1182).
@@ -152,6 +154,7 @@ const DATABASE_TOKENS: Record<string, string> = {
   LIFTY_WORKSPACE_AMBIGUOUS: "WORKSPACE_SELECTION_REQUIRED",
   LIFTY_WORKSPACE_FORBIDDEN: "WORKSPACE_FORBIDDEN",
   LIFTY_WORKSPACE_MISSING: "WORKSPACE_NOT_READY",
+  WORKSPACE_NOT_FOUND: "WORKSPACE_NOT_READY",
 };
 
 const STATUS = new Set([400, 401, 403, 404, 409, 413, 422, 429, 503]);

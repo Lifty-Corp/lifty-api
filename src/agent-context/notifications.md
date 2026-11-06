@@ -46,11 +46,15 @@ selection; do not send a workspace ID. A stale edit returns
 `NOTIFICATION_SETTINGS_CHANGED`: read again before trying another change.
 
 `notifications_preferences_set` takes `body` with `notification_type`, `channels`
-and `slack_destination_ref`. Choose `channels: []` and a null Slack ref for Off;
-`["email"]` and null for Email; `["slack"]` or `["slack","email"]` with the saved
-Slack destination ref for Slack or Both. Only supported type channels are accepted.
-This atomically replaces that type's workspace destinations and returns the saved
-configuration. Email/Off do not require a Slack connection.
+and `destination_refs`, a map from each selected messaging provider to its saved
+destination UUID. Choose `channels: []` and `destination_refs: {}` for Off;
+`["email"]` and `{}` for Email; `["slack"]` or `["slack","email"]` with
+`destination_refs: {"slack": "<saved destination UUID>"}` for Slack or both.
+Use only the installed provider metadata and supported type channels returned
+by the configuration read. Teams is not installed by this abstraction.
+This atomically replaces that type's workspace destinations. Email and Off need
+no messaging connection. Existing clients may still use `slack_destination_ref`;
+never mix the two request shapes.
 
 ## First setup and required inputs
 
@@ -62,7 +66,8 @@ do not request tokens or infer authorization from channel data.
 After verified authorization, read `channels` and obtain only the missing
 channel choice. Explain when Lifty needs to be invited to a private channel.
 In MCP, `notifications_destination_upsert` takes `body` with the actual
-`channel_id` and `channel_name` and returns the saved destination. A new
+`provider`, `address` and `name` and returns the saved destination. The legacy
+Slack fields `channel_id` and `channel_name` remain accepted. A new
 channel already receives every default-on type Slack can show (its `types`);
 change that only when the founder asks. Saving an existing channel again
 updates its name and reactivates it.
@@ -80,28 +85,48 @@ The CLI and HTTP API retain PATCH with `operation: destination` or
 HTTP clients can PUT the same fields to `/v1/notifications/controls` or
 `/v1/notifications/preferences`. No global controls are exposed to founders.
 
+## Delivery timing
+
+Read `notifications_timing` with `path.type_code` (HTTP GET
+`/v1/notifications/timing/{type_code}`) before changing a type's timing.
+The reply includes `editable`, `effective`, the global default and the current
+workspace override/version. Only `editable: true` supports scheduled delivery.
+Other types keep immediate delivery; interactive replies and Insights retain
+their dedicated action surfaces.
+
+Use `notifications_timing_set` with `body.notification_type`,
+`body.expected_version` from `workspace.version`, and `body.timing`:
+`{kind:"immediate"}`, `{kind:"delay",delayMinutes:30}`, or
+`{kind:"calendar",frequency:"daily",hour:9,minute:0,timezone:"America/New_York"}`.
+Weekly schedules use `frequency:"weekly"` and `weekday` (Sunday=0 through Saturday=6).
+Delay is 1–525600 whole minutes. Null timing restores the global default.
+CLI/HTTP PATCH uses `operation: timing` with those fields in `values`; HTTP
+also accepts PUT `/v1/notifications/timing`. On `NOTIFICATION_SETTINGS_CHANGED`,
+read again and confirm the current choice instead of blindly retrying.
+Changes apply to future requests; already scheduled notifications retain their
+accepted timing. Operational health alerts that stop sending remain immediate.
+
 ## Later edits
 
 Use the matching MCP tool, or the existing CLI/HTTP PATCH, for later changes. Reconnect
 Slack via a fresh POST and verify its exact attempt; old healthy Slack state
 does not prove completion. PATCH cannot authorize Slack or set connection state.
-`test` posts one visible test message to a saved Slack destination, active or
-not; send it only when the founder asks to check a channel. Its `request_ref`
+`test` sends one visible test message to a saved Slack or current-owner email
+destination, active or not; send it only when the founder asks to check delivery. Its `request_ref`
 means Lifty accepted the request, not that the message arrived: ask the
-founder to look in the channel. The email destination cannot be tested.
+founder to check the selected channel or owner inbox. Email tests do not require Slack.
 `disconnect` removes the Slack grant from the current workspace after the
 founder confirms; Slack notifications stop until Slack is reconnected.
 
 ## User-facing behavior and errors
 
 Describe which notification types reach which Slack channel or the founder's
-email, by the names the read returns. Saving a channel and sending a test need
+email, by the names the read returns. Saving a Slack channel and sending a Slack test need
 connected Slack: `SLACK_NOT_CONNECTED` or `SLACK_RECONNECT_REQUIRED` means
 connect or reconnect it first. `DESTINATION_NOT_FOUND` and
 `NOTIFICATION_TYPE_UNKNOWN` mean re-read notifications and use its current
 refs and codes. `NOTIFICATION_CHANNEL_UNSUPPORTED` means that type cannot go to
-that destination's channel; `DESTINATION_NOT_TESTABLE` means only Slack
-destinations take a test. Refresh channel/state reads before retrying. Follow
+that destination's channel. Refresh channel/state reads before retrying. Follow
 the common pending/expiry/denial/reconnection rules; a failed status request
 means authorization could not be verified, not disconnected. Connecting Slack
 does not authorize sending outreach or a test message.

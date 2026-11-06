@@ -73,6 +73,7 @@ describe("notification configuration operations", () => {
     await expect(getNotificationConfig(session(database))).resolves.toEqual({
       workspace_ref: workspaceRef,
       slack: publishedSlack,
+      connections: { slack: { status: "connected", tenant_id: publishedSlack.team_id, tenant_name: publishedSlack.team_name, reconnect_required: publishedSlack.reconnect_required } },
       types: storedTypes().map(({ code, name, channels, default_on, paused, email_fallback }) => ({ code, name, channels, default_on, paused, email_fallback })),
       destinations: [
         { destination_ref: emailRef, channel: "email", address: null, name: null, active: true, types: ["sending_account.needs_reconnect"] },
@@ -88,7 +89,7 @@ describe("notification configuration operations", () => {
     ]);
     // Empty arrays arrive as JSON null.
     await expect(getNotificationConfig(session(notificationsDatabase({ types: [], destinations: [], slack: { provider: "slack", status: "not_connected" } }))))
-      .resolves.toEqual({ workspace_ref: workspaceRef, slack: { status: "not_connected" }, types: [], destinations: [] });
+      .resolves.toEqual({ workspace_ref: workspaceRef, slack: { status: "not_connected" }, connections: { slack: { status: "not_connected" } }, types: [], destinations: [] });
   });
 
   it("keeps the workspace selection errors and refuses an unusable workspace before the notifications functions", async () => {
@@ -134,6 +135,19 @@ describe("notification configuration operations", () => {
       .rejects.toMatchObject({ status: 400, code: "INVALID_REQUEST" });
   });
 
+  it("uses the installed provider adapter with the neutral destination contract", async () => {
+    const database = notificationsDatabase();
+    await expect(upsertNotificationDestination(session(database), { provider: "slack", address: "G643PRIVATE", name: "founders" }))
+      .resolves.toMatchObject({ destination_ref: createdRef, channel: "slack", address: "G643PRIVATE" });
+    expect(database.calls.find(call => call.name === "save_message_destination")?.args).toEqual({
+      p_workspace_id: workspaceRef, p_provider: "slack", p_address: "G643PRIVATE", p_name: "founders", p_active: true,
+    });
+    const unknown = notificationsDatabase();
+    await expect(upsertNotificationDestination(session(unknown), { provider: "test_chat", address: "opaque-channel", name: "founders" }))
+      .rejects.toMatchObject({ status: 409 });
+    expect(unknown.calls.some(call => call.schema === "notifications")).toBe(false);
+  });
+
   it("checks the destination, type and channel against the configuration before subscribing", async () => {
     const route = (notification_type: string, destination_ref: string, enabled = true) => ({ notification_type, destination_ref, enabled });
     for (const [input, expected] of [
@@ -169,7 +183,6 @@ describe("notification configuration operations", () => {
   it("queues a test only for this workspace's Slack destination while Slack is usable", async () => {
     const refusals: Array<[string, NotificationsDatabaseOptions, { status: number; code: string }]> = [
       ["64300000-0000-4000-a000-000000000099", {}, { status: 404, code: "DESTINATION_NOT_FOUND" }],
-      [emailRef, {}, { status: 409, code: "DESTINATION_NOT_TESTABLE" }],
       [slackRef, { slack: { provider: "slack", status: "not_connected" } }, { status: 409, code: "SLACK_NOT_CONNECTED" }],
       [slackRef, { slack: { ...connectedSlack, reconnect_required: true } }, { status: 409, code: "SLACK_RECONNECT_REQUIRED" }],
     ];
@@ -184,6 +197,17 @@ describe("notification configuration operations", () => {
     const result = await sendNotificationTest(session(notificationsDatabase({ destinations: [ownerEmail(), { ...slackChannel(), active: false }] })), slackRef, enqueue);
     expect(enqueue).toHaveBeenCalledExactlyOnceWith({ workspaceId: workspaceRef, destinationId: slackRef, requestId: result.request_ref });
     expect(result).toEqual({ destination_ref: slackRef, request_ref: expect.stringMatching(/^[0-9a-f-]{36}$/), status: "queued" });
+  });
+
+  it("tests only the current owner's email without reading a Slack grant", async () => {
+    const database = notificationsDatabase({ errors: { "public.get_lifty_slack_connection": { code: "42501" } } });
+    const enqueue = vi.fn(async (_request: NotificationTestRequest) => ({ id: "run_email" }));
+    const result = await sendNotificationTest(session(database), emailRef, enqueue);
+    expect(enqueue).toHaveBeenCalledExactlyOnceWith({ workspaceId: workspaceRef, destinationId: emailRef, requestId: result.request_ref });
+    expect(database.calls.some(call => call.name === "get_lifty_slack_connection")).toBe(false);
+    const invalid = notificationsDatabase({ destinations: [{ ...ownerEmail(), address: "other@example.com" }] });
+    await expect(sendNotificationTest(session(invalid), emailRef, enqueue)).rejects.toMatchObject({ status: 404 });
+    expect(enqueue).toHaveBeenCalledTimes(1);
   });
 
   it("reports a missing Slack grant as a setup step, not a transient failure", async () => {

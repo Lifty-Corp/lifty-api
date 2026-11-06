@@ -26,7 +26,7 @@ describe("generated MCP stage operations", () => {
       const name = stage === "summary" && action === "next_step" ? "next_step" : `${listedStage.replace(/-/g, "_")}_${action}`;
       const supported = Object.keys(operation.responses).some(status => status.startsWith("2"));
       const notificationWrite = stage === "notifications" && action === "patch";
-      const names = notificationWrite ? ["notifications_destination_upsert", "notifications_route_set", "notifications_controls_set", "notifications_preferences_set"]
+      const names = notificationWrite ? ["notifications_destination_upsert", "notifications_route_set", "notifications_controls_set", "notifications_preferences_set", "notifications_timing_set"]
         : stage === "notifications" && action === "post" ? ["notifications_connect"] : [name];
       const matches = tools.filter(tool => names.includes(tool.name));
       expect(matches.length, name).toBe(supported ? names.length : 0);
@@ -54,10 +54,16 @@ describe("generated MCP stage operations", () => {
     // is never published; codes carry only a pattern. LIF-1764 adds
     // senders_turn_off and senders_turn_on (about 3,600 characters). LIF-1800
     // adds search lane and research field lane rules (about 900 characters).
+    // LIF-1265 adds timing read/write schemas (about 4,500 characters).
+    // LIF-1255 adds DNS status and recheck (about 4,000 characters).
+    // LIF-1571 adds the three report reads (about 4,800 characters); the metric
+    // ids stay out of it, because a report names its own.
     // LIF-1771 adds the Senders controls: pause and resume, handoffs, workspace
     // settings, the transfer scope, LIFT stops, recovery incidents and reply
     // counts (about 27,000 with the sample-changed wording).
-    expect(JSON.stringify(tools).length).toBeLessThan(236_000);
+    expect(JSON.stringify(tools).length).toBeLessThan(250_000);
+    expect(tools.find(tool => tool.name === "sending_accounts_dns_status")!.annotations.readOnlyHint).toBe(true);
+    expect(tools.find(tool => tool.name === "sending_accounts_dns_recheck")!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, openWorldHint: false });
     expect(tools.find(tool => tool.name === "crm_mapping_sources")!.annotations.readOnlyHint).toBe(true);
     expect(tools.find(tool => tool.name === "sending_accounts_deliverability")!.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
     expect(tools.find(tool => tool.name === "sending_accounts_disconnect")!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: true });
@@ -114,8 +120,11 @@ describe("generated MCP stage operations", () => {
       expect(tool).toBeDefined();
       expect(tool.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: false });
       expect(tool.inputSchema.required).toContain("body");
-      expect(tool.inputSchema.properties.body).toMatchObject({ type: "object", required: [...fields], additionalProperties: false });
-      expect(Object.keys((tool.inputSchema.properties.body as { properties: object }).properties)).toEqual([...fields]);
+      const body = tool.inputSchema.properties.body as { anyOf?: { properties: object }[]; properties: object };
+      const legacy = name === "notifications_destination_upsert" ? body.anyOf![1]! : body;
+      expect(legacy).toMatchObject({ type: "object", required: [...fields], additionalProperties: false });
+      expect(Object.keys(legacy.properties)).toEqual([...fields]);
+      if (name === "notifications_destination_upsert") expect(body.anyOf![0]).toMatchObject({ type: "object", required: ["provider", "address", "name"], additionalProperties: false });
       expect(tool.description).toContain("Requires the founder's approval");
     }
   });
