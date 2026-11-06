@@ -27,6 +27,8 @@ operation, including persisted provider maintenance and enabled scheduled work.
 | `research_schedule_patch` | false / true / false | Replaces the effective weekly target; does not activate research. |
 | `research_schedule_activate` | false / true / true | Saves active research intent; later scheduled cycles acquire and research public prospects. |
 | `leads_list` | true / false / false | Lists existing tenant research results; does not acquire or enrich leads. |
+| `reports_get`, `reports_details` | true / false / false | Reads the stored weekly reports and pages the contributors behind one metric. Never recalculates or publishes a report. |
+| `reports_measurements` | true / false / false | Reads the shared live measurement for a bounded range. Saves nothing. |
 | `crm_sync_start` | false / true / false | Queues creation/update of eligible saved leads in the connected CRM and configured research mirrors. |
 | `crm_mapping_sources` | true / false / false | Reads saved evidence for the explicit tenant-owned cohort. |
 | `crm_mapping_preview` | false / true / false | Computes proposed mapping values against existing records; can replace stored CRM credentials or connection health. |
@@ -79,6 +81,10 @@ operation, including persisted provider maintenance and enabled scheduled work.
   `notifications` schema owns the catalog, refuses unknown codes and refuses a
   type on a channel that cannot show it. Route and test writes check the
   destination against `notifications.get_configuration` first.
+- Report ranges and details are refused before any read when a week is not a
+  Monday (UTC), a range exceeds its limit, or a `metric` is unknown. `metric` is
+  checked by the API, not published as an enum: a report names its own metrics
+  and every connector turn carries the tool schemas.
 - The research target RPC accepts one-to-nine-digit positive integers before
   checking the workspace's plan limit. The API maximum is therefore
   `999999999`, not the wider PostgreSQL integer bound; `null` still follows the
@@ -104,6 +110,7 @@ interpretation is superseded by the complete persistence effects above.
 Operation owners are [business-operations.ts](../src/business-operations.ts),
 [research-operations.ts](../src/research-operations.ts),
 [outreach-operations.ts](../src/outreach-operations.ts),
+[report-operations.ts](../src/report-operations.ts),
 [identity-operations.ts](../src/identity-operations.ts),
 [member-review-operations.ts](../src/member-review-operations.ts),
 [stage-contracts.ts](../src/stage-contracts.ts) and
@@ -131,6 +138,10 @@ Notification configuration (LIF-1464) uses the `notifications` schema's
 customer-edge functions `get_configuration`, `save_slack_destination` and
 `set_subscription`, owned by lift-gtm-services migrations; test sends are its
 `notifications-test` Trigger task.
+
+Reports read `get_workspace_reports` and `get_workspace_report_details` from
+`20261106195200_lif1759_current_reports.sql`, and measurements read
+`get_workspace_measurements` over `20261106195000_lif1757_research_crm_measurements.sql`.
 
 Channel review choices and future automatic approvals are implemented in
 `20261007190200_lif1287_channel_review_policy.sql`; LIF-1360's subsequent

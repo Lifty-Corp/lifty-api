@@ -7,6 +7,7 @@ import { getStageMcpTools, callStageMcpTool } from "../src/mcp-stage-tools.js";
 
 import { receipt as sql } from "./senders-fixtures.js";
 import { journeyRef, campaignRef, revisionRef, senderId, workspace, digest, policy, journeyPolicy, revision, executableVersion, journey, campaign, journeySummary, campaignSummary } from "./outreach-fixtures.js";
+import slack from "./outreach-slack-approval-sql-fixtures.json" with { type: "json" };
 function harness(result: (name: string, args: Record<string, unknown>) => unknown) {
   const rpc = vi.fn(async (name: string, args: Record<string, unknown>) => {
     try { return { data: result(name, args), error: null }; } catch (error) { return { data: null, error }; }
@@ -285,5 +286,71 @@ describe("canonical Outreach member transport", () => {
     }
     const h = harness(() => ({ workspace, campaigns: [], next_cursor: null }));
     expect((await h.request("PATCH", "/v1/workspace/campaigns", { scope: "workspace", request: {} })).status).toBe(404);
+  });
+});
+
+// LIF-1760: a real Slack approval from the Functions proof. actor_ref is null
+// because no member approved it; the revision is approved all the same.
+describe("Campaign revisions approved through Slack", () => {
+  const { campaign: read } = slack.campaign_slack;
+  const exact = { revision_ref: read.active_revision.revision_ref, digest: read.active_revision.digest };
+  const slackApproval = read.active_revision.approval;
+  const activation = { expected_version: slack.campaign_pause_slack.campaign.version, ...exact };
+  const activated = slack.campaign_activate_slack;
+  const readWith = (approval: unknown) => ({ ...slack.campaign_slack, campaign: { ...read, active_revision: { ...read.active_revision, approval } } });
+
+  it.each([
+    ["detail", "get_lifty_campaign", `/v1/workspace/campaigns/${read.campaign_ref}`, slack.campaign_slack],
+    ["list", "get_lifty_campaigns", "/v1/workspace/campaigns", slack.campaigns_slack],
+    ["Journey detail", "get_lifty_journey", `/v1/workspace/journeys/${read.journey_ref}`, slack.journey_slack],
+    ["Journey list", "get_lifty_journeys", "/v1/workspace/journeys", slack.journeys_slack],
+  ])("reads the %s unchanged, naming no member", async (_label, rpc, path, receipt) => {
+    const h = harness(name => { expect(name).toBe(rpc); return receipt; });
+    const response = await h.request("GET", path);
+    expect([response.status, await response.json()]).toEqual([200, receipt]);
+  });
+
+  it("confirms publication and activation of the exact Slack-approved revision", async () => {
+    const h = harness(name => name === "activate_lifty_campaign" ? activated : slack.campaign_slack);
+    expect((await h.request("POST", `/v1/workspace/campaigns/${read.campaign_ref}/publish`, { expected_version: read.version, ...exact })).status).toBe(200);
+    const response = await h.request("POST", `/v1/workspace/campaigns/${read.campaign_ref}/activate`, activation);
+    expect(response.status).toBe(200);
+    expect(((await response.json()) as typeof activated).campaign.active_revision.approval).toEqual(slackApproval);
+  });
+
+  it.each([
+    ["another revision", { ...activated, campaign: { ...activated.campaign, active_revision: { ...activated.campaign.active_revision, revision_ref: revisionRef } } }],
+    ["another digest", { ...activated, campaign: { ...activated.campaign, active_revision: { ...activated.campaign.active_revision, digest } } }],
+    ["no approval", { ...activated, campaign: { ...activated.campaign, active_revision: { ...activated.campaign.active_revision, approval: null } } }],
+  ])("never confirms activation of %s", async (_label, receipt) => {
+    const response = await harness(() => receipt).request("POST", `/v1/workspace/campaigns/${read.campaign_ref}/activate`, activation);
+    expect([response.status, ((await response.json()) as { error: { code: string } }).error.code]).toEqual([502, "OUTREACH_UNAVAILABLE"]);
+  });
+
+  it.each([
+    ["an extra field", { ...slackApproval, member: "invented" }],
+    ["a member and a Slack identity", { ...slackApproval, actor_ref: senderId }],
+    ["another origin", { ...slackApproval, origin: "dashboard" }],
+    ["no Slack identity", (({ slack: _slack, ...approval }) => approval)(slackApproval)],
+    ["a blank Slack user", { ...slackApproval, slack: { ...slackApproval.slack, user_id: "" } }],
+    ["an extra Slack field", { ...slackApproval, slack: { ...slackApproval.slack, email: "person@example.test" } }],
+    ["no decision link", (({ decision_ref: _decision, ...approval }) => approval)(slackApproval)],
+    ["a decision link that is no UUID", { ...slackApproval, proposal_ref: "proposal" }],
+    ["a null actor with nothing else", { actor_ref: null, approved_at: slackApproval.approved_at }],
+  ])("refuses an approval with %s", async (_label, approval) => {
+    const response = await harness(() => readWith(approval)).request("GET", `/v1/workspace/campaigns/${read.campaign_ref}`);
+    expect([response.status, ((await response.json()) as { error: { code: string } }).error.code]).toEqual([502, "OUTREACH_UNAVAILABLE"]);
+  });
+
+  it("keeps a member's approval and an unapproved revision exactly as they were", async () => {
+    const receipt = { workspace, campaign: { ...campaign, revisions: [revision(policy, true), revision(policy)] } };
+    const response = await harness(() => receipt).request("GET", `/v1/workspace/campaigns/${campaignRef}`);
+    expect([response.status, await response.json()]).toEqual([200, receipt]);
+  });
+
+  it("keeps Journey authoring member-only while its Campaign summaries carry Slack approvals", async () => {
+    const own = { ...slack.journey_slack.journey.active_revision, approval: slackApproval };
+    const response = await harness(() => ({ ...slack.journey_slack, journey: { ...slack.journey_slack.journey, active_revision: own } })).request("GET", `/v1/workspace/journeys/${read.journey_ref}`);
+    expect(response.status).toBe(502);
   });
 });

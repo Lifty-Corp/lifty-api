@@ -3,6 +3,7 @@ import { businessEntries, validateBusinessRequest } from "./business-operations.
 import { researchEntries, validateResearchInput } from "./research-operations.js";
 import { handoffRepliesRequest, identityEntries, validateIdentityInput } from "./identity-operations.js";
 import { linkedinEntries } from "./linkedin-operations.js";
+import { reportEntries } from "./report-operations.js";
 import { crmPreferencesEntries } from "./crm-preferences.js";
 import { crmSyncControlsEntries, crmSyncControlsRunRef } from "./crm-sync-controls.js";
 import type { crmOperationEntries } from "./crm-operations.js";
@@ -182,6 +183,21 @@ export function registerStageRoutes(app: OpenAPIHono<AppEnvironment>, dependenci
       request: { headers: z.object({ "x-lifty-workspace": z.string().max(100).optional() }), query: definition.query as z.ZodObject },
       responses: { 200: { description: definition.description, content: { "application/json": { schema: definition.response } } },
         ...Object.fromEntries([400, 401, 403, 404, 409, 429, 502].map(code => [code, { description: "Typed resource error", content: { "application/json": { schema: StageErrorSchema } } }])) } });
+  }
+  // Weekly reports and shared measurement (LIF-1571): member reads, the
+  // workspace resolved by the database like Identity.
+  for (const { key, definition } of reportEntries()) {
+    app.get(definition.route.replace(/\{(\w+)\}/g, ":$1"), async context => {
+      context.header("cache-control", "no-store");
+      const path = validateIdentityInput(definition.path, context.req.param(), definition.invalid) as Record<string, string>;
+      const query = validateIdentityInput(definition.query, readQuery(context, definition.query), definition.invalid) as Record<string, unknown>;
+      return context.json(definition.response.parse(await dependencies.reportOperation(context.get("authSession"), key, { path, query, body: undefined })));
+    });
+    app.openAPIRegistry.registerPath({ method: "get", path: definition.route, security: [{ bearerAuth: [] }],
+      request: { headers: z.object({ "x-lifty-workspace": z.string().max(100).optional() }), query: definition.query as z.ZodObject,
+        ...(definition.path instanceof z.ZodObject && Object.keys(definition.path.shape).length ? { params: definition.path } : {}) },
+      responses: { 200: { description: definition.description, content: { "application/json": { schema: definition.response } } },
+        ...Object.fromEntries([400, 401, 403, 404, 409, 422, 429, 502].map(code => [code, { description: "Typed resource error", content: { "application/json": { schema: StageErrorSchema } } }])) } });
   }
   // CRM page resources (crm-operations.ts): the database resolves the
   // workspace and its selected CRM, like Identity. `after` runs once the

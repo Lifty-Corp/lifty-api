@@ -1,0 +1,4364 @@
+{
+  "details_conversion": {
+    "calculated_at": "2026-11-05T16:48:10.769474+00:00",
+    "items": [
+      {
+        "anchored_at": "2026-10-26T10:00:00+00:00",
+        "converted": true,
+        "id": "15711000-0000-4000-8000-000000000101",
+        "lead_id": "15711000-0000-4000-8000-000000000101"
+      },
+      {
+        "anchored_at": "2026-10-26T10:01:00+00:00",
+        "converted": true,
+        "id": "15711000-0000-4000-8000-000000000102",
+        "lead_id": "15711000-0000-4000-8000-000000000102"
+      },
+      {
+        "anchored_at": "2026-10-26T10:02:00+00:00",
+        "converted": true,
+        "id": "15711000-0000-4000-8000-000000000103",
+        "lead_id": "15711000-0000-4000-8000-000000000103"
+      }
+    ],
+    "metric": {
+      "availability": "collecting",
+      "denominator": 3,
+      "horizon_days": 28,
+      "matures_at": "2026-11-30T00:00:00+00:00",
+      "numerator": 3,
+      "reason": "cohort_maturing",
+      "unit": "ratio",
+      "value": null
+    },
+    "next_offset": null,
+    "offset": 0,
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "stale": false,
+    "total": 3,
+    "week_start": "2026-10-26",
+    "workspace_id": "15711000-0000-4000-8000-000000000001"
+  },
+  "details_crm_created": {
+    "calculated_at": "2026-11-05T16:48:10.800341+00:00",
+    "items": [
+      {
+        "evidence": [
+          {
+            "event_id": "13683796-31a3-439e-b10b-d256e0fe8708",
+            "lead_id": "15711000-0000-4000-8000-000000000201",
+            "operation": "create",
+            "property_keys": [],
+            "written_at": "2026-10-26T12:00:00+00:00"
+          }
+        ],
+        "id": "hubspot:contact:7",
+        "object_type": "contact",
+        "provider": "hubspot",
+        "record_id": "7"
+      }
+    ],
+    "metric": {
+      "ambiguous_receipts": 0,
+      "availability": "complete",
+      "reason": null,
+      "unit": "entities",
+      "value": 1
+    },
+    "next_offset": null,
+    "offset": 0,
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "stale": false,
+    "total": 1,
+    "week_start": "2026-10-26",
+    "workspace_id": "15711000-0000-4000-8000-000000000002"
+  },
+  "details_crm_enriched": {
+    "calculated_at": "2026-11-05T16:48:10.800341+00:00",
+    "items": [
+      {
+        "evidence": [
+          {
+            "event_id": "33f4f164-33cb-4784-bdab-4d1a4bc9531b",
+            "lead_id": "15711000-0000-4000-8000-000000000202",
+            "operation": "update",
+            "property_keys": [
+              "industry"
+            ],
+            "written_at": "2026-10-27T12:00:00+00:00"
+          }
+        ],
+        "id": "hubspot:company:9",
+        "object_type": "company",
+        "provider": "hubspot",
+        "record_id": "9"
+      }
+    ],
+    "metric": {
+      "ambiguous_receipts": 0,
+      "availability": "complete",
+      "reason": null,
+      "unit": "entities",
+      "value": 1
+    },
+    "next_offset": null,
+    "offset": 0,
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "stale": false,
+    "total": 1,
+    "week_start": "2026-10-26",
+    "workspace_id": "15711000-0000-4000-8000-000000000002"
+  },
+  "details_current": {
+    "calculated_at": "2026-11-05T16:48:10.8409+00:00",
+    "items": [
+      {
+        "id": "15711000-0000-4000-8000-000000000103",
+        "lead_id": "15711000-0000-4000-8000-000000000103"
+      },
+      {
+        "id": "15711000-0000-4000-8000-000000000104",
+        "lead_id": "15711000-0000-4000-8000-000000000104"
+      }
+    ],
+    "metric": {
+      "availability": "complete",
+      "reason": null,
+      "unit": "people",
+      "value": 4
+    },
+    "next_offset": null,
+    "offset": 2,
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "stale": false,
+    "total": 4,
+    "week_start": "2026-10-26",
+    "workspace_id": "15711000-0000-4000-8000-000000000001"
+  },
+  "details_deals": {
+    "calculated_at": "2026-11-05T16:48:10.800341+00:00",
+    "items": [
+      {
+        "amount": 1000,
+        "closed_at": null,
+        "created_at": "2026-10-27T10:00:00+00:00",
+        "currency": "USD",
+        "id": "hubspot:d1",
+        "lead_id": "15711000-0000-4000-8000-000000000201"
+      },
+      {
+        "amount": 500,
+        "closed_at": "2026-10-30T10:00:00+00:00",
+        "created_at": "2026-10-28T10:00:00+00:00",
+        "currency": "USD",
+        "id": "hubspot:d2",
+        "lead_id": "15711000-0000-4000-8000-000000000202"
+      },
+      {
+        "amount": null,
+        "closed_at": null,
+        "created_at": "2026-10-29T10:00:00+00:00",
+        "currency": null,
+        "id": "hubspot:d3",
+        "lead_id": "15711000-0000-4000-8000-000000000201"
+      }
+    ],
+    "metric": {
+      "availability": "complete",
+      "reason": null,
+      "unit": "money",
+      "unpriced": 1,
+      "value": [
+        {
+          "amount": 1500,
+          "currency": "USD",
+          "deals": 2
+        }
+      ]
+    },
+    "next_offset": null,
+    "offset": 0,
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "stale": false,
+    "total": 3,
+    "week_start": "2026-10-26",
+    "workspace_id": "15711000-0000-4000-8000-000000000002"
+  },
+  "details_first_page": {
+    "calculated_at": "2026-11-05T16:48:10.769474+00:00",
+    "items": [
+      {
+        "id": "15711000-0000-4000-8000-000000000101",
+        "lead_id": "15711000-0000-4000-8000-000000000101"
+      },
+      {
+        "id": "15711000-0000-4000-8000-000000000102",
+        "lead_id": "15711000-0000-4000-8000-000000000102"
+      }
+    ],
+    "metric": {
+      "availability": "complete",
+      "reason": null,
+      "unit": "people",
+      "value": 3
+    },
+    "next_offset": 2,
+    "offset": 0,
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "stale": false,
+    "total": 3,
+    "week_start": "2026-10-26",
+    "workspace_id": "15711000-0000-4000-8000-000000000001"
+  },
+  "details_last_page": {
+    "calculated_at": "2026-11-05T16:48:10.769474+00:00",
+    "items": [
+      {
+        "id": "15711000-0000-4000-8000-000000000103",
+        "lead_id": "15711000-0000-4000-8000-000000000103"
+      }
+    ],
+    "metric": {
+      "availability": "complete",
+      "reason": null,
+      "unit": "people",
+      "value": 3
+    },
+    "next_offset": null,
+    "offset": 2,
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "stale": false,
+    "total": 3,
+    "week_start": "2026-10-26",
+    "workspace_id": "15711000-0000-4000-8000-000000000001"
+  },
+  "details_meetings": {
+    "calculated_at": "2026-11-05T16:48:10.800341+00:00",
+    "items": [
+      {
+        "booked_at": "2026-10-27T10:00:00+00:00",
+        "id": "hubspot:mt1",
+        "lead_id": "15711000-0000-4000-8000-000000000201"
+      }
+    ],
+    "metric": {
+      "availability": "complete",
+      "reason": null,
+      "unit": "meetings",
+      "value": 1
+    },
+    "next_offset": null,
+    "offset": 0,
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "stale": false,
+    "total": 1,
+    "week_start": "2026-10-26",
+    "workspace_id": "15711000-0000-4000-8000-000000000002"
+  },
+  "details_messages": {
+    "calculated_at": "2026-11-05T16:48:10.769474+00:00",
+    "items": [
+      {
+        "id": "40fea40c-5f15-486f-a7b0-f7d8fa6bb29b",
+        "lead_id": "15711000-0000-4000-8000-000000000103"
+      },
+      {
+        "id": "5f113897-9571-4102-a8ae-8c5e92d66007",
+        "lead_id": "15711000-0000-4000-8000-000000000101"
+      },
+      {
+        "id": "e324c9a4-5931-468e-9297-06aac00ca9b2",
+        "lead_id": "15711000-0000-4000-8000-000000000101"
+      },
+      {
+        "id": "fc075399-b838-48d0-a00a-a8d2e7c71dcf",
+        "lead_id": "15711000-0000-4000-8000-000000000102"
+      }
+    ],
+    "metric": {
+      "availability": "complete",
+      "reason": null,
+      "unit": "messages",
+      "value": 4
+    },
+    "next_offset": null,
+    "offset": 0,
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "stale": false,
+    "total": 4,
+    "week_start": "2026-10-26",
+    "workspace_id": "15711000-0000-4000-8000-000000000001"
+  },
+  "details_missing": null,
+  "details_not_applicable": {
+    "calculated_at": "2026-11-05T16:48:10.769474+00:00",
+    "items": [],
+    "metric": {
+      "availability": "not_applicable",
+      "reason": "crm_not_connected",
+      "unit": "meetings",
+      "value": null
+    },
+    "next_offset": null,
+    "offset": 0,
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "stale": false,
+    "total": 0,
+    "week_start": "2026-10-26",
+    "workspace_id": "15711000-0000-4000-8000-000000000001"
+  },
+  "details_research": {
+    "calculated_at": "2026-11-05T16:48:10.769474+00:00",
+    "items": [
+      {
+        "candidate_id": "15711000-0000-4000-8000-000000000031",
+        "converted": false,
+        "evidence": {
+          "candidate_id": "15711000-0000-4000-8000-000000000031",
+          "grade": "C",
+          "run_ref": "15711000-0000-4000-8000-000000000302",
+          "source": "candidate_at_settlement"
+        },
+        "grade": "C",
+        "id": "candidate:15711000-0000-4000-8000-000000000031",
+        "lead_id": null,
+        "settled_at": "2026-10-27T04:00:00+00:00"
+      },
+      {
+        "candidate_id": null,
+        "converted": true,
+        "evidence": {
+          "grade": "A",
+          "research_id": "f3bd35e3-890b-4c71-aaa7-a33b4c50a331",
+          "run_ref": "15711000-0000-4000-8000-000000000301",
+          "source": "run_result"
+        },
+        "grade": "A",
+        "id": "lead:15711000-0000-4000-8000-000000000101",
+        "lead_id": "15711000-0000-4000-8000-000000000101",
+        "settled_at": "2026-10-27T02:00:00+00:00"
+      },
+      {
+        "candidate_id": null,
+        "converted": false,
+        "evidence": {
+          "grade": null,
+          "source": "unavailable"
+        },
+        "grade": "unclassified",
+        "id": "lead:15711000-0000-4000-8000-000000000102",
+        "lead_id": "15711000-0000-4000-8000-000000000102",
+        "settled_at": "2026-10-27T03:00:00+00:00"
+      }
+    ],
+    "metric": {
+      "availability": "complete",
+      "reason": null,
+      "unit": "people",
+      "value": 3
+    },
+    "next_offset": null,
+    "offset": 0,
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "stale": false,
+    "total": 3,
+    "week_start": "2026-10-26",
+    "workspace_id": "15711000-0000-4000-8000-000000000001"
+  },
+  "details_stale": {
+    "calculated_at": "2026-11-05T16:48:10.8409+00:00",
+    "items": [
+      {
+        "id": "15711000-0000-4000-8000-000000000103",
+        "lead_id": "15711000-0000-4000-8000-000000000103"
+      },
+      {
+        "id": "15711000-0000-4000-8000-000000000104",
+        "lead_id": "15711000-0000-4000-8000-000000000104"
+      }
+    ],
+    "metric": {
+      "availability": "complete",
+      "reason": null,
+      "unit": "people",
+      "value": 4
+    },
+    "next_offset": null,
+    "offset": 2,
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "stale": true,
+    "total": 4,
+    "week_start": "2026-10-26",
+    "workspace_id": "15711000-0000-4000-8000-000000000001"
+  },
+  "details_suppressed": {
+    "calculated_at": "2026-11-05T16:48:10.769474+00:00",
+    "items": [
+      {
+        "candidate_id": "15711000-0000-4000-8000-000000000032",
+        "id": "15711000-0000-4000-8000-000000000032",
+        "suppressed_at": "2026-10-28T02:00:00+00:00"
+      }
+    ],
+    "metric": {
+      "availability": "complete",
+      "reason": null,
+      "unit": "people",
+      "value": 1
+    },
+    "next_offset": null,
+    "offset": 0,
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "stale": false,
+    "total": 1,
+    "week_start": "2026-10-26",
+    "workspace_id": "15711000-0000-4000-8000-000000000001"
+  },
+  "details_won": {
+    "calculated_at": "2026-11-05T16:48:10.800341+00:00",
+    "items": [
+      {
+        "amount": 500,
+        "closed_at": "2026-10-30T10:00:00+00:00",
+        "created_at": "2026-10-28T10:00:00+00:00",
+        "currency": "USD",
+        "id": "hubspot:d2",
+        "lead_id": "15711000-0000-4000-8000-000000000202"
+      }
+    ],
+    "metric": {
+      "availability": "complete",
+      "reason": null,
+      "unit": "deals",
+      "value": 1
+    },
+    "next_offset": null,
+    "offset": 0,
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "stale": false,
+    "total": 1,
+    "week_start": "2026-10-26",
+    "workspace_id": "15711000-0000-4000-8000-000000000002"
+  },
+  "measurements_before_migration": {
+    "metrics": {
+      "conversion.connectionAccepted": {
+        "availability": "not_applicable",
+        "denominator": null,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": null,
+        "reason": "channel_not_used",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.email.replied": {
+        "availability": "not_applicable",
+        "denominator": null,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": null,
+        "reason": "channel_not_used",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.linkedin.replied": {
+        "availability": "not_applicable",
+        "denominator": null,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": null,
+        "reason": "channel_not_used",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.meeting": {
+        "availability": "not_applicable",
+        "denominator": null,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": null,
+        "reason": "channel_not_used",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.won": {
+        "availability": "not_applicable",
+        "denominator": null,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": null,
+        "reason": "channel_not_used",
+        "unit": "ratio",
+        "value": null
+      },
+      "email.messagesSent": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "messages",
+        "value": null
+      },
+      "email.peopleBlocked": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "people",
+        "value": null
+      },
+      "email.peopleBounced": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "people",
+        "value": null
+      },
+      "email.peopleEmailed": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "people",
+        "value": null
+      },
+      "email.peopleReplied": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "people",
+        "value": null
+      },
+      "linkedin.connectionsAccepted": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "people",
+        "value": null
+      },
+      "linkedin.connectionsSent": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "people",
+        "value": null
+      },
+      "linkedin.peopleMessaged": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "people",
+        "value": null
+      },
+      "linkedin.peopleReplied": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "people",
+        "value": null
+      },
+      "pipeline.createdDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.dealsCreated": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.dealsWon": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.email.createdDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.email.dealsCreated": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.email.dealsWon": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.email.meetingsBooked": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "meetings",
+        "value": null
+      },
+      "pipeline.email.wonDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.linkedin.createdDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.linkedin.dealsCreated": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.linkedin.dealsWon": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.linkedin.meetingsBooked": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "meetings",
+        "value": null
+      },
+      "pipeline.linkedin.wonDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.meetingsBooked": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "meetings",
+        "value": null
+      },
+      "pipeline.wonDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      }
+    },
+    "observed_at": "2026-11-05T16:48:10.290915+00:00",
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "period_closed": true,
+    "senders": [],
+    "sources": {
+      "crm": {
+        "connected": false,
+        "failed": false,
+        "provider": null,
+        "synced_at": null
+      }
+    },
+    "workspace_id": "15712000-0000-4000-8000-000000000001"
+  },
+  "measurements_crm": {
+    "metrics": {
+      "conversion.connectionAccepted": {
+        "availability": "collecting",
+        "denominator": 1,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": 0,
+        "reason": "cohort_maturing",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.email.replied": {
+        "availability": "collecting",
+        "denominator": 1,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": 1,
+        "reason": "cohort_maturing",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.linkedin.replied": {
+        "availability": "collecting",
+        "denominator": 1,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": 1,
+        "reason": "cohort_maturing",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.meeting": {
+        "availability": "collecting",
+        "denominator": 2,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": 1,
+        "reason": "cohort_maturing",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.won": {
+        "availability": "collecting",
+        "denominator": 2,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": 1,
+        "reason": "cohort_maturing",
+        "unit": "ratio",
+        "value": null
+      },
+      "crm.companiesCreated": {
+        "ambiguous_receipts": 0,
+        "availability": "complete",
+        "reason": null,
+        "unit": "entities",
+        "value": 1
+      },
+      "crm.companiesEnriched": {
+        "ambiguous_receipts": 0,
+        "availability": "complete",
+        "reason": null,
+        "unit": "entities",
+        "value": 1
+      },
+      "crm.contactsCreated": {
+        "ambiguous_receipts": 0,
+        "availability": "complete",
+        "reason": null,
+        "unit": "entities",
+        "value": 1
+      },
+      "crm.contactsEnriched": {
+        "ambiguous_receipts": 0,
+        "availability": "complete",
+        "reason": null,
+        "unit": "entities",
+        "value": 1
+      },
+      "discovery.suppressedBeforeResearch": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "email.messagesSent": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "messages",
+        "value": 1
+      },
+      "email.peopleBlocked": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "email.peopleBounced": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "email.peopleEmailed": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "email.peopleReplied": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "linkedin.connectionsAccepted": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "linkedin.connectionsSent": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "linkedin.peopleMessaged": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "linkedin.peopleReplied": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "pipeline.createdDealValue": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "money",
+        "unpriced": 1,
+        "value": [
+          {
+            "amount": 1500,
+            "currency": "USD",
+            "deals": 2
+          }
+        ]
+      },
+      "pipeline.dealsCreated": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "deals",
+        "value": 3
+      },
+      "pipeline.dealsWon": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "deals",
+        "value": 1
+      },
+      "pipeline.email.createdDealValue": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "money",
+        "unpriced": 1,
+        "value": [
+          {
+            "amount": 1000,
+            "currency": "USD",
+            "deals": 1
+          }
+        ]
+      },
+      "pipeline.email.dealsCreated": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "deals",
+        "value": 2
+      },
+      "pipeline.email.dealsWon": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "deals",
+        "value": 0
+      },
+      "pipeline.email.meetingsBooked": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "meetings",
+        "value": 1
+      },
+      "pipeline.email.wonDealValue": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "money",
+        "unpriced": 0,
+        "value": []
+      },
+      "pipeline.linkedin.createdDealValue": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "money",
+        "unpriced": 0,
+        "value": [
+          {
+            "amount": 500,
+            "currency": "USD",
+            "deals": 1
+          }
+        ]
+      },
+      "pipeline.linkedin.dealsCreated": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "deals",
+        "value": 1
+      },
+      "pipeline.linkedin.dealsWon": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "deals",
+        "value": 1
+      },
+      "pipeline.linkedin.meetingsBooked": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "meetings",
+        "value": 0
+      },
+      "pipeline.linkedin.wonDealValue": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "money",
+        "unpriced": 0,
+        "value": [
+          {
+            "amount": 500,
+            "currency": "USD",
+            "deals": 1
+          }
+        ]
+      },
+      "pipeline.meetingsBooked": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "meetings",
+        "value": 1
+      },
+      "pipeline.wonDealValue": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "money",
+        "unpriced": 0,
+        "value": [
+          {
+            "amount": 500,
+            "currency": "USD",
+            "deals": 1
+          }
+        ]
+      },
+      "research.quality": {
+        "availability": "not_applicable",
+        "denominator": 0,
+        "numerator": 0,
+        "reason": "empty_population",
+        "unit": "ratio",
+        "value": null
+      },
+      "research.researched": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.tierA": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.tierAB": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.tierB": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.tierC": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.unclassified": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      }
+    },
+    "observed_at": "2026-11-05T16:48:10.290915+00:00",
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "period_closed": true,
+    "senders": [
+      {
+        "deleted": false,
+        "display_name": "Blake",
+        "metrics": {
+          "email.peopleEmailed": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "linkedin.connectionsSent": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "linkedin.peopleMessaged": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          }
+        },
+        "sender_id": "15711000-0000-4000-8000-000000000012"
+      }
+    ],
+    "sources": {
+      "crm": {
+        "connected": true,
+        "failed": false,
+        "provider": "hubspot",
+        "synced_at": "2026-11-03T00:30:00+00:00"
+      }
+    },
+    "workspace_id": "15711000-0000-4000-8000-000000000002"
+  },
+  "measurements_crm_failed": {
+    "metrics": {
+      "conversion.connectionAccepted": {
+        "availability": "collecting",
+        "denominator": 1,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": 0,
+        "reason": "cohort_maturing",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.email.replied": {
+        "availability": "collecting",
+        "denominator": 1,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": 1,
+        "reason": "cohort_maturing",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.linkedin.replied": {
+        "availability": "collecting",
+        "denominator": 1,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": 1,
+        "reason": "cohort_maturing",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.meeting": {
+        "availability": "unavailable",
+        "denominator": null,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": null,
+        "reason": "crm_source_failed",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.won": {
+        "availability": "unavailable",
+        "denominator": null,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": null,
+        "reason": "crm_source_failed",
+        "unit": "ratio",
+        "value": null
+      },
+      "crm.companiesCreated": {
+        "ambiguous_receipts": 0,
+        "availability": "complete",
+        "reason": null,
+        "unit": "entities",
+        "value": 1
+      },
+      "crm.companiesEnriched": {
+        "ambiguous_receipts": 0,
+        "availability": "complete",
+        "reason": null,
+        "unit": "entities",
+        "value": 1
+      },
+      "crm.contactsCreated": {
+        "ambiguous_receipts": 0,
+        "availability": "complete",
+        "reason": null,
+        "unit": "entities",
+        "value": 1
+      },
+      "crm.contactsEnriched": {
+        "ambiguous_receipts": 0,
+        "availability": "complete",
+        "reason": null,
+        "unit": "entities",
+        "value": 1
+      },
+      "discovery.suppressedBeforeResearch": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "email.messagesSent": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "messages",
+        "value": 1
+      },
+      "email.peopleBlocked": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "email.peopleBounced": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "email.peopleEmailed": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "email.peopleReplied": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "linkedin.connectionsAccepted": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "linkedin.connectionsSent": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "linkedin.peopleMessaged": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "linkedin.peopleReplied": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "pipeline.createdDealValue": {
+        "availability": "unavailable",
+        "reason": "crm_source_failed",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.dealsCreated": {
+        "availability": "unavailable",
+        "reason": "crm_source_failed",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.dealsWon": {
+        "availability": "unavailable",
+        "reason": "crm_source_failed",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.email.createdDealValue": {
+        "availability": "unavailable",
+        "reason": "crm_source_failed",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.email.dealsCreated": {
+        "availability": "unavailable",
+        "reason": "crm_source_failed",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.email.dealsWon": {
+        "availability": "unavailable",
+        "reason": "crm_source_failed",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.email.meetingsBooked": {
+        "availability": "unavailable",
+        "reason": "crm_source_failed",
+        "unit": "meetings",
+        "value": null
+      },
+      "pipeline.email.wonDealValue": {
+        "availability": "unavailable",
+        "reason": "crm_source_failed",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.linkedin.createdDealValue": {
+        "availability": "unavailable",
+        "reason": "crm_source_failed",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.linkedin.dealsCreated": {
+        "availability": "unavailable",
+        "reason": "crm_source_failed",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.linkedin.dealsWon": {
+        "availability": "unavailable",
+        "reason": "crm_source_failed",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.linkedin.meetingsBooked": {
+        "availability": "unavailable",
+        "reason": "crm_source_failed",
+        "unit": "meetings",
+        "value": null
+      },
+      "pipeline.linkedin.wonDealValue": {
+        "availability": "unavailable",
+        "reason": "crm_source_failed",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.meetingsBooked": {
+        "availability": "unavailable",
+        "reason": "crm_source_failed",
+        "unit": "meetings",
+        "value": null
+      },
+      "pipeline.wonDealValue": {
+        "availability": "unavailable",
+        "reason": "crm_source_failed",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "research.quality": {
+        "availability": "not_applicable",
+        "denominator": 0,
+        "numerator": 0,
+        "reason": "empty_population",
+        "unit": "ratio",
+        "value": null
+      },
+      "research.researched": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.tierA": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.tierAB": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.tierB": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.tierC": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.unclassified": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      }
+    },
+    "observed_at": "2026-11-05T16:48:10.290915+00:00",
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "period_closed": true,
+    "senders": [
+      {
+        "deleted": false,
+        "display_name": "Blake",
+        "metrics": {
+          "email.peopleEmailed": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "linkedin.connectionsSent": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "linkedin.peopleMessaged": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          }
+        },
+        "sender_id": "15711000-0000-4000-8000-000000000012"
+      }
+    ],
+    "sources": {
+      "crm": {
+        "connected": true,
+        "failed": true,
+        "provider": "hubspot",
+        "synced_at": "2026-11-03T00:30:00+00:00"
+      }
+    },
+    "workspace_id": "15711000-0000-4000-8000-000000000002"
+  },
+  "measurements_current": {
+    "metrics": {
+      "conversion.connectionAccepted": {
+        "availability": "collecting",
+        "denominator": 0,
+        "horizon_days": 28,
+        "matures_at": "2026-12-07T00:00:00+00:00",
+        "numerator": 0,
+        "reason": "cohort_maturing",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.email.replied": {
+        "availability": "collecting",
+        "denominator": 0,
+        "horizon_days": 28,
+        "matures_at": "2026-12-07T00:00:00+00:00",
+        "numerator": 0,
+        "reason": "cohort_maturing",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.linkedin.replied": {
+        "availability": "collecting",
+        "denominator": 0,
+        "horizon_days": 28,
+        "matures_at": "2026-12-07T00:00:00+00:00",
+        "numerator": 0,
+        "reason": "cohort_maturing",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.meeting": {
+        "availability": "not_applicable",
+        "denominator": null,
+        "horizon_days": 28,
+        "matures_at": "2026-12-07T00:00:00+00:00",
+        "numerator": null,
+        "reason": "crm_not_connected",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.won": {
+        "availability": "not_applicable",
+        "denominator": null,
+        "horizon_days": 28,
+        "matures_at": "2026-12-07T00:00:00+00:00",
+        "numerator": null,
+        "reason": "crm_not_connected",
+        "unit": "ratio",
+        "value": null
+      },
+      "crm.companiesCreated": {
+        "ambiguous_receipts": 0,
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "entities",
+        "value": null
+      },
+      "crm.companiesEnriched": {
+        "ambiguous_receipts": 0,
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "entities",
+        "value": null
+      },
+      "crm.contactsCreated": {
+        "ambiguous_receipts": 0,
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "entities",
+        "value": null
+      },
+      "crm.contactsEnriched": {
+        "ambiguous_receipts": 0,
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "entities",
+        "value": null
+      },
+      "discovery.suppressedBeforeResearch": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "email.messagesSent": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "messages",
+        "value": 0
+      },
+      "email.peopleBlocked": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "email.peopleBounced": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "email.peopleEmailed": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "email.peopleReplied": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "linkedin.connectionsAccepted": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "linkedin.connectionsSent": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "linkedin.peopleMessaged": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "linkedin.peopleReplied": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "pipeline.createdDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.dealsCreated": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.dealsWon": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.email.createdDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.email.dealsCreated": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.email.dealsWon": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.email.meetingsBooked": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "meetings",
+        "value": null
+      },
+      "pipeline.email.wonDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.linkedin.createdDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.linkedin.dealsCreated": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.linkedin.dealsWon": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.linkedin.meetingsBooked": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "meetings",
+        "value": null
+      },
+      "pipeline.linkedin.wonDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.meetingsBooked": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "meetings",
+        "value": null
+      },
+      "pipeline.wonDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "research.quality": {
+        "availability": "not_applicable",
+        "denominator": 0,
+        "numerator": 0,
+        "reason": "empty_population",
+        "unit": "ratio",
+        "value": null
+      },
+      "research.researched": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.tierA": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.tierAB": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.tierB": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.tierC": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.unclassified": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      }
+    },
+    "observed_at": "2026-11-05T16:48:10.290915+00:00",
+    "period": {
+      "end": "2026-11-09T00:00:00+00:00",
+      "start": "2026-11-02T00:00:00+00:00"
+    },
+    "period_closed": false,
+    "senders": [
+      {
+        "deleted": false,
+        "display_name": "Avery",
+        "metrics": {
+          "email.peopleEmailed": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "linkedin.connectionsSent": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "linkedin.peopleMessaged": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          }
+        },
+        "sender_id": "15711000-0000-4000-8000-000000000011"
+      }
+    ],
+    "sources": {
+      "crm": {
+        "connected": false,
+        "failed": false,
+        "provider": null,
+        "synced_at": null
+      }
+    },
+    "workspace_id": "15711000-0000-4000-8000-000000000001"
+  },
+  "measurements_range": {
+    "metrics": {
+      "conversion.connectionAccepted": {
+        "availability": "collecting",
+        "denominator": 1,
+        "horizon_days": 28,
+        "matures_at": "2026-12-02T12:34:56.123456+00:00",
+        "numerator": 1,
+        "reason": "cohort_maturing",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.email.replied": {
+        "availability": "collecting",
+        "denominator": 3,
+        "horizon_days": 28,
+        "matures_at": "2026-12-02T12:34:56.123456+00:00",
+        "numerator": 3,
+        "reason": "cohort_maturing",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.linkedin.replied": {
+        "availability": "collecting",
+        "denominator": 1,
+        "horizon_days": 28,
+        "matures_at": "2026-12-02T12:34:56.123456+00:00",
+        "numerator": 1,
+        "reason": "cohort_maturing",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.meeting": {
+        "availability": "not_applicable",
+        "denominator": null,
+        "horizon_days": 28,
+        "matures_at": "2026-12-02T12:34:56.123456+00:00",
+        "numerator": null,
+        "reason": "crm_not_connected",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.won": {
+        "availability": "not_applicable",
+        "denominator": null,
+        "horizon_days": 28,
+        "matures_at": "2026-12-02T12:34:56.123456+00:00",
+        "numerator": null,
+        "reason": "crm_not_connected",
+        "unit": "ratio",
+        "value": null
+      },
+      "crm.companiesCreated": {
+        "ambiguous_receipts": 0,
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "entities",
+        "value": null
+      },
+      "crm.companiesEnriched": {
+        "ambiguous_receipts": 0,
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "entities",
+        "value": null
+      },
+      "crm.contactsCreated": {
+        "ambiguous_receipts": 0,
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "entities",
+        "value": null
+      },
+      "crm.contactsEnriched": {
+        "ambiguous_receipts": 0,
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "entities",
+        "value": null
+      },
+      "discovery.suppressedBeforeResearch": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "email.messagesSent": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "messages",
+        "value": 4
+      },
+      "email.peopleBlocked": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "email.peopleBounced": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "email.peopleEmailed": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 3
+      },
+      "email.peopleReplied": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 4
+      },
+      "linkedin.connectionsAccepted": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "linkedin.connectionsSent": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "linkedin.peopleMessaged": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "linkedin.peopleReplied": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "pipeline.createdDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.dealsCreated": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.dealsWon": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.email.createdDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.email.dealsCreated": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.email.dealsWon": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.email.meetingsBooked": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "meetings",
+        "value": null
+      },
+      "pipeline.email.wonDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.linkedin.createdDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.linkedin.dealsCreated": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.linkedin.dealsWon": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.linkedin.meetingsBooked": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "meetings",
+        "value": null
+      },
+      "pipeline.linkedin.wonDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.meetingsBooked": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "meetings",
+        "value": null
+      },
+      "pipeline.wonDealValue": {
+        "availability": "not_applicable",
+        "reason": "crm_not_connected",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "research.quality": {
+        "availability": "complete",
+        "denominator": 3,
+        "numerator": 1,
+        "reason": null,
+        "unit": "ratio",
+        "value": 0.3333
+      },
+      "research.researched": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 3
+      },
+      "research.tierA": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "research.tierAB": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "research.tierB": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.tierC": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      },
+      "research.unclassified": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 1
+      }
+    },
+    "observed_at": "2026-11-05T16:48:10.290915+00:00",
+    "period": {
+      "end": "2026-11-04T12:34:56.123456+00:00",
+      "start": "2026-10-05T12:34:56.123456+00:00"
+    },
+    "period_closed": true,
+    "senders": [
+      {
+        "deleted": false,
+        "display_name": "Avery",
+        "metrics": {
+          "email.peopleEmailed": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 3
+          },
+          "linkedin.connectionsSent": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "linkedin.peopleMessaged": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          }
+        },
+        "sender_id": "15711000-0000-4000-8000-000000000011"
+      }
+    ],
+    "sources": {
+      "crm": {
+        "connected": false,
+        "failed": false,
+        "provider": null,
+        "synced_at": null
+      }
+    },
+    "workspace_id": "15711000-0000-4000-8000-000000000001"
+  },
+  "measurements_unsynced": {
+    "metrics": {
+      "conversion.connectionAccepted": {
+        "availability": "not_applicable",
+        "denominator": null,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": null,
+        "reason": "channel_not_used",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.email.replied": {
+        "availability": "not_applicable",
+        "denominator": null,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": null,
+        "reason": "channel_not_used",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.linkedin.replied": {
+        "availability": "not_applicable",
+        "denominator": null,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": null,
+        "reason": "channel_not_used",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.meeting": {
+        "availability": "unavailable",
+        "denominator": null,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": null,
+        "reason": "crm_not_synced",
+        "unit": "ratio",
+        "value": null
+      },
+      "conversion.won": {
+        "availability": "unavailable",
+        "denominator": null,
+        "horizon_days": 28,
+        "matures_at": "2026-11-30T00:00:00+00:00",
+        "numerator": null,
+        "reason": "crm_not_synced",
+        "unit": "ratio",
+        "value": null
+      },
+      "crm.companiesCreated": {
+        "ambiguous_receipts": 0,
+        "availability": "complete",
+        "reason": null,
+        "unit": "entities",
+        "value": 0
+      },
+      "crm.companiesEnriched": {
+        "ambiguous_receipts": 0,
+        "availability": "complete",
+        "reason": null,
+        "unit": "entities",
+        "value": 0
+      },
+      "crm.contactsCreated": {
+        "ambiguous_receipts": 0,
+        "availability": "complete",
+        "reason": null,
+        "unit": "entities",
+        "value": 0
+      },
+      "crm.contactsEnriched": {
+        "ambiguous_receipts": 0,
+        "availability": "complete",
+        "reason": null,
+        "unit": "entities",
+        "value": 0
+      },
+      "discovery.suppressedBeforeResearch": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "email.messagesSent": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "messages",
+        "value": null
+      },
+      "email.peopleBlocked": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "people",
+        "value": null
+      },
+      "email.peopleBounced": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "people",
+        "value": null
+      },
+      "email.peopleEmailed": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "people",
+        "value": null
+      },
+      "email.peopleReplied": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "people",
+        "value": null
+      },
+      "linkedin.connectionsAccepted": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "people",
+        "value": null
+      },
+      "linkedin.connectionsSent": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "people",
+        "value": null
+      },
+      "linkedin.peopleMessaged": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "people",
+        "value": null
+      },
+      "linkedin.peopleReplied": {
+        "availability": "not_applicable",
+        "reason": "channel_not_used",
+        "unit": "people",
+        "value": null
+      },
+      "pipeline.createdDealValue": {
+        "availability": "unavailable",
+        "reason": "crm_not_synced",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.dealsCreated": {
+        "availability": "unavailable",
+        "reason": "crm_not_synced",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.dealsWon": {
+        "availability": "unavailable",
+        "reason": "crm_not_synced",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.email.createdDealValue": {
+        "availability": "unavailable",
+        "reason": "crm_not_synced",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.email.dealsCreated": {
+        "availability": "unavailable",
+        "reason": "crm_not_synced",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.email.dealsWon": {
+        "availability": "unavailable",
+        "reason": "crm_not_synced",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.email.meetingsBooked": {
+        "availability": "unavailable",
+        "reason": "crm_not_synced",
+        "unit": "meetings",
+        "value": null
+      },
+      "pipeline.email.wonDealValue": {
+        "availability": "unavailable",
+        "reason": "crm_not_synced",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.linkedin.createdDealValue": {
+        "availability": "unavailable",
+        "reason": "crm_not_synced",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.linkedin.dealsCreated": {
+        "availability": "unavailable",
+        "reason": "crm_not_synced",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.linkedin.dealsWon": {
+        "availability": "unavailable",
+        "reason": "crm_not_synced",
+        "unit": "deals",
+        "value": null
+      },
+      "pipeline.linkedin.meetingsBooked": {
+        "availability": "unavailable",
+        "reason": "crm_not_synced",
+        "unit": "meetings",
+        "value": null
+      },
+      "pipeline.linkedin.wonDealValue": {
+        "availability": "unavailable",
+        "reason": "crm_not_synced",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "pipeline.meetingsBooked": {
+        "availability": "unavailable",
+        "reason": "crm_not_synced",
+        "unit": "meetings",
+        "value": null
+      },
+      "pipeline.wonDealValue": {
+        "availability": "unavailable",
+        "reason": "crm_not_synced",
+        "unit": "money",
+        "unpriced": null,
+        "value": null
+      },
+      "research.quality": {
+        "availability": "not_applicable",
+        "denominator": 0,
+        "numerator": 0,
+        "reason": "empty_population",
+        "unit": "ratio",
+        "value": null
+      },
+      "research.researched": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.tierA": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.tierAB": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.tierB": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.tierC": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      },
+      "research.unclassified": {
+        "availability": "complete",
+        "reason": null,
+        "unit": "people",
+        "value": 0
+      }
+    },
+    "observed_at": "2026-11-05T16:48:10.290915+00:00",
+    "period": {
+      "end": "2026-11-02T00:00:00+00:00",
+      "start": "2026-10-26T00:00:00+00:00"
+    },
+    "period_closed": true,
+    "senders": [],
+    "sources": {
+      "crm": {
+        "connected": true,
+        "failed": false,
+        "provider": "attio",
+        "synced_at": null
+      }
+    },
+    "workspace_id": "15711000-0000-4000-8000-000000000003"
+  },
+  "reports_corrected": [
+    {
+      "calculated_at": "2026-11-05T16:48:10.8409+00:00",
+      "payload": {
+        "metrics": {
+          "conversion.connectionAccepted": {
+            "availability": "collecting",
+            "denominator": 1,
+            "horizon_days": 28,
+            "matures_at": "2026-11-30T00:00:00+00:00",
+            "numerator": 1,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.email.replied": {
+            "availability": "collecting",
+            "denominator": 3,
+            "horizon_days": 28,
+            "matures_at": "2026-11-30T00:00:00+00:00",
+            "numerator": 3,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.linkedin.replied": {
+            "availability": "collecting",
+            "denominator": 1,
+            "horizon_days": 28,
+            "matures_at": "2026-11-30T00:00:00+00:00",
+            "numerator": 1,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.meeting": {
+            "availability": "not_applicable",
+            "denominator": null,
+            "horizon_days": 28,
+            "matures_at": "2026-11-30T00:00:00+00:00",
+            "numerator": null,
+            "reason": "crm_not_connected",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.won": {
+            "availability": "not_applicable",
+            "denominator": null,
+            "horizon_days": 28,
+            "matures_at": "2026-11-30T00:00:00+00:00",
+            "numerator": null,
+            "reason": "crm_not_connected",
+            "unit": "ratio",
+            "value": null
+          },
+          "crm.companiesCreated": {
+            "ambiguous_receipts": 0,
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "entities",
+            "value": null
+          },
+          "crm.companiesEnriched": {
+            "ambiguous_receipts": 0,
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "entities",
+            "value": null
+          },
+          "crm.contactsCreated": {
+            "ambiguous_receipts": 0,
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "entities",
+            "value": null
+          },
+          "crm.contactsEnriched": {
+            "ambiguous_receipts": 0,
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "entities",
+            "value": null
+          },
+          "discovery.suppressedBeforeResearch": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "email.messagesSent": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "messages",
+            "value": 4
+          },
+          "email.peopleBlocked": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.peopleBounced": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.peopleEmailed": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 3
+          },
+          "email.peopleReplied": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 4
+          },
+          "linkedin.connectionsAccepted": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "linkedin.connectionsSent": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "linkedin.peopleMessaged": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "linkedin.peopleReplied": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "pipeline.createdDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.dealsCreated": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.dealsWon": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.email.createdDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.email.dealsCreated": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.email.dealsWon": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.email.meetingsBooked": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "meetings",
+            "value": null
+          },
+          "pipeline.email.wonDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.linkedin.createdDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.linkedin.dealsCreated": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.linkedin.dealsWon": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.linkedin.meetingsBooked": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "meetings",
+            "value": null
+          },
+          "pipeline.linkedin.wonDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.meetingsBooked": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "meetings",
+            "value": null
+          },
+          "pipeline.wonDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "research.quality": {
+            "availability": "complete",
+            "denominator": 3,
+            "numerator": 1,
+            "reason": null,
+            "unit": "ratio",
+            "value": 0.3333
+          },
+          "research.researched": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 3
+          },
+          "research.tierA": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "research.tierAB": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "research.tierB": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "research.tierC": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "research.unclassified": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          }
+        },
+        "observed_at": "2026-11-05T16:48:10.290915+00:00",
+        "period": {
+          "end": "2026-11-02T00:00:00+00:00",
+          "start": "2026-10-26T00:00:00+00:00"
+        },
+        "period_closed": true,
+        "publication_state": "complete",
+        "schema_version": 1,
+        "senders": [
+          {
+            "deleted": false,
+            "display_name": "Avery",
+            "metrics": {
+              "email.peopleEmailed": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 3
+              },
+              "linkedin.connectionsSent": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 1
+              },
+              "linkedin.peopleMessaged": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 1
+              }
+            },
+            "sender_id": "15711000-0000-4000-8000-000000000011"
+          }
+        ],
+        "sources": {
+          "crm": {
+            "connected": false,
+            "failed": false,
+            "provider": null,
+            "synced_at": null
+          }
+        },
+        "workspace_id": "15711000-0000-4000-8000-000000000001"
+      },
+      "period_end": "2026-11-02T00:00:00+00:00",
+      "period_start": "2026-10-26T00:00:00+00:00",
+      "week_start": "2026-10-26",
+      "workspace_id": "15711000-0000-4000-8000-000000000001"
+    }
+  ],
+  "reports_crm": [
+    {
+      "calculated_at": "2026-11-05T16:48:10.807914+00:00",
+      "payload": {
+        "metrics": {
+          "conversion.connectionAccepted": {
+            "availability": "collecting",
+            "denominator": 0,
+            "horizon_days": 28,
+            "matures_at": "2026-11-23T00:00:00+00:00",
+            "numerator": 0,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.email.replied": {
+            "availability": "collecting",
+            "denominator": 0,
+            "horizon_days": 28,
+            "matures_at": "2026-11-23T00:00:00+00:00",
+            "numerator": 0,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.linkedin.replied": {
+            "availability": "collecting",
+            "denominator": 0,
+            "horizon_days": 28,
+            "matures_at": "2026-11-23T00:00:00+00:00",
+            "numerator": 0,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.meeting": {
+            "availability": "collecting",
+            "denominator": 0,
+            "horizon_days": 28,
+            "matures_at": "2026-11-23T00:00:00+00:00",
+            "numerator": 0,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.won": {
+            "availability": "collecting",
+            "denominator": 0,
+            "horizon_days": 28,
+            "matures_at": "2026-11-23T00:00:00+00:00",
+            "numerator": 0,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "crm.companiesCreated": {
+            "ambiguous_receipts": 1,
+            "availability": "unavailable",
+            "reason": "object_write_evidence_missing",
+            "unit": "entities",
+            "value": null
+          },
+          "crm.companiesEnriched": {
+            "ambiguous_receipts": 1,
+            "availability": "unavailable",
+            "reason": "object_write_evidence_missing",
+            "unit": "entities",
+            "value": null
+          },
+          "crm.contactsCreated": {
+            "ambiguous_receipts": 1,
+            "availability": "unavailable",
+            "reason": "object_write_evidence_missing",
+            "unit": "entities",
+            "value": null
+          },
+          "crm.contactsEnriched": {
+            "ambiguous_receipts": 1,
+            "availability": "unavailable",
+            "reason": "object_write_evidence_missing",
+            "unit": "entities",
+            "value": null
+          },
+          "discovery.suppressedBeforeResearch": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.messagesSent": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "messages",
+            "value": 0
+          },
+          "email.peopleBlocked": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.peopleBounced": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.peopleEmailed": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.peopleReplied": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "linkedin.connectionsAccepted": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "linkedin.connectionsSent": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "linkedin.peopleMessaged": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "linkedin.peopleReplied": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "pipeline.createdDealValue": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "money",
+            "unpriced": 0,
+            "value": []
+          },
+          "pipeline.dealsCreated": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "deals",
+            "value": 0
+          },
+          "pipeline.dealsWon": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "deals",
+            "value": 0
+          },
+          "pipeline.email.createdDealValue": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "money",
+            "unpriced": 0,
+            "value": []
+          },
+          "pipeline.email.dealsCreated": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "deals",
+            "value": 0
+          },
+          "pipeline.email.dealsWon": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "deals",
+            "value": 0
+          },
+          "pipeline.email.meetingsBooked": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "meetings",
+            "value": 0
+          },
+          "pipeline.email.wonDealValue": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "money",
+            "unpriced": 0,
+            "value": []
+          },
+          "pipeline.linkedin.createdDealValue": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "money",
+            "unpriced": 0,
+            "value": []
+          },
+          "pipeline.linkedin.dealsCreated": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "deals",
+            "value": 0
+          },
+          "pipeline.linkedin.dealsWon": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "deals",
+            "value": 0
+          },
+          "pipeline.linkedin.meetingsBooked": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "meetings",
+            "value": 0
+          },
+          "pipeline.linkedin.wonDealValue": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "money",
+            "unpriced": 0,
+            "value": []
+          },
+          "pipeline.meetingsBooked": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "meetings",
+            "value": 0
+          },
+          "pipeline.wonDealValue": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "money",
+            "unpriced": 0,
+            "value": []
+          },
+          "research.quality": {
+            "availability": "not_applicable",
+            "denominator": 0,
+            "numerator": 0,
+            "reason": "empty_population",
+            "unit": "ratio",
+            "value": null
+          },
+          "research.researched": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "research.tierA": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "research.tierAB": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "research.tierB": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "research.tierC": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "research.unclassified": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          }
+        },
+        "observed_at": "2026-11-05T16:48:10.290915+00:00",
+        "period": {
+          "end": "2026-10-26T00:00:00+00:00",
+          "start": "2026-10-19T00:00:00+00:00"
+        },
+        "period_closed": true,
+        "publication_state": "complete",
+        "schema_version": 1,
+        "senders": [
+          {
+            "deleted": false,
+            "display_name": "Blake",
+            "metrics": {
+              "email.peopleEmailed": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 0
+              },
+              "linkedin.connectionsSent": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 0
+              },
+              "linkedin.peopleMessaged": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 0
+              }
+            },
+            "sender_id": "15711000-0000-4000-8000-000000000012"
+          }
+        ],
+        "sources": {
+          "crm": {
+            "connected": true,
+            "failed": false,
+            "provider": "hubspot",
+            "synced_at": "2026-11-03T00:30:00+00:00"
+          }
+        },
+        "workspace_id": "15711000-0000-4000-8000-000000000002"
+      },
+      "period_end": "2026-10-26T00:00:00+00:00",
+      "period_start": "2026-10-19T00:00:00+00:00",
+      "week_start": "2026-10-19",
+      "workspace_id": "15711000-0000-4000-8000-000000000002"
+    },
+    {
+      "calculated_at": "2026-11-05T16:48:10.800341+00:00",
+      "payload": {
+        "metrics": {
+          "conversion.connectionAccepted": {
+            "availability": "collecting",
+            "denominator": 1,
+            "horizon_days": 28,
+            "matures_at": "2026-11-30T00:00:00+00:00",
+            "numerator": 0,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.email.replied": {
+            "availability": "collecting",
+            "denominator": 1,
+            "horizon_days": 28,
+            "matures_at": "2026-11-30T00:00:00+00:00",
+            "numerator": 1,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.linkedin.replied": {
+            "availability": "collecting",
+            "denominator": 1,
+            "horizon_days": 28,
+            "matures_at": "2026-11-30T00:00:00+00:00",
+            "numerator": 1,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.meeting": {
+            "availability": "collecting",
+            "denominator": 2,
+            "horizon_days": 28,
+            "matures_at": "2026-11-30T00:00:00+00:00",
+            "numerator": 1,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.won": {
+            "availability": "collecting",
+            "denominator": 2,
+            "horizon_days": 28,
+            "matures_at": "2026-11-30T00:00:00+00:00",
+            "numerator": 1,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "crm.companiesCreated": {
+            "ambiguous_receipts": 0,
+            "availability": "complete",
+            "reason": null,
+            "unit": "entities",
+            "value": 1
+          },
+          "crm.companiesEnriched": {
+            "ambiguous_receipts": 0,
+            "availability": "complete",
+            "reason": null,
+            "unit": "entities",
+            "value": 1
+          },
+          "crm.contactsCreated": {
+            "ambiguous_receipts": 0,
+            "availability": "complete",
+            "reason": null,
+            "unit": "entities",
+            "value": 1
+          },
+          "crm.contactsEnriched": {
+            "ambiguous_receipts": 0,
+            "availability": "complete",
+            "reason": null,
+            "unit": "entities",
+            "value": 1
+          },
+          "discovery.suppressedBeforeResearch": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.messagesSent": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "messages",
+            "value": 1
+          },
+          "email.peopleBlocked": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.peopleBounced": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.peopleEmailed": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "email.peopleReplied": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "linkedin.connectionsAccepted": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "linkedin.connectionsSent": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "linkedin.peopleMessaged": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "linkedin.peopleReplied": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "pipeline.createdDealValue": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "money",
+            "unpriced": 1,
+            "value": [
+              {
+                "amount": 1500,
+                "currency": "USD",
+                "deals": 2
+              }
+            ]
+          },
+          "pipeline.dealsCreated": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "deals",
+            "value": 3
+          },
+          "pipeline.dealsWon": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "deals",
+            "value": 1
+          },
+          "pipeline.email.createdDealValue": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "money",
+            "unpriced": 1,
+            "value": [
+              {
+                "amount": 1000,
+                "currency": "USD",
+                "deals": 1
+              }
+            ]
+          },
+          "pipeline.email.dealsCreated": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "deals",
+            "value": 2
+          },
+          "pipeline.email.dealsWon": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "deals",
+            "value": 0
+          },
+          "pipeline.email.meetingsBooked": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "meetings",
+            "value": 1
+          },
+          "pipeline.email.wonDealValue": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "money",
+            "unpriced": 0,
+            "value": []
+          },
+          "pipeline.linkedin.createdDealValue": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "money",
+            "unpriced": 0,
+            "value": [
+              {
+                "amount": 500,
+                "currency": "USD",
+                "deals": 1
+              }
+            ]
+          },
+          "pipeline.linkedin.dealsCreated": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "deals",
+            "value": 1
+          },
+          "pipeline.linkedin.dealsWon": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "deals",
+            "value": 1
+          },
+          "pipeline.linkedin.meetingsBooked": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "meetings",
+            "value": 0
+          },
+          "pipeline.linkedin.wonDealValue": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "money",
+            "unpriced": 0,
+            "value": [
+              {
+                "amount": 500,
+                "currency": "USD",
+                "deals": 1
+              }
+            ]
+          },
+          "pipeline.meetingsBooked": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "meetings",
+            "value": 1
+          },
+          "pipeline.wonDealValue": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "money",
+            "unpriced": 0,
+            "value": [
+              {
+                "amount": 500,
+                "currency": "USD",
+                "deals": 1
+              }
+            ]
+          },
+          "research.quality": {
+            "availability": "not_applicable",
+            "denominator": 0,
+            "numerator": 0,
+            "reason": "empty_population",
+            "unit": "ratio",
+            "value": null
+          },
+          "research.researched": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "research.tierA": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "research.tierAB": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "research.tierB": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "research.tierC": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "research.unclassified": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          }
+        },
+        "observed_at": "2026-11-05T16:48:10.290915+00:00",
+        "period": {
+          "end": "2026-11-02T00:00:00+00:00",
+          "start": "2026-10-26T00:00:00+00:00"
+        },
+        "period_closed": true,
+        "publication_state": "complete",
+        "schema_version": 1,
+        "senders": [
+          {
+            "deleted": false,
+            "display_name": "Blake",
+            "metrics": {
+              "email.peopleEmailed": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 1
+              },
+              "linkedin.connectionsSent": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 1
+              },
+              "linkedin.peopleMessaged": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 1
+              }
+            },
+            "sender_id": "15711000-0000-4000-8000-000000000012"
+          }
+        ],
+        "sources": {
+          "crm": {
+            "connected": true,
+            "failed": false,
+            "provider": "hubspot",
+            "synced_at": "2026-11-03T00:30:00+00:00"
+          }
+        },
+        "workspace_id": "15711000-0000-4000-8000-000000000002"
+      },
+      "period_end": "2026-11-02T00:00:00+00:00",
+      "period_start": "2026-10-26T00:00:00+00:00",
+      "week_start": "2026-10-26",
+      "workspace_id": "15711000-0000-4000-8000-000000000002"
+    }
+  ],
+  "reports_empty": [],
+  "reports_range": [
+    {
+      "calculated_at": "2026-11-05T16:48:10.786042+00:00",
+      "payload": {
+        "metrics": {
+          "conversion.connectionAccepted": {
+            "availability": "not_applicable",
+            "denominator": 0,
+            "horizon_days": 28,
+            "matures_at": "2026-05-11T00:00:00+00:00",
+            "numerator": 0,
+            "reason": "empty_cohort",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.email.replied": {
+            "availability": "not_applicable",
+            "denominator": 0,
+            "horizon_days": 28,
+            "matures_at": "2026-05-11T00:00:00+00:00",
+            "numerator": 0,
+            "reason": "empty_cohort",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.linkedin.replied": {
+            "availability": "not_applicable",
+            "denominator": 0,
+            "horizon_days": 28,
+            "matures_at": "2026-05-11T00:00:00+00:00",
+            "numerator": 0,
+            "reason": "empty_cohort",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.meeting": {
+            "availability": "not_applicable",
+            "denominator": null,
+            "horizon_days": 28,
+            "matures_at": "2026-05-11T00:00:00+00:00",
+            "numerator": null,
+            "reason": "crm_not_connected",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.won": {
+            "availability": "not_applicable",
+            "denominator": null,
+            "horizon_days": 28,
+            "matures_at": "2026-05-11T00:00:00+00:00",
+            "numerator": null,
+            "reason": "crm_not_connected",
+            "unit": "ratio",
+            "value": null
+          },
+          "crm.companiesCreated": {
+            "ambiguous_receipts": 0,
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "entities",
+            "value": null
+          },
+          "crm.companiesEnriched": {
+            "ambiguous_receipts": 0,
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "entities",
+            "value": null
+          },
+          "crm.contactsCreated": {
+            "ambiguous_receipts": 0,
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "entities",
+            "value": null
+          },
+          "crm.contactsEnriched": {
+            "ambiguous_receipts": 0,
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "entities",
+            "value": null
+          },
+          "discovery.suppressedBeforeResearch": {
+            "availability": "unavailable",
+            "reason": "before_history",
+            "unit": "people",
+            "value": null
+          },
+          "email.messagesSent": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "messages",
+            "value": 0
+          },
+          "email.peopleBlocked": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.peopleBounced": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.peopleEmailed": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.peopleReplied": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "linkedin.connectionsAccepted": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "linkedin.connectionsSent": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "linkedin.peopleMessaged": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "linkedin.peopleReplied": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "pipeline.createdDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.dealsCreated": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.dealsWon": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.email.createdDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.email.dealsCreated": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.email.dealsWon": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.email.meetingsBooked": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "meetings",
+            "value": null
+          },
+          "pipeline.email.wonDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.linkedin.createdDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.linkedin.dealsCreated": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.linkedin.dealsWon": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.linkedin.meetingsBooked": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "meetings",
+            "value": null
+          },
+          "pipeline.linkedin.wonDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.meetingsBooked": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "meetings",
+            "value": null
+          },
+          "pipeline.wonDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "research.quality": {
+            "availability": "unavailable",
+            "denominator": null,
+            "numerator": null,
+            "reason": "before_history",
+            "unit": "ratio",
+            "value": null
+          },
+          "research.researched": {
+            "availability": "unavailable",
+            "reason": "before_history",
+            "unit": "people",
+            "value": null
+          },
+          "research.tierA": {
+            "availability": "unavailable",
+            "reason": "before_history",
+            "unit": "people",
+            "value": null
+          },
+          "research.tierAB": {
+            "availability": "unavailable",
+            "reason": "before_history",
+            "unit": "people",
+            "value": null
+          },
+          "research.tierB": {
+            "availability": "unavailable",
+            "reason": "before_history",
+            "unit": "people",
+            "value": null
+          },
+          "research.tierC": {
+            "availability": "unavailable",
+            "reason": "before_history",
+            "unit": "people",
+            "value": null
+          },
+          "research.unclassified": {
+            "availability": "unavailable",
+            "reason": "before_history",
+            "unit": "people",
+            "value": null
+          }
+        },
+        "observed_at": "2026-11-05T16:48:10.290915+00:00",
+        "period": {
+          "end": "2026-04-13T00:00:00+00:00",
+          "start": "2026-04-06T00:00:00+00:00"
+        },
+        "period_closed": true,
+        "publication_state": "complete",
+        "schema_version": 1,
+        "senders": [
+          {
+            "deleted": false,
+            "display_name": "Avery",
+            "metrics": {
+              "email.peopleEmailed": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 0
+              },
+              "linkedin.connectionsSent": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 0
+              },
+              "linkedin.peopleMessaged": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 0
+              }
+            },
+            "sender_id": "15711000-0000-4000-8000-000000000011"
+          }
+        ],
+        "sources": {
+          "crm": {
+            "connected": false,
+            "failed": false,
+            "provider": null,
+            "synced_at": null
+          }
+        },
+        "workspace_id": "15711000-0000-4000-8000-000000000001"
+      },
+      "period_end": "2026-04-13T00:00:00+00:00",
+      "period_start": "2026-04-06T00:00:00+00:00",
+      "week_start": "2026-04-06",
+      "workspace_id": "15711000-0000-4000-8000-000000000001"
+    },
+    {
+      "calculated_at": "2026-11-05T16:48:10.77658+00:00",
+      "payload": {
+        "metrics": {
+          "conversion.connectionAccepted": {
+            "availability": "collecting",
+            "denominator": 0,
+            "horizon_days": 28,
+            "matures_at": "2026-11-23T00:00:00+00:00",
+            "numerator": 0,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.email.replied": {
+            "availability": "collecting",
+            "denominator": 0,
+            "horizon_days": 28,
+            "matures_at": "2026-11-23T00:00:00+00:00",
+            "numerator": 0,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.linkedin.replied": {
+            "availability": "collecting",
+            "denominator": 0,
+            "horizon_days": 28,
+            "matures_at": "2026-11-23T00:00:00+00:00",
+            "numerator": 0,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.meeting": {
+            "availability": "not_applicable",
+            "denominator": null,
+            "horizon_days": 28,
+            "matures_at": "2026-11-23T00:00:00+00:00",
+            "numerator": null,
+            "reason": "crm_not_connected",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.won": {
+            "availability": "not_applicable",
+            "denominator": null,
+            "horizon_days": 28,
+            "matures_at": "2026-11-23T00:00:00+00:00",
+            "numerator": null,
+            "reason": "crm_not_connected",
+            "unit": "ratio",
+            "value": null
+          },
+          "crm.companiesCreated": {
+            "ambiguous_receipts": 0,
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "entities",
+            "value": null
+          },
+          "crm.companiesEnriched": {
+            "ambiguous_receipts": 0,
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "entities",
+            "value": null
+          },
+          "crm.contactsCreated": {
+            "ambiguous_receipts": 0,
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "entities",
+            "value": null
+          },
+          "crm.contactsEnriched": {
+            "ambiguous_receipts": 0,
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "entities",
+            "value": null
+          },
+          "discovery.suppressedBeforeResearch": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.messagesSent": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "messages",
+            "value": 0
+          },
+          "email.peopleBlocked": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.peopleBounced": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.peopleEmailed": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.peopleReplied": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "linkedin.connectionsAccepted": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "linkedin.connectionsSent": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "linkedin.peopleMessaged": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "linkedin.peopleReplied": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "pipeline.createdDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.dealsCreated": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.dealsWon": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.email.createdDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.email.dealsCreated": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.email.dealsWon": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.email.meetingsBooked": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "meetings",
+            "value": null
+          },
+          "pipeline.email.wonDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.linkedin.createdDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.linkedin.dealsCreated": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.linkedin.dealsWon": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.linkedin.meetingsBooked": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "meetings",
+            "value": null
+          },
+          "pipeline.linkedin.wonDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.meetingsBooked": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "meetings",
+            "value": null
+          },
+          "pipeline.wonDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "research.quality": {
+            "availability": "not_applicable",
+            "denominator": 0,
+            "numerator": 0,
+            "reason": "empty_population",
+            "unit": "ratio",
+            "value": null
+          },
+          "research.researched": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "research.tierA": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "research.tierAB": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "research.tierB": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "research.tierC": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "research.unclassified": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          }
+        },
+        "observed_at": "2026-11-05T16:48:10.290915+00:00",
+        "period": {
+          "end": "2026-10-26T00:00:00+00:00",
+          "start": "2026-10-19T00:00:00+00:00"
+        },
+        "period_closed": true,
+        "publication_state": "complete",
+        "schema_version": 1,
+        "senders": [
+          {
+            "deleted": false,
+            "display_name": "Avery",
+            "metrics": {
+              "email.peopleEmailed": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 0
+              },
+              "linkedin.connectionsSent": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 0
+              },
+              "linkedin.peopleMessaged": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 0
+              }
+            },
+            "sender_id": "15711000-0000-4000-8000-000000000011"
+          }
+        ],
+        "sources": {
+          "crm": {
+            "connected": false,
+            "failed": false,
+            "provider": null,
+            "synced_at": null
+          }
+        },
+        "workspace_id": "15711000-0000-4000-8000-000000000001"
+      },
+      "period_end": "2026-10-26T00:00:00+00:00",
+      "period_start": "2026-10-19T00:00:00+00:00",
+      "week_start": "2026-10-19",
+      "workspace_id": "15711000-0000-4000-8000-000000000001"
+    },
+    {
+      "calculated_at": "2026-11-05T16:48:10.769474+00:00",
+      "payload": {
+        "metrics": {
+          "conversion.connectionAccepted": {
+            "availability": "collecting",
+            "denominator": 1,
+            "horizon_days": 28,
+            "matures_at": "2026-11-30T00:00:00+00:00",
+            "numerator": 1,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.email.replied": {
+            "availability": "collecting",
+            "denominator": 3,
+            "horizon_days": 28,
+            "matures_at": "2026-11-30T00:00:00+00:00",
+            "numerator": 3,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.linkedin.replied": {
+            "availability": "collecting",
+            "denominator": 1,
+            "horizon_days": 28,
+            "matures_at": "2026-11-30T00:00:00+00:00",
+            "numerator": 1,
+            "reason": "cohort_maturing",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.meeting": {
+            "availability": "not_applicable",
+            "denominator": null,
+            "horizon_days": 28,
+            "matures_at": "2026-11-30T00:00:00+00:00",
+            "numerator": null,
+            "reason": "crm_not_connected",
+            "unit": "ratio",
+            "value": null
+          },
+          "conversion.won": {
+            "availability": "not_applicable",
+            "denominator": null,
+            "horizon_days": 28,
+            "matures_at": "2026-11-30T00:00:00+00:00",
+            "numerator": null,
+            "reason": "crm_not_connected",
+            "unit": "ratio",
+            "value": null
+          },
+          "crm.companiesCreated": {
+            "ambiguous_receipts": 0,
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "entities",
+            "value": null
+          },
+          "crm.companiesEnriched": {
+            "ambiguous_receipts": 0,
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "entities",
+            "value": null
+          },
+          "crm.contactsCreated": {
+            "ambiguous_receipts": 0,
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "entities",
+            "value": null
+          },
+          "crm.contactsEnriched": {
+            "ambiguous_receipts": 0,
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "entities",
+            "value": null
+          },
+          "discovery.suppressedBeforeResearch": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "email.messagesSent": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "messages",
+            "value": 4
+          },
+          "email.peopleBlocked": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.peopleBounced": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "email.peopleEmailed": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 3
+          },
+          "email.peopleReplied": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 3
+          },
+          "linkedin.connectionsAccepted": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "linkedin.connectionsSent": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "linkedin.peopleMessaged": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "linkedin.peopleReplied": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "pipeline.createdDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.dealsCreated": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.dealsWon": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.email.createdDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.email.dealsCreated": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.email.dealsWon": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.email.meetingsBooked": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "meetings",
+            "value": null
+          },
+          "pipeline.email.wonDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.linkedin.createdDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.linkedin.dealsCreated": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.linkedin.dealsWon": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "deals",
+            "value": null
+          },
+          "pipeline.linkedin.meetingsBooked": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "meetings",
+            "value": null
+          },
+          "pipeline.linkedin.wonDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "pipeline.meetingsBooked": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "meetings",
+            "value": null
+          },
+          "pipeline.wonDealValue": {
+            "availability": "not_applicable",
+            "reason": "crm_not_connected",
+            "unit": "money",
+            "unpriced": null,
+            "value": null
+          },
+          "research.quality": {
+            "availability": "complete",
+            "denominator": 3,
+            "numerator": 1,
+            "reason": null,
+            "unit": "ratio",
+            "value": 0.3333
+          },
+          "research.researched": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 3
+          },
+          "research.tierA": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "research.tierAB": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "research.tierB": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 0
+          },
+          "research.tierC": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          },
+          "research.unclassified": {
+            "availability": "complete",
+            "reason": null,
+            "unit": "people",
+            "value": 1
+          }
+        },
+        "observed_at": "2026-11-05T16:48:10.290915+00:00",
+        "period": {
+          "end": "2026-11-02T00:00:00+00:00",
+          "start": "2026-10-26T00:00:00+00:00"
+        },
+        "period_closed": true,
+        "publication_state": "complete",
+        "schema_version": 1,
+        "senders": [
+          {
+            "deleted": false,
+            "display_name": "Avery",
+            "metrics": {
+              "email.peopleEmailed": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 3
+              },
+              "linkedin.connectionsSent": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 1
+              },
+              "linkedin.peopleMessaged": {
+                "availability": "complete",
+                "reason": null,
+                "unit": "people",
+                "value": 1
+              }
+            },
+            "sender_id": "15711000-0000-4000-8000-000000000011"
+          }
+        ],
+        "sources": {
+          "crm": {
+            "connected": false,
+            "failed": false,
+            "provider": null,
+            "synced_at": null
+          }
+        },
+        "workspace_id": "15711000-0000-4000-8000-000000000001"
+      },
+      "period_end": "2026-11-02T00:00:00+00:00",
+      "period_start": "2026-10-26T00:00:00+00:00",
+      "week_start": "2026-10-26",
+      "workspace_id": "15711000-0000-4000-8000-000000000001"
+    }
+  ]
+}

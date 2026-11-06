@@ -12,7 +12,7 @@ const Empty = z.object({}).strict();
 const Timestamp = z.iso.datetime({ offset: true });
 const Count = z.number().int().nonnegative();
 const isMonday = (value: string) => new Date(`${value}T00:00:00Z`).getUTCDay() === 1;
-const Monday = z.iso
+export const Monday = z.iso
   .date()
   .refine(isMonday, "Choose the Monday (UTC) that starts the week, as YYYY-MM-DD.")
   .describe("The Monday (UTC) that starts the week, YYYY-MM-DD.");
