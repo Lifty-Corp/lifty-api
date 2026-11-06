@@ -11,7 +11,7 @@ import { customerExclusionsEntries, validateCustomerExclusionsInput } from "./cu
 import { getWorkspaceSummary } from "./workspace-summary.js";
 import { getNextStep } from "./next-step.js";
 import { getConnectionNextStep } from "./connection-next-step.js";
-import { readAdminOnboarding } from "./admin-onboarding.js";
+import { readAdminOnboarding, readAdminOnboardingCatalog } from "./admin-onboarding.js";
 import { readAdminContext } from "./context-drafts.js";
 import { RunProgressQuerySchema, RunProgressSchema } from "./run-progress.js";
 import { NextStepSchema } from "./next-step-contracts.js";
@@ -98,6 +98,15 @@ export function registerStageRoutes(app: OpenAPIHono<AppEnvironment>, dependenci
     parse(Empty, context.req.query());
     context.header("cache-control", "no-store");
     return context.json(await readAdminOnboarding(dependencies, context.get("authSession")));
+  });
+  // LIF-1838: what the ops page renders before the positions above arrive.
+  app.openAPIRegistry.registerPath({ method: "get", path: "/v1/admin/onboarding/catalog", security: [{ bearerAuth: [] }],
+    responses: { 200: { description: "The next_step catalog, both context maps and the workspace list, with no read of any one workspace" },
+      403: { description: "Caller is not a LIFT admin" } } });
+  app.get("/v1/admin/onboarding/catalog", async context => {
+    parse(Empty, context.req.query());
+    context.header("cache-control", "no-store");
+    return context.json(await readAdminOnboardingCatalog(dependencies, context.get("authSession")));
   });
   // LIF-1298: published context files, drafts and test workspaces for the ops editor.
   app.openAPIRegistry.registerPath({ method: "get", path: "/v1/admin/context", security: [{ bearerAuth: [] }],

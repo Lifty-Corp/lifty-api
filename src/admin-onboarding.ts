@@ -33,6 +33,23 @@ export async function listAdminWorkspaces(session: AuthSession): Promise<AdminWo
 
 type Reads = Parameters<typeof getNextStep>[0] & Pick<AppDependencies, "listAdminWorkspaces">;
 
+function onboardingCatalog() {
+  const steps = Object.entries(NEXT_STEP_CATALOG).map(([reason, entry]) => {
+    const guide = nextStepGuide(reason)!;
+    return { reason, ...entry, guide: { ...entry.guide, revision: guide.revision, size: JSON.stringify(guide).length } };
+  });
+  // Contexts no step links, each with how the agent reaches it: the base of
+  // every step and the ones read on request (LIF-1301, LIF-1304).
+  return { steps, base: BASE_CONTEXTS, on_request: ON_REQUEST_CONTEXTS };
+}
+
+/** What the ops page renders before positions arrive (LIF-1838): the catalog
+ * and the workspace list, with no read of any one workspace. */
+export async function readAdminOnboardingCatalog(dependencies: Pick<AppDependencies, "listAdminWorkspaces">, session: AuthSession) {
+  const workspaces = await dependencies.listAdminWorkspaces(session);
+  return { generated_at: new Date().toISOString(), ...onboardingCatalog(), workspaces };
+}
+
 export async function readAdminOnboarding(dependencies: Reads, session: AuthSession) {
   const workspaces = await dependencies.listAdminWorkspaces(session);
   const positions: unknown[] = new Array(workspaces.length);
@@ -56,11 +73,5 @@ export async function readAdminOnboarding(dependencies: Reads, session: AuthSess
       }
     }
   }));
-  const steps = Object.entries(NEXT_STEP_CATALOG).map(([reason, entry]) => {
-    const guide = nextStepGuide(reason)!;
-    return { reason, ...entry, guide: { ...entry.guide, revision: guide.revision, size: JSON.stringify(guide).length } };
-  });
-  // Contexts no step links, each with how the agent reaches it: the base of
-  // every step and the ones read on request (LIF-1301, LIF-1304).
-  return { generated_at: new Date().toISOString(), steps, base: BASE_CONTEXTS, on_request: ON_REQUEST_CONTEXTS, workspaces: positions };
+  return { generated_at: new Date().toISOString(), ...onboardingCatalog(), workspaces: positions };
 }

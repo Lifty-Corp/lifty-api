@@ -67,7 +67,7 @@ function harness(admin: boolean) {
     getRunStatus: session => getRunStatus(session), getCrmSyncStatus, getAttioConnection,
     getHubspotConnection: hubspot.getConnection, log: () => {},
   });
-  const read = () => app.request("/v1/admin/onboarding", {
+  const read = (path = "/v1/admin/onboarding") => app.request(path, {
     headers: { authorization: "Bearer admin", "x-lifty-client-contract": STAGE_CLIENT_CONTRACT } });
   return { read, calls };
 }
@@ -117,5 +117,28 @@ describe("admin onboarding read", () => {
     expect(response.status).toBe(403);
     expect((await response.json()).error.code).toBe("ADMIN_REQUIRED");
     expect(h.calls.map(([name]) => name)).toEqual(["admin_list_workspaces"]);
+  });
+
+  it("serves the catalog and the workspace list without reading any one workspace", async () => {
+    const h = harness(true);
+    const response = await h.read("/v1/admin/onboarding/catalog");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    const body = await response.json();
+    expect(body.steps.map((step: { reason: string }) => step.reason)).toEqual(Object.keys(NEXT_STEP_CATALOG));
+    expect(body.base).toEqual(BASE_CONTEXTS);
+    expect(body.on_request).toEqual(ON_REQUEST_CONTEXTS);
+    expect(body.workspaces.map((item: { workspace_ref: string }) => item.workspace_ref)).toEqual(listed.map(item => item.workspace_ref));
+    expect(body.workspaces[1]).not.toHaveProperty("next_step");
+    expect(JSON.stringify(body)).not.toContain("founder@example.invalid");
+    // The ops page waits on this read, so it must never grow with the workspace count.
+    expect(h.calls.map(([name]) => name)).toEqual(["admin_list_workspaces"]);
+  });
+
+  it("refuses the catalog to a caller who is not a LIFT admin", async () => {
+    const h = harness(false);
+    const response = await h.read("/v1/admin/onboarding/catalog");
+    expect(response.status).toBe(403);
+    expect((await response.json()).error.code).toBe("ADMIN_REQUIRED");
   });
 });
