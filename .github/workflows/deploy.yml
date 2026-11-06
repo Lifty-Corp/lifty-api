@@ -98,4 +98,6 @@ jobs:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
       - name: Deploy exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: bash scripts/digitalocean.sh deploy "$GITHUB_SHA"

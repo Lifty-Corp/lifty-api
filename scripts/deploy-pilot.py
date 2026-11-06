@@ -9,7 +9,7 @@ import tempfile
 import urllib.request
 import urllib.error
 
-REPOSITORY = 'https://github.com/Lifty-Corp/lifty-api.git'
+REPOSITORY = 'Lifty-Corp/lifty-api'
 NAME = 'lifty-api-pilot'
 BASE = 'https://api.pilot.liftygtm.com'
 DATABASE = 'https://csyhcwpcojbjlwwxdmhc.supabase.co'
@@ -32,7 +32,8 @@ def check_spec(spec, installed=True):
     # Only the existing pilot may migrate from its former source. The final
     # spec and active deployment must both use staging.
     branches = {'staging'} if installed else {'staging', 'develop'}
-    if service.get('name') != 'api' or service.get('git',{}).get('branch') not in branches or service.get('git',{}).get('repo_clone_url') != REPOSITORY:
+    source = service.get('github',{})
+    if service.get('name') != 'api' or source.get('branch') not in branches or source.get('repo') != REPOSITORY or source.get('deploy_on_push'):
         raise RuntimeError('Unexpected pilot source')
     values = {e['key']:e.get('value') for e in spec.get('envs',[]) + service.get('envs',[])}
     for key, value in {'LIFTY_RUNTIME_PROFILE':'connections','SUPABASE_URL':DATABASE,
@@ -60,7 +61,7 @@ def main():
     sha = os.environ.get('GITHUB_SHA','')
     if os.environ.get('GITHUB_ACTIONS') != 'true' or os.environ.get('GITHUB_REF') != 'refs/heads/staging' or len(sha) != 40:
         raise RuntimeError('Pilot deployment belongs to verified staging CI')
-    remote = subprocess.check_output(['git','ls-remote',REPOSITORY,'refs/heads/staging'],text=True).split()[0]
+    remote = subprocess.check_output(['gh','api',f'repos/{REPOSITORY}/git/ref/heads/staging','--jq','.object.sha'],text=True).strip()
     if remote != sha: raise RuntimeError('Superseded staging source')
     ready = probe(DATABASE+'/rest/v1/rpc/lifty_connection_profile_ready',
         {'p_server_key':os.environ['LIFTY_EMAIL_SERVER_KEY'],
@@ -92,7 +93,7 @@ def main():
         spec = app['spec']
         envs = spec['services'][0].setdefault('envs', [])
         current = {e['key']: e for e in spec.get('envs', []) + envs}
-        source = spec['services'][0]['git']
+        source = spec['services'][0]['github']
         changed = source['branch'] != 'staging'
         source['branch'] = 'staging'
         if 'LIFTY_LINKEDIN_SERVER_KEY' not in current:

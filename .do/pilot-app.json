@@ -6,7 +6,7 @@
   "ingress": { "rules": [{ "match": { "path": { "prefix": "/" } }, "component": { "name": "api" } }] },
   "services": [{
     "name": "api",
-    "git": { "repo_clone_url": "https://github.com/Lifty-Corp/lifty-api.git", "branch": "staging" },
+    "github": { "repo": "Lifty-Corp/lifty-api", "branch": "staging", "deploy_on_push": false },
     "dockerfile_path": "Dockerfile",
     "source_dir": "/",
     "instance_size_slug": "apps-s-1vcpu-0.5gb",
