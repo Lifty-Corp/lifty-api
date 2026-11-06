@@ -1,5 +1,7 @@
+import { createSlackNotificationProvider } from "./notification-providers/slack.js";
+import type { NotificationProvider } from "./notification-providers/provider.js";
 import { NotificationTimingConfigurationSchema, SetNotificationTimingRequestSchema, type NotificationTimingConfiguration, type SetNotificationTimingRequest } from "./notification-timing.js";
-import { NotificationControlsSchema, SetNotificationControlsRequestSchema, SetNotificationPreferencesRequestSchema, type SetNotificationControlsRequest, type SetNotificationPreferencesRequest } from "./contracts.js";
+import { NotificationChannelInfoSchema, NotificationControlsSchema, SetNotificationControlsRequestSchema, SetNotificationPreferencesRequestSchema, type SetNotificationControlsRequest, type SetNotificationPreferencesRequest } from "./contracts.js";
 import { z } from "zod";
 import type { AuthSession } from "./app.js";
 import { DisconnectResultSchema, type DisconnectResult, type Provider, RunStatusSchema, type RunStatus, StartRunResultSchema, type StartRunResult, StartCrmSyncResultSchema, type StartCrmSyncResult, CrmSyncStatusSchema, type CrmSyncStatus, WorkspaceStatusSchema, type WorkspaceStatus, NotificationChannelSchema, type NotificationConfig, type NotificationDestination, NotificationTestResultSchema, type NotificationTestResult, NotificationTypeCodeSchema, SetNotificationRouteRequestSchema, type SetNotificationRouteRequest, SlackNotificationChannelsSchema, type SlackNotificationChannels, UpsertNotificationDestinationRequestSchema, type UpsertNotificationDestinationRequest } from "./contracts.js";
@@ -371,6 +373,7 @@ function notificationsClient(session: AuthSession): RpcClient {
 // The database is the authority on the catalog: unknown type codes pass by
 // shape, and fields this API does not publish are dropped, never forwarded.
 const StoredNotificationConfigurationSchema = z.object({
+  channels: z.array(NotificationChannelInfoSchema).optional(),
   controls: NotificationControlsSchema.optional(),
   types: z.array(z.object({
     code: NotificationTypeCodeSchema,
@@ -390,13 +393,7 @@ const StoredNotificationConfigurationSchema = z.object({
     types: z.array(NotificationTypeCodeSchema),
   })).nullable(),
 });
-type StoredNotificationConfiguration = Pick<NotificationConfig, "types" | "destinations" | "controls">;
-
-const StoredSlackConnectionSchema = z.union([
-  z.object({ status: z.literal("not_connected") }),
-  z.object({ status: z.literal("connected"), team_id: z.string().min(1), team_name: z.string().min(1), reconnect_required: z.boolean() }),
-]);
-type SlackStatus = NotificationConfig["slack"];
+type StoredNotificationConfiguration = Pick<NotificationConfig, "types" | "destinations" | "controls" | "channels">;
 
 const workspaceForbidden = (cause: unknown) => new PublicError({ status: 403, code: "WORKSPACE_FORBIDDEN",
   message: "You don't belong to that workspace. Run whoami to list yours.", cause });
@@ -434,6 +431,7 @@ async function readNotificationConfiguration(session: AuthSession, workspaceRef:
   const parsed = StoredNotificationConfigurationSchema.safeParse(data);
   if (!parsed.success) throw invalidResponse(parsed.error);
   return {
+    ...(parsed.data.channels ? { channels: parsed.data.channels } : {}),
     ...(parsed.data.controls ? { controls: parsed.data.controls } : {}),
     types: (parsed.data.types ?? []).map(type => ({ code: type.code, name: type.name, channels: type.channels,
       default_on: type.default_on, paused: type.paused, email_fallback: type.email_fallback,
@@ -444,33 +442,14 @@ async function readNotificationConfiguration(session: AuthSession, workspaceRef:
   };
 }
 
-async function readSlackStatus(session: AuthSession): Promise<SlackStatus> {
-  const { data, error } = await getRpcClient(session).rpc<unknown>("get_lifty_slack_connection");
-  if (error) throw configRpcError(error, "get_lifty_slack_connection");
-  const parsed = StoredSlackConnectionSchema.safeParse(data);
-  if (!parsed.success) throw invalidResponse(parsed.error);
-  return parsed.data.status === "connected"
-    ? { status: "connected", team_id: parsed.data.team_id, team_name: parsed.data.team_name, reconnect_required: parsed.data.reconnect_required }
-    : { status: "not_connected" };
-}
-
-// The configuration functions do not check the Slack grant, so writes and tests
-// that need Slack refuse here, with the same codes the channel list uses.
-function requireUsableSlack(slack: SlackStatus): void {
-  if (slack.status !== "connected") {
-    throw new PublicError({ status: 409, code: "SLACK_NOT_CONNECTED", message: "Slack is not connected to this workspace. Connect Slack first." });
-  }
-  if (slack.reconnect_required) {
-    throw new PublicError({ status: 409, code: "SLACK_RECONNECT_REQUIRED", message: "Reconnect Slack before configuring or testing a Slack notification channel." });
-  }
-}
-
-// Both reads run together; the configuration error wins so the result is stable.
-async function readConfigurationAndSlack(session: AuthSession, workspaceRef: string) {
-  const [configuration, slack] = await Promise.allSettled([readNotificationConfiguration(session, workspaceRef), readSlackStatus(session)]);
-  if (configuration.status === "rejected") throw configuration.reason;
-  if (slack.status === "rejected") throw slack.reason;
-  return { configuration: configuration.value, slack: slack.value };
+/** Provider registration: connection checks and address syntax stay at the edge. */
+const notificationProviders: ReadonlyMap<string, NotificationProvider> = new Map([["slack",
+  createSlackNotificationProvider({ invalidResponse, rpcError: configRpcError }),
+]]);
+function notificationProvider(code: string) {
+  const provider = notificationProviders.get(code);
+  if (!provider) throw channelUnsupported();
+  return provider;
 }
 
 function savedDestination(configuration: StoredNotificationConfiguration, destinationRef: string): NotificationDestination {
@@ -481,8 +460,11 @@ function savedDestination(configuration: StoredNotificationConfiguration, destin
 
 export async function getNotificationConfig(session: AuthSession): Promise<NotificationConfig> {
   const workspaceRef = await notificationWorkspace(session);
-  const { configuration, slack } = await readConfigurationAndSlack(session, workspaceRef);
-  return { workspace_ref: workspaceRef, slack, ...configuration };
+  const configuration = await readNotificationConfiguration(session, workspaceRef);
+  const connections = Object.fromEntries(await Promise.all([...notificationProviders].map(async ([code, provider]) => [code, await provider.status(session)])));
+  const legacy = connections.slack!;
+  const slack = legacy.status === "connected" ? { status: legacy.status, team_id: legacy.tenant_id, team_name: legacy.tenant_name, reconnect_required: legacy.reconnect_required } : legacy;
+  return { workspace_ref: workspaceRef, slack, connections, ...configuration };
 }
 
 export async function listSlackNotificationChannels(
@@ -534,11 +516,17 @@ export async function upsertNotificationDestination(
 ): Promise<NotificationDestination> {
   const validated = UpsertNotificationDestinationRequestSchema.parse(input);
   const workspaceRef = await notificationWorkspace(session);
-  requireUsableSlack(await readSlackStatus(session));
-  const { data, error } = await notificationsClient(session).rpc<unknown>("save_slack_destination", {
-    p_workspace_id: workspaceRef, p_channel_id: validated.channel_id, p_name: validated.channel_name, p_active: true,
+  const legacy = "channel_id" in validated;
+  const provider = legacy ? "slack" : validated.provider;
+  const adapter = notificationProvider(provider);
+  await adapter.requireConnected(session);
+  const address = adapter.address.parse(legacy ? validated.channel_id : validated.address);
+  const operation = legacy ? "save_slack_destination" : "save_message_destination";
+  const { data, error } = await notificationsClient(session).rpc<unknown>(operation, {
+    p_workspace_id: workspaceRef, p_name: legacy ? validated.channel_name : validated.name, p_active: true,
+    ...(legacy ? { p_channel_id: address } : { p_provider: provider, p_address: address }),
   });
-  if (error) throw notificationsRpcError(error, "notifications.save_slack_destination");
+  if (error) throw notificationsRpcError(error, `notifications.${operation}`);
   const destinationRef = z.uuid().safeParse(unwrapSingleRow(data));
   if (!destinationRef.success) throw invalidResponse(destinationRef.error);
   return savedDestination(await readNotificationConfiguration(session, workspaceRef), destinationRef.data);
@@ -579,7 +567,7 @@ export async function sendNotificationTest(
   const configuration = await readNotificationConfiguration(session, workspaceRef);
   const destination = configuration.destinations.find(item => item.destination_ref === destinationRef);
   if (!destination) throw destinationNotFound();
-  if (destination.channel === "slack") requireUsableSlack(await readSlackStatus(session));
+  if (destination.channel !== "email") await notificationProvider(destination.channel).requireConnected(session);
   else if (destination.address !== null || destination.name !== null) throw destinationNotFound();
   const requestRef = crypto.randomUUID();
   await enqueue({ workspaceId: workspaceRef, destinationId: destination.destination_ref, requestId: requestRef });
@@ -601,12 +589,14 @@ export async function setNotificationControls(session: AuthSession, input: SetNo
 export async function setNotificationPreferences(session: AuthSession, input: SetNotificationPreferencesRequest): Promise<NotificationConfig> {
   const value = SetNotificationPreferencesRequestSchema.parse(input);
   const workspaceRef = await notificationWorkspace(session);
-  if (value.channels.includes("slack")) requireUsableSlack(await readSlackStatus(session));
-  const { error } = await notificationsClient(session).rpc<unknown>("set_preferences", {
+  for (const channel of value.channels) if (channel !== "email") await notificationProvider(channel).requireConnected(session);
+  const legacy = "slack_destination_ref" in value;
+  const operation = legacy ? "set_preferences" : "set_delivery_preferences";
+  const { error } = await notificationsClient(session).rpc<unknown>(operation, {
     p_workspace_id: workspaceRef, p_type_code: value.notification_type, p_channels: value.channels,
-    p_slack_destination_id: value.slack_destination_ref,
+    ...(legacy ? { p_slack_destination_id: value.slack_destination_ref } : { p_destination_ids: Object.values(value.destination_refs) }),
   });
-  if (error) throw notificationsRpcError(error, "notifications.set_preferences");
+  if (error) throw notificationsRpcError(error, `notifications.${operation}`);
   return getNotificationConfig(session);
 }
 

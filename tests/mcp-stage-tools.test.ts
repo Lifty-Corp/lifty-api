@@ -120,8 +120,11 @@ describe("generated MCP stage operations", () => {
       expect(tool).toBeDefined();
       expect(tool.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: false });
       expect(tool.inputSchema.required).toContain("body");
-      expect(tool.inputSchema.properties.body).toMatchObject({ type: "object", required: [...fields], additionalProperties: false });
-      expect(Object.keys((tool.inputSchema.properties.body as { properties: object }).properties)).toEqual([...fields]);
+      const body = tool.inputSchema.properties.body as { anyOf?: { properties: object }[]; properties: object };
+      const legacy = name === "notifications_destination_upsert" ? body.anyOf![1]! : body;
+      expect(legacy).toMatchObject({ type: "object", required: [...fields], additionalProperties: false });
+      expect(Object.keys(legacy.properties)).toEqual([...fields]);
+      if (name === "notifications_destination_upsert") expect(body.anyOf![0]).toMatchObject({ type: "object", required: ["provider", "address", "name"], additionalProperties: false });
       expect(tool.description).toContain("Requires the founder's approval");
     }
   });

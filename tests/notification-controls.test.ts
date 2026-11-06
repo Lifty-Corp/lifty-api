@@ -42,6 +42,28 @@ describe("notification owner controls", () => {
     expect((await f.put("/v1/notifications/preferences",{notification_type:"meeting.booked",channels:["slack"],slack_destination_ref:null})).status).toBe(400);
     expect(f.database.calls.some(c=>c.name==="set_controls"||c.name==="set_preferences")).toBe(false);
   });
+  it("accepts provider-keyed choices through the same endpoint while refusing mixed or uninstalled providers", async () => {
+    for (const channels of [[], ["email"], ["slack", "email"]]) {
+      const f = appFor();
+      const destination_refs = channels.includes("slack") ? { slack: slackRef } : {};
+      const response = await f.put("/v1/notifications/preferences", { notification_type: "sending_account.needs_reconnect", channels, destination_refs });
+      expect(response.status).toBe(200);
+      expect(f.database.calls.find(c => c.name === "set_delivery_preferences")?.args).toEqual({
+        p_workspace_id: workspaceRef, p_type_code: "sending_account.needs_reconnect", p_channels: channels,
+        p_destination_ids: Object.values(destination_refs),
+      });
+    }
+    const f = appFor();
+    for (const body of [
+      { channels: ["slack"], destination_refs: {} },
+      { channels: ["slack"], destination_refs: { slack: slackRef }, slack_destination_ref: slackRef },
+      { channels: ["slack"], destination_refs: { test_chat: slackRef } },
+    ]) expect((await f.put("/v1/notifications/preferences", { notification_type: "meeting.booked", ...body })).status).toBe(400);
+    expect((await f.put("/v1/notifications/preferences", {
+      notification_type: "meeting.booked", channels: ["test_chat"], destination_refs: { test_chat: slackRef },
+    })).status).toBe(409);
+    expect(f.database.calls.some(c => c.name === "set_delivery_preferences")).toBe(false);
+  });
   it("preserves stale-change and authorization refusals instead of reporting a saved preference", async () => {
     for (const [code,status] of [["40001",409],["42501",403]] as const) {
       const f=appFor({"notifications.set_controls":{code,message:"Refused"}});

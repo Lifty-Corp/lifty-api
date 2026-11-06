@@ -46,11 +46,15 @@ selection; do not send a workspace ID. A stale edit returns
 `NOTIFICATION_SETTINGS_CHANGED`: read again before trying another change.
 
 `notifications_preferences_set` takes `body` with `notification_type`, `channels`
-and `slack_destination_ref`. Choose `channels: []` and a null Slack ref for Off;
-`["email"]` and null for Email; `["slack"]` or `["slack","email"]` with the saved
-Slack destination ref for Slack or Both. Only supported type channels are accepted.
-This atomically replaces that type's workspace destinations and returns the saved
-configuration. Email/Off do not require a Slack connection.
+and `destination_refs`, a map from each selected messaging provider to its saved
+destination UUID. Choose `channels: []` and `destination_refs: {}` for Off;
+`["email"]` and `{}` for Email; `["slack"]` or `["slack","email"]` with
+`destination_refs: {"slack": "<saved destination UUID>"}` for Slack or both.
+Use only the installed provider metadata and supported type channels returned
+by the configuration read. Teams is not installed by this abstraction.
+This atomically replaces that type's workspace destinations. Email and Off need
+no messaging connection. Existing clients may still use `slack_destination_ref`;
+never mix the two request shapes.
 
 ## First setup and required inputs
 
@@ -62,7 +66,8 @@ do not request tokens or infer authorization from channel data.
 After verified authorization, read `channels` and obtain only the missing
 channel choice. Explain when Lifty needs to be invited to a private channel.
 In MCP, `notifications_destination_upsert` takes `body` with the actual
-`channel_id` and `channel_name` and returns the saved destination. A new
+`provider`, `address` and `name` and returns the saved destination. The legacy
+Slack fields `channel_id` and `channel_name` remain accepted. A new
 channel already receives every default-on type Slack can show (its `types`);
 change that only when the founder asks. Saving an existing channel again
 updates its name and reactivates it.

@@ -51,17 +51,19 @@ export function notificationsDatabase(options: NotificationsDatabaseOptions = {}
       return { data: { ...(options.controls === undefined ? {} : { controls: options.controls }), types: types.length ? structuredClone(types) : null,
         destinations: destinations.length ? structuredClone(destinations) : null }, error: null };
     }
-    if (key === "notifications.save_slack_destination") {
-      const existing = destinations.find(item => item.channel === "slack" && item.address === args?.p_channel_id);
+    if (key === "notifications.save_slack_destination" || key === "notifications.save_message_destination") {
+      const provider = key.endsWith("save_slack_destination") ? "slack" : String(args?.p_provider);
+      const address = String(args?.p_channel_id ?? args?.p_address);
+      const existing = destinations.find(item => item.channel === provider && item.address === address);
       if (existing) {
         Object.assign(existing, { name: args?.p_name ?? null, active: args?.p_active ?? existing.active });
         return { data: existing.id, error: null };
       }
-      destinations.push({ id: createdRef, channel: "slack", address: String(args?.p_channel_id), name: (args?.p_name as string | undefined) ?? null,
-        active: true, types: types.filter(type => type.default_on && type.channels.includes("slack")).map(type => type.code) });
+      destinations.push({ id: createdRef, channel: provider, address, name: (args?.p_name as string | undefined) ?? null,
+        active: true, types: types.filter(type => type.default_on && type.channels.includes(provider)).map(type => type.code) });
       return { data: createdRef, error: null };
     }
-    if (key === "notifications.set_controls" || key === "notifications.set_preferences") return { data: null, error: null };
+    if (["notifications.set_controls", "notifications.set_preferences", "notifications.set_delivery_preferences"].includes(key)) return { data: null, error: null };
     if (key === "notifications.set_subscription") {
       const destination = destinations.find(item => item.id === args?.p_destination_id)!;
       const code = String(args?.p_type_code);
