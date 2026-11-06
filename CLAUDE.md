@@ -185,7 +185,9 @@ returns the sample review until the latest sample is confirmed
 `admin_list_workspaces()` and computes each next_step with the admin's own
 session, naming the workspace (`AuthSession.workspaceRef` → `p_workspace_id`).
 It also returns both context maps for the ops page. Founder sessions never set
-`workspaceRef`.
+`workspaceRef`. `GET /v1/admin/onboarding/catalog` returns the same catalog and
+maps with the workspace list and no read of any one workspace, so the ops page
+renders before the positions arrive.
 
 ### Context drafts
 
