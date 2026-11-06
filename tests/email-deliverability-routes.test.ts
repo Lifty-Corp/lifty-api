@@ -267,7 +267,7 @@ describe("capacity on the authorized deliverability read", () => {
     expect(readout.status).toBe("available");
     if (readout.status !== "available") throw new Error("Expected the canonical calculation");
     expect(readout.email.people[0]).toMatchObject({ sender_name: "Dana Smith", capacity_per_day: 15,
-      capacity_at_caps_per_day: 15, rate: 27.5, on_deck: 2, inboxes_to_connect: 2, days_to_clear: null });
+      capacity_at_caps_per_day: 15, capacity_at_full_pace_per_day: 50, rate: 27.5, on_deck: 2, inboxes_to_connect: 2, inboxes_short: 1, days_to_clear: null });
     expect(readout.email.people[0]!.inboxes[0]).toMatchObject({ cap: 15, planned: 15, safety_check_stale: true });
     expect(readout.linkedin).toMatchObject({ senders_to_add: 1, planned_messages_per_day: 16, messages_needed_per_day: 21.6 });
     expect(JSON.stringify(readout)).not.toMatch(/cause|operator_hold|account_ref|private_assumption/);
@@ -289,7 +289,8 @@ describe("capacity on the authorized deliverability read", () => {
   it("reads a workspace with no inboxes and preserves inactive channel facts without inventing recommendations", async () => {
     const data = { ...memberA, mailboxes: [], total_count: 0 };
     const capacity = fixture("capacity-source.json");
-    capacity.email = { operating: false, short: false, on_deck_total: 0, inboxes_to_connect: 0, people: [] };
+    capacity.email = { operating: false, short: false, on_deck_total: 0, inboxes_to_connect: 0, inboxes_short: 0,
+      plan: { leads_per_week: 0, valid_email_share: 1, emails_per_lead: 0, emails_per_week: 0, people: 0 }, people: [] };
     const h = harness({ data, capacity });
     const result = await h.ops.read(h.session, { workspace: "fixture-a" });
     expect(result.outreach_capacity?.[0]).toMatchObject({ status: "available", email: { operating: false, inboxes_to_connect: 0 } });
