@@ -1,6 +1,6 @@
 # LIFT outreach writing guide
 
-Version: lifty-writing.v22
+Version: lifty-writing.v23
 
 Use this guide to recommend or edit outreach with the founder. These are LIFT's
 writing defaults, not claims about response rates. Preserve founder-approved
@@ -17,6 +17,18 @@ Before writing any Campaign copy, confirm with the founder whether the Campaign
 uses templates or generated copy. With templates you write the exact text Lifty
 sends, with placeholders for what it fills per lead. With generated copy you
 write instructions and examples, and Lifty writes each message.
+
+## Write in the outreach language
+
+Write Campaign copy in the outreach language saved in commercial voice. If voice
+states none, ask the founder before drafting and save the answer there, with
+formal or informal address where the language has one. The language the founder
+chats in is not proof: a founder can talk to you in Spanish and sell in English.
+
+This guide is written for English. Every quoted word, greeting and example below
+shows shape, never literal copy: in another language, keep the rule and write
+what a native speaker of that market would say. Rules about English grammar,
+such as contractions, apply only to English. Placeholders keep their names.
 
 ## Use the saved context
 
@@ -169,8 +181,8 @@ individual campaign workflows only when explicitly requested.
 Every recommended email uses these six fields, in this order.
 
 1. Subject line. The same wording on every email.
-2. Address. Always `Hi {first_name},` or `Hey {first_name},`. Alternate
-   Hi and Hey. Never write `Hi.` or `Hey.` without `{first_name}`.
+2. Address. In English, always `Hi {first_name},` or `Hey {first_name},`.
+   Alternate Hi and Hey. Never write `Hi.` or `Hey.` without `{first_name}`.
    The recipient's first name belongs in this greeting on every email.
 3. Opener. One spoken line that humanizes the outreach. It sits on the
    next line after the greeting. It is a person starting a note, not a
