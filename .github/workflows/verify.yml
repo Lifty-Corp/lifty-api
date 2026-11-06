@@ -106,4 +106,6 @@ jobs:
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
       - name: Deploy isolated staging API after database/replay readiness
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: python3 scripts/deploy-pilot.py

@@ -13,8 +13,7 @@ import { describe, expect, it } from "vitest";
 
 const script = new URL("../scripts/digitalocean.sh", import.meta.url).pathname;
 const expectedCommit = "def4567890abcdef1234567890abcdef12345678";
-const expectedRepository =
-  "https://github.com/LIFT-Leadership-Group/lifty-api.git";
+const expectedRepository = "Lifty-Corp/lifty-api";
 
 function runDeployPreflight(
   app: Record<string, unknown>,
@@ -22,7 +21,7 @@ function runDeployPreflight(
 ) {
   const fakeBin = mkdtempSync(join(tmpdir(), "lifty-doctl-test-"));
   const fakeDoctl = join(fakeBin, "doctl");
-  const fakeGit = join(fakeBin, "git");
+  const fakeGh = join(fakeBin, "gh");
   const calls = join(fakeBin, "doctl-calls.log");
   writeFileSync(
     fakeDoctl,
@@ -42,14 +41,14 @@ fi
 `,
   );
   writeFileSync(
-    fakeGit,
+    fakeGh,
     `#!/usr/bin/env bash
 set -euo pipefail
-printf '%s\\t%s\\n' '${remoteCommit}' 'refs/heads/main'
+printf '%s\\n' '${remoteCommit}'
 `,
   );
   chmodSync(fakeDoctl, 0o755);
-  chmodSync(fakeGit, 0o755);
+  chmodSync(fakeGh, 0o755);
 
   try {
     const result = spawnSync("bash", [script, "deploy", expectedCommit], {
@@ -161,7 +160,7 @@ set -euo pipefail
 if [[ "$1 $2" == "apps list" ]]; then
   printf '%s' '[{"id":"app-123","spec":{"name":"lifty-api-staging"}}]'
 elif [[ "$1 $2" == "apps get" ]]; then
-  printf '%s' '[{"id":"app-123","spec":{"name":"lifty-api-staging","services":[{"name":"api","git":{"repo_clone_url":"${expectedRepository}","branch":"main"}}]},"region":{"slug":"sfo"},"default_ingress":"https://api.example.test","active_deployment":{"id":"dep-456","phase":"ACTIVE"}}]'
+  printf '%s' '[{"id":"app-123","spec":{"name":"lifty-api-staging","services":[{"name":"api","github":{"repo":"${expectedRepository}","branch":"main","deploy_on_push":false}}]},"region":{"slug":"sfo"},"default_ingress":"https://api.example.test","active_deployment":{"id":"dep-456","phase":"ACTIVE"}}]'
 elif [[ "$1 $2" == "apps get-deployment" ]]; then
   printf '%s' '[{"id":"dep-456","phase":"ACTIVE","services":[{"name":"api","source_commit_hash":"abc123"}]}]'
 else
@@ -421,7 +420,7 @@ esac
   it("refuses to deploy when an app-id override does not resolve to staging", () => {
     const fakeBin = mkdtempSync(join(tmpdir(), "lifty-doctl-test-"));
     const fakeDoctl = join(fakeBin, "doctl");
-    const fakeGit = join(fakeBin, "git");
+    const fakeGh = join(fakeBin, "gh");
     const calls = join(fakeBin, "doctl-calls.log");
     writeFileSync(
       fakeDoctl,
@@ -431,7 +430,7 @@ printf '%s\\n' "$*" >> "$FAKE_DOCTL_CALLS"
 if [[ "$1 $2" == "apps list" ]]; then
   printf '%s' '[{"id":"app-123","spec":{"name":"lifty-api-staging"}},{"id":"prod-999","spec":{"name":"lifty-api-production"}}]'
 elif [[ "$1 $2" == "apps get" ]]; then
-  printf '%s' '[{"id":"prod-999","spec":{"name":"lifty-api-production","services":[{"name":"api","git":{"repo_clone_url":"${expectedRepository}","branch":"main"}}]},"active_deployment":{"id":"dep-prod","phase":"ACTIVE"}}]'
+  printf '%s' '[{"id":"prod-999","spec":{"name":"lifty-api-production","services":[{"name":"api","github":{"repo":"${expectedRepository}","branch":"main","deploy_on_push":false}}]},"active_deployment":{"id":"dep-prod","phase":"ACTIVE"}}]'
 elif [[ "$1 $2" == "apps create-deployment" ]]; then
   exit 88
 else
@@ -441,14 +440,14 @@ fi
 `,
     );
     writeFileSync(
-      fakeGit,
+      fakeGh,
       `#!/usr/bin/env bash
 set -euo pipefail
-printf '%s\\t%s\\n' '${expectedCommit}' 'refs/heads/main'
+printf '%s\\n' '${expectedCommit}'
 `,
     );
     chmodSync(fakeDoctl, 0o755);
-    chmodSync(fakeGit, 0o755);
+    chmodSync(fakeGh, 0o755);
 
     try {
       const result = spawnSync("bash", [script, "deploy", expectedCommit], {
@@ -474,7 +473,7 @@ printf '%s\\t%s\\n' '${expectedCommit}' 'refs/heads/main'
   it("refuses to deploy when the staging app source is not the approved repository", () => {
     const fakeBin = mkdtempSync(join(tmpdir(), "lifty-doctl-test-"));
     const fakeDoctl = join(fakeBin, "doctl");
-    const fakeGit = join(fakeBin, "git");
+    const fakeGh = join(fakeBin, "gh");
     const calls = join(fakeBin, "doctl-calls.log");
     writeFileSync(
       fakeDoctl,
@@ -484,7 +483,7 @@ printf '%s\\n' "$*" >> "$FAKE_DOCTL_CALLS"
 if [[ "$1 $2" == "apps list" ]]; then
   printf '%s' '[{"id":"app-123","spec":{"name":"lifty-api-staging"}}]'
 elif [[ "$1 $2" == "apps get" ]]; then
-  printf '%s' '[{"id":"app-123","spec":{"name":"lifty-api-staging","services":[{"name":"api","git":{"repo_clone_url":"https://github.com/attacker/repository.git","branch":"main"}}]},"active_deployment":{"id":"dep-456","phase":"ACTIVE"}}]'
+  printf '%s' '[{"id":"app-123","spec":{"name":"lifty-api-staging","services":[{"name":"api","github":{"repo":"attacker/repository","branch":"main","deploy_on_push":false}}]},"active_deployment":{"id":"dep-456","phase":"ACTIVE"}}]'
 elif [[ "$1 $2" == "apps create-deployment" ]]; then
   exit 88
 else
@@ -494,14 +493,14 @@ fi
 `,
     );
     writeFileSync(
-      fakeGit,
+      fakeGh,
       `#!/usr/bin/env bash
 set -euo pipefail
-printf '%s\\t%s\\n' '${expectedCommit}' 'refs/heads/main'
+printf '%s\\n' '${expectedCommit}'
 `,
     );
     chmodSync(fakeDoctl, 0o755);
-    chmodSync(fakeGit, 0o755);
+    chmodSync(fakeGh, 0o755);
 
     try {
       const result = spawnSync("bash", [script, "deploy", expectedCommit], {
@@ -526,7 +525,7 @@ printf '%s\\t%s\\n' '${expectedCommit}' 'refs/heads/main'
   it("refuses to deploy when staging contains an unexpected component", () => {
     const fakeBin = mkdtempSync(join(tmpdir(), "lifty-doctl-test-"));
     const fakeDoctl = join(fakeBin, "doctl");
-    const fakeGit = join(fakeBin, "git");
+    const fakeGh = join(fakeBin, "gh");
     const calls = join(fakeBin, "doctl-calls.log");
     writeFileSync(
       fakeDoctl,
@@ -536,7 +535,7 @@ printf '%s\\n' "$*" >> "$FAKE_DOCTL_CALLS"
 if [[ "$1 $2" == "apps list" ]]; then
   printf '%s' '[{"id":"app-123","spec":{"name":"lifty-api-staging"}}]'
 elif [[ "$1 $2" == "apps get" ]]; then
-  printf '%s' '[{"id":"app-123","spec":{"name":"lifty-api-staging","services":[{"name":"api","git":{"repo_clone_url":"${expectedRepository}","branch":"main"}},{"name":"unexpected-worker","git":{"repo_clone_url":"${expectedRepository}","branch":"main"}}]},"active_deployment":{"id":"dep-456","phase":"ACTIVE"}}]'
+  printf '%s' '[{"id":"app-123","spec":{"name":"lifty-api-staging","services":[{"name":"api","github":{"repo":"${expectedRepository}","branch":"main","deploy_on_push":false}},{"name":"unexpected-worker","github":{"repo":"${expectedRepository}","branch":"main","deploy_on_push":false}}]},"active_deployment":{"id":"dep-456","phase":"ACTIVE"}}]'
 elif [[ "$1 $2" == "apps create-deployment" ]]; then
   exit 88
 else
@@ -546,14 +545,14 @@ fi
 `,
     );
     writeFileSync(
-      fakeGit,
+      fakeGh,
       `#!/usr/bin/env bash
 set -euo pipefail
-printf '%s\\t%s\\n' '${expectedCommit}' 'refs/heads/main'
+printf '%s\\n' '${expectedCommit}'
 `,
     );
     chmodSync(fakeDoctl, 0o755);
-    chmodSync(fakeGit, 0o755);
+    chmodSync(fakeGh, 0o755);
 
     try {
       const result = spawnSync("bash", [script, "deploy", expectedCommit], {
@@ -582,7 +581,7 @@ printf '%s\\t%s\\n' '${expectedCommit}' 'refs/heads/main'
         name: "lifty-api-staging",
         services: [{
           name: "api",
-          git: { repo_clone_url: expectedRepository, branch: "release" },
+          github: { repo: expectedRepository, branch: "release", deploy_on_push: false },
         }],
       },
       active_deployment: { id: "dep-456", phase: "ACTIVE" },
@@ -593,6 +592,24 @@ printf '%s\\t%s\\n' '${expectedCommit}' 'refs/heads/main'
     expect(calls).not.toContain("apps create-deployment");
   });
 
+  it("refuses to deploy while a push can start an unverified build", () => {
+    const { result, calls } = runDeployPreflight({
+      id: "app-123",
+      spec: {
+        name: "lifty-api-staging",
+        services: [{
+          name: "api",
+          github: { repo: expectedRepository, branch: "main", deploy_on_push: true },
+        }],
+      },
+      active_deployment: { id: "dep-456", phase: "ACTIVE" },
+    });
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("deploy_on_push must stay off");
+    expect(calls).not.toContain("apps create-deployment");
+  });
+
   it("refuses to deploy when the resolved app record is not staging", () => {
     const { result, calls } = runDeployPreflight({
       id: "app-123",
@@ -600,7 +617,7 @@ printf '%s\\t%s\\n' '${expectedCommit}' 'refs/heads/main'
         name: "lifty-api-production",
         services: [{
           name: "api",
-          git: { repo_clone_url: expectedRepository, branch: "main" },
+          github: { repo: expectedRepository, branch: "main", deploy_on_push: false },
         }],
       },
       active_deployment: { id: "dep-456", phase: "ACTIVE" },
@@ -619,7 +636,7 @@ printf '%s\\t%s\\n' '${expectedCommit}' 'refs/heads/main'
         name: "lifty-api-staging",
         services: [{
           name: "api",
-          git: { repo_clone_url: expectedRepository, branch: "main" },
+          github: { repo: expectedRepository, branch: "main", deploy_on_push: false },
         }],
       },
       active_deployment: { id: "dep-456", phase: "ACTIVE" },
@@ -655,7 +672,7 @@ printf '%s\\t%s\\n' '${expectedCommit}' 'refs/heads/main'
     const fakeBin = mkdtempSync(join(tmpdir(), "lifty-doctl-test-"));
     const fakeDoctl = join(fakeBin, "doctl");
     const fakeCurl = join(fakeBin, "curl");
-    const fakeGit = join(fakeBin, "git");
+    const fakeGh = join(fakeBin, "gh");
     const calls = join(fakeBin, "doctl-calls.log");
     const appFile = join(fakeBin, "app.json");
     const submittedSpec = join(fakeBin, "submitted-spec.json");
@@ -668,7 +685,7 @@ printf '%s\\t%s\\n' '${expectedCommit}' 'refs/heads/main'
         { key: "HEYREACH_API_KEY", value: "retired-secret-heyreach", type: "SECRET" },
       ] : [])],
       services: [{
-        name: "api", git: { repo_clone_url: expectedRepository, branch: "main" },
+        name: "api", github: { repo: expectedRepository, branch: "main", deploy_on_push: false },
         envs: [keptServiceEnv, ...(options.retired ? [
           { key: "SMARTLEAD_API_KEY", value: "retired-secret-smartlead", type: "SECRET", scope: "RUN_TIME" },
           { key: "SMARTDELIVERY_API_KEY", value: "retired-secret-smartdelivery", type: "SECRET" },
@@ -703,10 +720,10 @@ else
   exit 64
 fi
 `);
-    writeFileSync(fakeGit, `#!/usr/bin/env bash
+    writeFileSync(fakeGh, `#!/usr/bin/env bash
 set -euo pipefail
-if [[ "$1" == "ls-remote" && "$2" == "${expectedRepository}" && "$3" == "refs/heads/main" ]]; then
-  printf '%s\\t%s\\n' '${expectedCommit}' 'refs/heads/main'
+if [[ "$1" == "api" && "$2" == "repos/${expectedRepository}/git/ref/heads/main" ]]; then
+  printf '%s\\n' '${expectedCommit}'
 else
   exit 64
 fi
@@ -733,7 +750,7 @@ case "$url" in
   *) exit 22 ;;
 esac
 `);
-    for (const executable of [fakeDoctl, fakeCurl, fakeGit]) chmodSync(executable, 0o755);
+    for (const executable of [fakeDoctl, fakeCurl, fakeGh]) chmodSync(executable, 0o755);
     try {
       const result = spawnSync("bash", [script, "deploy", expectedCommit, ...(options.forceRebuild ? ["--force-rebuild"] : [])], {
         encoding: "utf8", env: {

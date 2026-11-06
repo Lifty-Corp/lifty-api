@@ -5,7 +5,7 @@ umask 077
 
 EXPECTED_APP_NAME="lifty-api-staging"
 EXPECTED_COMPONENT="api"
-EXPECTED_REPOSITORY="https://github.com/LIFT-Leadership-Group/lifty-api.git"
+EXPECTED_REPOSITORY="Lifty-Corp/lifty-api"
 EXPECTED_BRANCH="main"
 APP_NAME="${LIFTY_DO_APP_NAME:-$EXPECTED_APP_NAME}"
 COMPONENT="${LIFTY_DO_COMPONENT:-$EXPECTED_COMPONENT}"
@@ -41,7 +41,7 @@ resolve_app_id() {
 
 validate_target() {
   local app_id="$1" app_json="$2" app_count actual_id actual_name
-  local component_count total_components repository branch
+  local component_count total_components repository branch deploy_on_push
   app_count="$(jq -r 'length' <<<"$app_json")"
   actual_id="$(jq -er '.[0].id' <<<"$app_json")"
   actual_name="$(jq -er '.[0].spec.name' <<<"$app_json")"
@@ -59,16 +59,23 @@ validate_target() {
   [[ "$component_count" == "1" && "$total_components" == "1" ]] \
     || fail "staging must contain exactly one '$EXPECTED_COMPONENT' component"
 
-  repository="$(jq -er --arg component "$EXPECTED_COMPONENT" \
-    '.[0].spec.services[] | select(.name == $component) | .git.repo_clone_url' \
+  repository="$(jq -r --arg component "$EXPECTED_COMPONENT" \
+    '.[0].spec.services[] | select(.name == $component) | .github.repo // empty' \
     <<<"$app_json")"
   [[ "$repository" == "$EXPECTED_REPOSITORY" ]] \
     || fail "repository is not the approved staging source"
-  branch="$(jq -er --arg component "$EXPECTED_COMPONENT" \
-    '.[0].spec.services[] | select(.name == $component) | .git.branch' \
+  branch="$(jq -r --arg component "$EXPECTED_COMPONENT" \
+    '.[0].spec.services[] | select(.name == $component) | .github.branch // empty' \
     <<<"$app_json")"
   [[ "$branch" == "$EXPECTED_BRANCH" ]] \
     || fail "branch is not the approved staging source"
+  # The Deploy workflow is the only deployer: a push must never start a build
+  # that skips verification.
+  deploy_on_push="$(jq -r --arg component "$EXPECTED_COMPONENT" \
+    '.[0].spec.services[] | select(.name == $component) | .github.deploy_on_push // false' \
+    <<<"$app_json")"
+  [[ "$deploy_on_push" == "false" ]] \
+    || fail "deploy_on_push must stay off for the staging source"
 }
 
 # Only these retired integration credentials may be removed from the live spec.
@@ -109,7 +116,7 @@ show_status() {
     "Ingress: \(.default_ingress)",
     "Deployment: \(.active_deployment.id) (\(.active_deployment.phase))",
     (.spec.services[] | select(.name == $component) |
-      "Source: \(.git.repo_clone_url // ("https://github.com/" + .github.repo))#\(.git.branch // .github.branch)")
+      "Source: \(.github.repo)#\(.github.branch)")
   ' <<<"$app_json"
   jq -r --arg component "$COMPONENT" '
     .[0].services[] | select(.name == $component) |
@@ -227,7 +234,7 @@ deploy_app() {
   [[ $# -le 2 && ( $# -lt 2 || "${2:-}" == "--force-rebuild" ) ]] \
     || fail "deploy accepts only <full-sha> [--force-rebuild]"
   require_command doctl
-  require_command git
+  require_command gh
   require_command jq
 
   local expected_commit="${1:-}" app_id app_json repository branch
@@ -241,13 +248,12 @@ deploy_app() {
   app_json="$(doctl apps get "$app_id" -o json)"
   validate_target "$app_id" "$app_json"
   repository="$(jq -er --arg component "$COMPONENT" \
-    '.[0].spec.services[] | select(.name == $component) | .git.repo_clone_url' \
+    '.[0].spec.services[] | select(.name == $component) | .github.repo' \
     <<<"$app_json")"
   branch="$(jq -er --arg component "$COMPONENT" \
-    '.[0].spec.services[] | select(.name == $component) | .git.branch' \
+    '.[0].spec.services[] | select(.name == $component) | .github.branch' \
     <<<"$app_json")"
-  remote_commit="$(git ls-remote "$repository" "refs/heads/$branch" \
-    | awk 'NR == 1 { print $1 }')"
+  remote_commit="$(gh api "repos/$repository/git/ref/heads/$branch" --jq .object.sha)"
   [[ "$remote_commit" == "$expected_commit" ]] \
     || fail "remote $repository#$branch is $remote_commit, expected $expected_commit"
 

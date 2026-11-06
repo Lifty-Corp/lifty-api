@@ -148,8 +148,9 @@ npm run do:deploy -- <full-40-character-sha>
 ```
 
 The deploy command resolves the app by name and validates its ID, single API
-component, GitHub repository, and `main` branch before mutation. It requires
-the supplied SHA to match the remote branch head, starts one App Platform
+component, GitHub repository, `main` branch, and `deploy_on_push` off before
+mutation. It requires `gh` with read access to the private repository and the
+supplied SHA to match the remote branch head, starts one App Platform
 deployment, waits, verifies the exact active commit, and runs health, readiness,
 OpenAPI, and unauthenticated fail-closed checks. When retired integration keys
 (`INSTANTLY_API_KEY`, `HEYREACH_API_KEY`, `SMARTLEAD_API_KEY`,
