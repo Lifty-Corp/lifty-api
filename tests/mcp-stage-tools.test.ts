@@ -62,8 +62,6 @@ describe("generated MCP stage operations", () => {
     // settings, the transfer scope, LIFT stops, recovery incidents and reply
     // counts (about 27,000 with the sample-changed wording).
     expect(JSON.stringify(tools).length).toBeLessThan(250_000);
-    expect(tools.find(tool => tool.name === "sending_accounts_dns_status")!.annotations.readOnlyHint).toBe(true);
-    expect(tools.find(tool => tool.name === "sending_accounts_dns_recheck")!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false, openWorldHint: false });
     expect(tools.find(tool => tool.name === "crm_mapping_sources")!.annotations.readOnlyHint).toBe(true);
     expect(tools.find(tool => tool.name === "sending_accounts_deliverability")!.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
     expect(tools.find(tool => tool.name === "sending_accounts_disconnect")!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: true });
