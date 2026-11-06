@@ -132,6 +132,7 @@ export const BASE_CONTEXTS: Record<string, string> = {
 };
 export const ON_REQUEST_CONTEXTS: Record<string, string> = {
   account: "Deleting the signed-in login, only when the founder asks.",
+  reports: "The weekly report, its details and live measurement, when the founder asks how outreach is performing.",
 };
 // A marked test workspace's drafts replace the published files they name
 // (LIF-1298); a drafting guide carries the workspace's writing rules (LIF-1724).
