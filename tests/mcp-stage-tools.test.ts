@@ -54,7 +54,10 @@ describe("generated MCP stage operations", () => {
     // is never published; codes carry only a pattern. LIF-1764 adds
     // senders_turn_off and senders_turn_on (about 3,600 characters). LIF-1800
     // adds search lane and research field lane rules (about 900 characters).
-    expect(JSON.stringify(tools).length).toBeLessThan(209_000);
+    // LIF-1771 adds the Senders controls: pause and resume, handoffs, workspace
+    // settings, the transfer scope, LIFT stops, recovery incidents and reply
+    // counts (about 26,000).
+    expect(JSON.stringify(tools).length).toBeLessThan(235_000);
     expect(tools.find(tool => tool.name === "crm_mapping_sources")!.annotations.readOnlyHint).toBe(true);
     expect(tools.find(tool => tool.name === "sending_accounts_deliverability")!.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
     expect(tools.find(tool => tool.name === "sending_accounts_disconnect")!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: true });

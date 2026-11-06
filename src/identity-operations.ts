@@ -2,8 +2,10 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { z } from "zod";
 import type { AuthSession } from "./app.js";
 import { PublicError } from "./errors.js";
-import { rpcFailure } from "./rpc-errors.js";
+import { RPC_ERROR_MESSAGES, rpcFailure } from "./rpc-errors.js";
 import * as contracts from "./identity-contracts.js";
+import { accountActionAvailable, accountControlDefinitions, senderControlDefinitions } from "./sender-controls.js";
+import { AccountActionQuery, HandoffSchema, TransferScopeSchema, WorkspaceSettingsResultSchema } from "./sender-control-contracts.js";
 
 // LIF-1182 Identity: senders and their sending accounts. Every definition is a
 // catalog operation (HTTP route, MCP tool, CLI noun, public context). Member
@@ -19,6 +21,8 @@ export interface IdentityDefinition {
   method: "GET" | "POST" | "PATCH";
   /** Override the method default when a GET can persist provider reconciliation. */
   readOnly?: boolean;
+  /** The RPC refuses a null p_workspace_id, so the selected workspace is resolved first. */
+  explicitWorkspace?: boolean;
   route: string;
   cli?: { operation: string };
   rpc: string;
@@ -43,6 +47,13 @@ const accountAction = (action: "pause" | "resume", description: string): Identit
   rpc: `${action}_lifty_sending_account`, path: contracts.IdPath, query: Empty, request: null,
   invalid: invalidRequest, response: contracts.AccountResultSchema, success: 200,
   args: input => ({ p_account_id: path(input) }), description,
+});
+
+const senderPause = (action: "pause" | "resume", description: string): IdentityDefinition => ({
+  method: "POST", route: `${sendersRoute}/{id}/${action}`, cli: { operation: action }, rpc: `${action}_lifty_sender`,
+  path: contracts.IdPath, query: Empty, request: action === "pause" ? contracts.SenderPauseSchema : contracts.SenderResumeSchema,
+  invalid: invalidRequest, response: contracts.SenderResultSchema, success: 200,
+  args: input => ({ p_sender_id: path(input), p_payload: input.body }), description,
 });
 
 export const identityOperationDefinitions = {
@@ -71,13 +82,16 @@ export const identityOperationDefinitions = {
       args: input => ({ p_sender_id: path(input), p_payload: input.body }),
       description: "Soft-delete a person with expected_version and confirm:true. The person leaves the roster and every account they own is disconnected exactly as sending-accounts disconnect; history stays. 200 when Lifty's access was confirmed removed for every account (or not applicable), 202 when the accounts are blocked and removal at the provider continues on its own: do not repeat the request. Not reversible.",
     },
+    // LIF-1794: pausing needs no replacement and moves nothing.
+    pause: senderPause("pause", "Pause a person with expected_version and confirm:true, and optionally a reason. They keep every lead and account, take no new leads and nothing automatic sends on either channel, including automatic replies. Inbound replies are still captured and a person can still answer by hand. Needs no replacement, and it never turns into a retirement. Idempotent. Refused with SENDER_OFF while the person is retired. After an uncertain response read senders: sending.state paused means it is saved."),
+    resume: senderPause("resume", "Resume a paused person with expected_version and confirm:true. They take new leads again and their automatic work continues under its usual limits. Clears the person's pause and nothing else: a Lifty stop, an account pause, a campaign pause and every hold stay as they are, so a resumed person can still be stopped. Idempotent. Never sends by itself. After an uncertain response read senders: no sending object means the person sends normally."),
     // LIF-1764: off is reversible and keeps the person's accounts connected.
     turn_off: {
       method: "POST", route: `${sendersRoute}/{id}/turn-off`, cli: { operation: "turn-off" }, rpc: "turn_off_lifty_sender",
       path: contracts.IdPath, query: Empty, request: contracts.SenderTurnOffSchema, invalid: invalidRequest,
       response: contracts.SenderTurnOffResultSchema, success: 200,
       args: input => ({ p_sender_id: path(input), p_payload: input.body }),
-      description: "Turn a person off with expected_version, confirm:true, a reason and drain_to_sender_id (another person who is on). Their accounts stay connected so replies keep arriving; they take part in no new Journey and send no outreach. Their admitted leads drain to the target, who sends only channels each prospect never received (drain_mode unused_channels; continue is not available yet). drain reports the first batch; Lifty drains the remaining leads on its own. Never deletes, disconnects or sends by itself: the target's runs send on the target's schedule. After an uncertain response read senders: sending.state off means it is saved.",
+      description: "Retire a person with expected_version, confirm:true, a reason and drain_to_sender_id (another person in this workspace who is on, not paused and not deleted; a person with no replacement is paused instead). They stop at once: their accounts stay connected so replies keep arriving, they take part in no new Journey and send no outreach. Untouched leads move to the target under ordinary rules. With drain_mode continue, contacted conversations and current replies stay with this person until a sample is approved: drain.handoff_ref names that handoff, so read it with handoff_get and approve it with handoff_approve; approved is not sent. With drain_mode unused_channels the target sends only channels each prospect never received. Omitted drain_mode uses the workspace's mode. drain reports the first batch; Lifty drains the remaining leads on its own. Refused with DRAIN_TARGET_INVALID when the target is missing, foreign, off or paused; nothing changes. Never deletes, disconnects or sends by itself. After an uncertain response read senders: sending.state off means it is saved.",
     },
     turn_on: {
       method: "POST", route: `${sendersRoute}/{id}/turn-on`, cli: { operation: "turn-on" }, rpc: "turn_on_lifty_sender",
@@ -86,13 +100,14 @@ export const identityOperationDefinitions = {
       args: input => ({ p_sender_id: path(input), p_payload: input.body }),
       description: "Turn a person who is off back on with expected_version and confirm:true: they take part in new Journeys again; drained leads stay with the person they moved to. Never connects or sends by itself. After an uncertain response read senders: no sending object means the person is on.",
     },
+    ...senderControlDefinitions,
   },
   "sending-accounts": {
     get: {
       method: "GET", route: accountsRoute, rpc: "get_lifty_sending_accounts", connectionRpc: "get_lifty_connection_accounts", path: Empty,
       query: contracts.AccountsQuerySchema, request: null, invalid: invalidRequest,
       response: contracts.AccountsGetSchema, success: 200, args: input => ({ p_query: input.query }),
-      description: "Read sending accounts, optionally filtered by sender_id and channel, including disconnected history: connection status, usage state (active/paused), sending (allowed now, else reason), daily limits, last verified check, observation (verified/unverified), access removal, declaration and sends. Read-only; never checks or changes a provider. Unverified means the last known facts are older than the freshness window, not a disconnection.",
+      description: "Read sending accounts, optionally filtered by sender_id and channel, including disconnected history: connection status, usage state (active/paused), sending (allowed now, else reason), daily limits, last verified check, observation (verified/unverified), access removal, declaration, sends and participation (next_step holds the words to show, who acts and what to do). Read-only; never checks or changes a provider. Unverified means the last known facts are older than the freshness window, not a disconnection.",
     },
     connect: {
       method: "POST", route: `${accountsRoute}/connect`, cli: { operation: "connect" }, rpc: "connect_lifty_sending_account", connectionRpc: "connect_lifty_connection_account",
@@ -149,8 +164,23 @@ export const identityOperationDefinitions = {
       args: input => ({ p_account_id: path(input), p_payload: input.body }),
       description: "Disconnect this account with confirm:true: it is paused and disconnected at once (new sends stop; submitted sends keep their history), then Lifty requests removal of its access at the provider. 200 when removal is confirmed (access_revoked_at set) or not applicable, 202 when it is still unconfirmed: Lifty keeps removing it on its own, so do not repeat the request. Other accounts are unaffected.",
     },
+    ...accountControlDefinitions,
   },
 } satisfies Record<string, Record<string, IdentityDefinition>>;
+
+/** Which handoff needs its current-reply drafts after this response, if any. */
+export function handoffRepliesRequest(key: string, body: unknown): { workspaceId: string; handoffRef: string; settingsRevision: number | null } | null {
+  if (key === "senders.turn_off") {
+    const { workspace, drain } = body as z.output<typeof contracts.SenderTurnOffResultSchema>;
+    return "handoff_ref" in drain && drain.handoff_ref ? { workspaceId: workspace.workspace_ref, handoffRef: drain.handoff_ref, settingsRevision: null } : null;
+  }
+  if (key !== "senders.handoff_prepare" && key !== "senders.handoff_settings_revise" && key !== "senders.handoff_approve") return null;
+  const handoff = body as z.output<typeof HandoffSchema>;
+  // Prepare shares the retire's key. An approval keys on its revision, so one
+  // made minutes after the retire is not collapsed into that earlier request.
+  return { workspaceId: handoff.workspace_id, handoffRef: handoff.drain_ref,
+    settingsRevision: key === "senders.handoff_prepare" ? null : handoff.settings_revision };
+}
 
 export const identityEntries = () =>
   Object.entries(identityOperationDefinitions).flatMap(([resource, operations]) =>
@@ -318,8 +348,23 @@ export async function executeIdentityOperation(session: AuthSession, key: string
     return { status: 200, body: verified(contracts.AttemptCloseResultSchema, { ...receipt,
       attempt: presentAttempt(receipt.attempt, connector, profile), successor }) };
   }
+  // A LIFT admin names the workspace; a member's comes from the shared selection rule.
+  const selectedWorkspace = async () => session.workspaceRef
+    ?? verified(WorkspaceSettingsResultSchema, await call("get_lifty_workspace_settings", {})).workspace.workspace_ref;
   const operationRpc = profile === "connections" && definition.connectionRpc ? definition.connectionRpc : definition.rpc;
-  const data = await call(operationRpc, definition.args(input));
+  const data = await call(operationRpc, { ...definition.args(input), ...(definition.explicitWorkspace ? { p_workspace_id: await selectedWorkspace() } : {}) });
+  // A scope for another person cannot describe this one.
+  if (key === "senders.transfer_scope" && verified(TransferScopeSchema, data).sender_id !== contracts.IdPath.parse(input.path).id)
+    throw new PublicError({ status: 502, ...unavailable });
+  if (key === "sending-accounts.action") {
+    const { workspace, accounts } = verified(contracts.AccountsGetSchema, data);
+    const account = accounts.find(item => item.id === contracts.IdPath.parse(input.path).id);
+    if (!account) throw new PublicError({ status: 404, code: "ACCOUNT_NOT_FOUND", message: RPC_ERROR_MESSAGES.ACCOUNT_NOT_FOUND! });
+    const { action } = AccountActionQuery.parse(input.query);
+    return { status: 200, body: verified(definition.response, { workspace, account_id: account.id, sender_id: account.sender_id, channel: account.channel,
+      action, available: accountActionAvailable(account, action),
+      operation: action === "reconnect" ? "sending_accounts_reconnect" : "sending_accounts_warmup_start", next_step: account.participation.next_step }) };
+  }
   if (key === "sending-accounts.connect" || key === "sending-accounts.reconnect") {
     const { channel, ...attemptStart } = verified(StartedAttempt, data);
     const attempt = await readAttempt(attemptStart.id);

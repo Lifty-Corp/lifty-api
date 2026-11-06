@@ -6,6 +6,7 @@ import { memberReviewOperationDefinitions } from "../src/member-review-operation
 import captures from "./campaign-review-sql-fixtures.json" with { type: "json" };
 import sql from "./member-review-sql-fixtures.json" with { type: "json" };
 import * as contracts from "../src/outreach-contracts.js";
+import { receipt } from "./senders-fixtures.js";
 import { memberReviewReceiptMatches } from "../src/member-review-operations.js";
 
 // Transport boundaries are tested independently of the SQL behavioral suites.
@@ -285,5 +286,72 @@ describe("member Review transport", () => {
       expect(tools.find(tool => tool.name === name)!.annotations.openWorldHint, name).toBe(true);
     // Reassignment contacts nobody.
     expect(tools.find(tool => tool.name === "campaigns_lead_reassign_post")!.annotations.openWorldHint).toBe(false);
+  });
+});
+
+// LIF-1771 S-09: the reply queue by answering sender, on the authentic receipts.
+describe("Review by sender", () => {
+  const route = "/v1/workspace/reply-turns";
+  const page = receipt("review.page");
+  const routed = page.turns.find((turn: { route_unavailable: boolean }) => !turn.route_unavailable);
+  // `review.page` stops at two rows ordered by a random id, so only the whole queue always holds the unroutable one.
+  const queued = receipt("review.page.all");
+  const unrouted = queued.turns.find((turn: { route_unavailable: boolean }) => turn.route_unavailable);
+  const answering = routed.answering_sender_id;
+  const queue = (result: (name: string, args: Record<string, unknown>) => unknown) => {
+    const rpc = vi.fn(async (name: string, args: Record<string, unknown>) => {
+      try { return { data: result(name, args), error: null }; } catch (error) { return { data: null, error }; }
+    });
+    const app = createApp({ authenticate: async () => ({ ok: true, session: { userId: "founder", client: { rpc } } }), log: () => {} });
+    const request = (path: string) => app.request(path, { headers: { authorization: "Bearer test", "x-lifty-client-contract": STAGE_CLIENT_CONTRACT, "x-lifty-workspace": "example" } });
+    return { rpc, request };
+  };
+
+  it("filters by the answering sender on the server and keeps its cursor", async () => {
+    const h = queue(() => page);
+    const response = await h.request(`${route}?sender_id=${answering}&limit=25&after=${routed.turn_ref}`);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.next_after).toBe(page.next_after);
+    expect(h.rpc).toHaveBeenCalledExactlyOnceWith("get_lifty_reply_turns", { p_workspace_id: null,
+      p_query: { sender_id: answering, limit: 25, after: routed.turn_ref } });
+  });
+
+  it("keeps the answering sender, an unavailable route and the original sender apart", async () => {
+    const turns = (await (await queue(() => queued).request(route)).json()).turns as { turn_ref: string }[];
+    const read = (ref: string) => turns.find(turn => turn.turn_ref === ref);
+    expect(read(routed.turn_ref)).toMatchObject({ answering_sender_id: answering, route_unavailable: false, original_sender_id: answering, original_sender_name: "Target" });
+    expect(read(unrouted.turn_ref)).toMatchObject({ answering_sender_id: answering, route_unavailable: true, sender_id: null, original_sender_id: null, original_sender_name: null,
+      view: { cause: "reply_route_unavailable", actions: ["suppress"] } });
+    const [moved] = (await (await queue(() => receipt("review.original")).request(route)).json()).turns;
+    const original = receipt("review.original").turns[0];
+    expect(original.answering_sender_id).not.toBe(original.original_sender_id);
+    expect(moved).toMatchObject({ answering_sender_id: original.answering_sender_id, sender_name: "Target",
+      original_sender_id: original.original_sender_id, original_sender_name: "Source" });
+  });
+
+  it("refuses a page that answers for another sender", async () => {
+    const response = await queue(() => page).request(`${route}?sender_id=${receipt("review.original").turns[0].original_sender_id}`);
+    expect(response.status).toBe(502);
+  });
+
+  it("counts with the same filter, keeping pending, sending and uncertain apart", async () => {
+    const all = await (await queue(() => receipt("review.counts")).request("/v1/workspace/reply-turn-counts")).json();
+    expect(all.counts).toMatchObject({ total: 31, pending: 31, sending: 0, uncertain: 0, route_unavailable: 1 });
+    expect(all.counts.senders).toHaveLength(3);
+    const h = queue(() => receipt("review.counts.sender"));
+    const one = await (await h.request(`/v1/workspace/reply-turn-counts?sender_id=${answering}&channel=email`)).json();
+    expect(one.counts).toMatchObject({ total: 11, pending: 11, route_unavailable: 1 });
+    expect(h.rpc).toHaveBeenCalledExactlyOnceWith("get_lifty_reply_turn_counts", { p_workspace_id: null, p_query: { sender_id: answering, channel: "email" } });
+    // A count that disagrees with its own senders cannot confirm the queue.
+    const wrong = receipt("review.counts.sender");
+    wrong.counts.total = 12;
+    expect((await queue(() => wrong).request("/v1/workspace/reply-turn-counts")).status).toBe(502);
+  });
+
+  it.each(["/v1/workspace/reply-turns", "/v1/workspace/reply-turn-counts"])("gives a foreign sender 404 and no data on %s", async path => {
+    const response = await queue(() => { throw { code: "PT404", message: "SENDER_NOT_FOUND" }; }).request(`${path}?sender_id=${answering}`);
+    expect(response.status).toBe(404);
+    expect((await response.json()).error.code).toBe("SENDER_NOT_FOUND");
   });
 });

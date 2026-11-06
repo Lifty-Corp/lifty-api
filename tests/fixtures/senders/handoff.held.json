@@ -1,0 +1,449 @@
+{
+  "authorization": {
+    "state": "waiting_sample_approval"
+  },
+  "cohort_count": 6,
+  "configured_sample_size": 5,
+  "confirmation_action": "approve_sample_and_transfer",
+  "context_sha256": "5ac169c308a016f67ba794a817331d9f3ec400ed743c2e79b1243372233c364a",
+  "contract": "sender-handoff-approval.v2",
+  "current_reply_count": 6,
+  "drain_ref": "5557",
+  "generation_settings": {
+    "instructions": ""
+  },
+  "held_for_human": 1,
+  "members": [
+    {
+      "dispatch_reason": "held_for_human",
+      "kind": "current_reply",
+      "lead_ref": "2abef087-195e-452c-9a33-e50a29d60594",
+      "owner": "79141375-1135-4c0e-aa57-de67ae2f65d5",
+      "prepared": false,
+      "reason": null,
+      "route": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "79141375-1135-4c0e-aa57-de67ae2f65d5"
+        },
+        "inbound_event_id": "010475c5-469d-4897-891d-7267049912d0",
+        "native_email_authority": null,
+        "provider_conversation_id": "inbound-010475c5-469d-4897-891d-7267049912d0",
+        "route": {
+          "account_id": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "channel": "email",
+          "connection_ref": "7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "inbound_channel": "email",
+          "provider": "unipile",
+          "recipient_email": "2abef087-195e-452c-9a33-e50a29d60594@prospect.test",
+          "rerouted": true,
+          "subject": "Re: Original subject"
+        },
+        "sender_account_ref": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+        "sender_id": "7a067ad1-6a10-4ad4-8d0e-bbabf6b371a4",
+        "turn_id": "010475c5-469d-4897-891d-7267049912d0"
+      },
+      "run_ref": null,
+      "state_token": "858e06ca2dff484f36de182622a48c414b31524dbc9b2d535166ebd411583a7c",
+      "turn_ref": "010475c5-469d-4897-891d-7267049912d0",
+      "turn_version": 0
+    },
+    {
+      "dispatch_reason": null,
+      "kind": "current_reply",
+      "lead_ref": "40f2b9e7-1391-4045-9ae8-06958a07667d",
+      "owner": "79141375-1135-4c0e-aa57-de67ae2f65d5",
+      "prepared": true,
+      "reason": null,
+      "route": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "79141375-1135-4c0e-aa57-de67ae2f65d5"
+        },
+        "inbound_event_id": "3b663004-37e9-474a-8722-b329b0dabc63",
+        "native_email_authority": null,
+        "provider_conversation_id": "inbound-3b663004-37e9-474a-8722-b329b0dabc63",
+        "route": {
+          "account_id": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "channel": "email",
+          "connection_ref": "7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "inbound_channel": "email",
+          "provider": "unipile",
+          "recipient_email": "40f2b9e7-1391-4045-9ae8-06958a07667d@prospect.test",
+          "rerouted": true,
+          "subject": "Re: Original subject"
+        },
+        "sender_account_ref": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+        "sender_id": "7a067ad1-6a10-4ad4-8d0e-bbabf6b371a4",
+        "turn_id": "3b663004-37e9-474a-8722-b329b0dabc63"
+      },
+      "run_ref": null,
+      "state_token": "601b157181d32d2de510d86e118f6719e56e21fc255fdb2665412e8dafabf511",
+      "turn_ref": "3b663004-37e9-474a-8722-b329b0dabc63",
+      "turn_version": 2
+    },
+    {
+      "dispatch_reason": null,
+      "kind": "current_reply",
+      "lead_ref": "85df6905-9bca-47f9-bf9a-bef6b1e05c67",
+      "owner": "79141375-1135-4c0e-aa57-de67ae2f65d5",
+      "prepared": true,
+      "reason": null,
+      "route": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "79141375-1135-4c0e-aa57-de67ae2f65d5"
+        },
+        "inbound_event_id": "2f168c34-a763-4359-9bf3-44c75f16729b",
+        "native_email_authority": null,
+        "provider_conversation_id": "inbound-2f168c34-a763-4359-9bf3-44c75f16729b",
+        "route": {
+          "account_id": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "channel": "email",
+          "connection_ref": "7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "inbound_channel": "email",
+          "provider": "unipile",
+          "recipient_email": "85df6905-9bca-47f9-bf9a-bef6b1e05c67@prospect.test",
+          "rerouted": true,
+          "subject": "Re: Original subject"
+        },
+        "sender_account_ref": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+        "sender_id": "7a067ad1-6a10-4ad4-8d0e-bbabf6b371a4",
+        "turn_id": "2f168c34-a763-4359-9bf3-44c75f16729b"
+      },
+      "run_ref": null,
+      "state_token": "465cc28e0919a47649b3ac430d2edab2632276c64fbda00efaec7650214a4498",
+      "turn_ref": "2f168c34-a763-4359-9bf3-44c75f16729b",
+      "turn_version": 2
+    },
+    {
+      "dispatch_reason": null,
+      "kind": "current_reply",
+      "lead_ref": "92753707-3ac8-4000-a0d5-cf80d6e80b45",
+      "owner": "79141375-1135-4c0e-aa57-de67ae2f65d5",
+      "prepared": true,
+      "reason": null,
+      "route": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "79141375-1135-4c0e-aa57-de67ae2f65d5"
+        },
+        "inbound_event_id": "debf1e42-210c-4d69-a1cc-a66937230424",
+        "native_email_authority": null,
+        "provider_conversation_id": "inbound-debf1e42-210c-4d69-a1cc-a66937230424",
+        "route": {
+          "account_id": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "channel": "email",
+          "connection_ref": "7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "inbound_channel": "email",
+          "provider": "unipile",
+          "recipient_email": "92753707-3ac8-4000-a0d5-cf80d6e80b45@prospect.test",
+          "rerouted": true,
+          "subject": "Re: Original subject"
+        },
+        "sender_account_ref": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+        "sender_id": "7a067ad1-6a10-4ad4-8d0e-bbabf6b371a4",
+        "turn_id": "debf1e42-210c-4d69-a1cc-a66937230424"
+      },
+      "run_ref": null,
+      "state_token": "d32011d609a8b711f58b231bdaf3fd783081e2c78861be3f3db65a7d57fab5a9",
+      "turn_ref": "debf1e42-210c-4d69-a1cc-a66937230424",
+      "turn_version": 2
+    },
+    {
+      "dispatch_reason": null,
+      "kind": "current_reply",
+      "lead_ref": "ae22806c-ad6c-4b61-8752-65351132d226",
+      "owner": "79141375-1135-4c0e-aa57-de67ae2f65d5",
+      "prepared": true,
+      "reason": null,
+      "route": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "79141375-1135-4c0e-aa57-de67ae2f65d5"
+        },
+        "inbound_event_id": "d6a8efa6-23e3-43cf-aaf7-9837a46d0c37",
+        "native_email_authority": null,
+        "provider_conversation_id": "inbound-d6a8efa6-23e3-43cf-aaf7-9837a46d0c37",
+        "route": {
+          "account_id": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "channel": "email",
+          "connection_ref": "7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "inbound_channel": "email",
+          "provider": "unipile",
+          "recipient_email": "ae22806c-ad6c-4b61-8752-65351132d226@prospect.test",
+          "rerouted": true,
+          "subject": "Re: Original subject"
+        },
+        "sender_account_ref": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+        "sender_id": "7a067ad1-6a10-4ad4-8d0e-bbabf6b371a4",
+        "turn_id": "d6a8efa6-23e3-43cf-aaf7-9837a46d0c37"
+      },
+      "run_ref": null,
+      "state_token": "928ae56f763e65ee4e698a0e25abfba38d26d8298a0e4f1873e7b34bdad473ec",
+      "turn_ref": "d6a8efa6-23e3-43cf-aaf7-9837a46d0c37",
+      "turn_version": 2
+    },
+    {
+      "dispatch_reason": null,
+      "kind": "current_reply",
+      "lead_ref": "da192467-37b5-44e5-9080-f66c0ea9d9e5",
+      "owner": "79141375-1135-4c0e-aa57-de67ae2f65d5",
+      "prepared": true,
+      "reason": null,
+      "route": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "79141375-1135-4c0e-aa57-de67ae2f65d5"
+        },
+        "inbound_event_id": "7f57ab91-7c96-4139-8265-e68a9f32160d",
+        "native_email_authority": null,
+        "provider_conversation_id": "inbound-7f57ab91-7c96-4139-8265-e68a9f32160d",
+        "route": {
+          "account_id": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "channel": "email",
+          "connection_ref": "7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "inbound_channel": "email",
+          "provider": "unipile",
+          "recipient_email": "da192467-37b5-44e5-9080-f66c0ea9d9e5@prospect.test",
+          "rerouted": true,
+          "subject": "Re: Original subject"
+        },
+        "sender_account_ref": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+        "sender_id": "7a067ad1-6a10-4ad4-8d0e-bbabf6b371a4",
+        "turn_id": "7f57ab91-7c96-4139-8265-e68a9f32160d"
+      },
+      "run_ref": null,
+      "state_token": "b0f24ead50ac2f2ab2addb343e2dff952cb5b6458a455461f2c05c5763b8fe94",
+      "turn_ref": "7f57ab91-7c96-4139-8265-e68a9f32160d",
+      "turn_version": 2
+    }
+  ],
+  "prepared_count": 5,
+  "preparing_count": 0,
+  "queued_count": 0,
+  "remainder_count": 1,
+  "replacement": {
+    "available": true,
+    "display_name": "Target",
+    "pinned_signature": "Target, Lifty",
+    "pinned_version": 1,
+    "sender_id": "7a067ad1-6a10-4ad4-8d0e-bbabf6b371a4",
+    "signature": "Target, Lifty",
+    "version": 1
+  },
+  "revision": "60d05eddf10a0ef11cd2ffc63a023e36056ba6274446bcdbd5af97e2ddc2e251",
+  "sample_complete": true,
+  "sample_count": 5,
+  "samples": [
+    {
+      "answering_route": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "79141375-1135-4c0e-aa57-de67ae2f65d5"
+        },
+        "inbound_event_id": "3b663004-37e9-474a-8722-b329b0dabc63",
+        "native_email_authority": null,
+        "provider_conversation_id": "inbound-3b663004-37e9-474a-8722-b329b0dabc63",
+        "route": {
+          "account_id": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "channel": "email",
+          "connection_ref": "7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "inbound_channel": "email",
+          "provider": "unipile",
+          "recipient_email": "40f2b9e7-1391-4045-9ae8-06958a07667d@prospect.test",
+          "rerouted": true,
+          "subject": "Re: Original subject"
+        },
+        "sender_account_ref": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+        "sender_id": "7a067ad1-6a10-4ad4-8d0e-bbabf6b371a4",
+        "turn_id": "3b663004-37e9-474a-8722-b329b0dabc63"
+      },
+      "body": "Happy to help.\n\nTarget, Lifty",
+      "context": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "79141375-1135-4c0e-aa57-de67ae2f65d5"
+        },
+        "inbound_event_ref": "3b663004-37e9-474a-8722-b329b0dabc63"
+      },
+      "draft_batch_id": "handoff/5557/3b663004-37e9-474a-8722-b329b0dabc63/1",
+      "draft_event_ref": "ea820a29-285e-49ca-80ce-9faccd822d60",
+      "kind": "current_reply",
+      "lead_ref": "40f2b9e7-1391-4045-9ae8-06958a07667d",
+      "prepared": true,
+      "subject": "Re: Original subject",
+      "turn_ref": "3b663004-37e9-474a-8722-b329b0dabc63",
+      "turn_version": 2
+    },
+    {
+      "answering_route": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "79141375-1135-4c0e-aa57-de67ae2f65d5"
+        },
+        "inbound_event_id": "2f168c34-a763-4359-9bf3-44c75f16729b",
+        "native_email_authority": null,
+        "provider_conversation_id": "inbound-2f168c34-a763-4359-9bf3-44c75f16729b",
+        "route": {
+          "account_id": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "channel": "email",
+          "connection_ref": "7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "inbound_channel": "email",
+          "provider": "unipile",
+          "recipient_email": "85df6905-9bca-47f9-bf9a-bef6b1e05c67@prospect.test",
+          "rerouted": true,
+          "subject": "Re: Original subject"
+        },
+        "sender_account_ref": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+        "sender_id": "7a067ad1-6a10-4ad4-8d0e-bbabf6b371a4",
+        "turn_id": "2f168c34-a763-4359-9bf3-44c75f16729b"
+      },
+      "body": "Happy to help.\n\nTarget, Lifty",
+      "context": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "79141375-1135-4c0e-aa57-de67ae2f65d5"
+        },
+        "inbound_event_ref": "2f168c34-a763-4359-9bf3-44c75f16729b"
+      },
+      "draft_batch_id": "handoff/5557/2f168c34-a763-4359-9bf3-44c75f16729b/1",
+      "draft_event_ref": "32c65d46-9805-42a2-ba6d-e11a0f847e78",
+      "kind": "current_reply",
+      "lead_ref": "85df6905-9bca-47f9-bf9a-bef6b1e05c67",
+      "prepared": true,
+      "subject": "Re: Original subject",
+      "turn_ref": "2f168c34-a763-4359-9bf3-44c75f16729b",
+      "turn_version": 2
+    },
+    {
+      "answering_route": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "79141375-1135-4c0e-aa57-de67ae2f65d5"
+        },
+        "inbound_event_id": "debf1e42-210c-4d69-a1cc-a66937230424",
+        "native_email_authority": null,
+        "provider_conversation_id": "inbound-debf1e42-210c-4d69-a1cc-a66937230424",
+        "route": {
+          "account_id": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "channel": "email",
+          "connection_ref": "7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "inbound_channel": "email",
+          "provider": "unipile",
+          "recipient_email": "92753707-3ac8-4000-a0d5-cf80d6e80b45@prospect.test",
+          "rerouted": true,
+          "subject": "Re: Original subject"
+        },
+        "sender_account_ref": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+        "sender_id": "7a067ad1-6a10-4ad4-8d0e-bbabf6b371a4",
+        "turn_id": "debf1e42-210c-4d69-a1cc-a66937230424"
+      },
+      "body": "Happy to help.\n\nTarget, Lifty",
+      "context": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "79141375-1135-4c0e-aa57-de67ae2f65d5"
+        },
+        "inbound_event_ref": "debf1e42-210c-4d69-a1cc-a66937230424"
+      },
+      "draft_batch_id": "handoff/5557/debf1e42-210c-4d69-a1cc-a66937230424/1",
+      "draft_event_ref": "3895f63b-3aed-4585-ba67-e68e201c73fb",
+      "kind": "current_reply",
+      "lead_ref": "92753707-3ac8-4000-a0d5-cf80d6e80b45",
+      "prepared": true,
+      "subject": "Re: Original subject",
+      "turn_ref": "debf1e42-210c-4d69-a1cc-a66937230424",
+      "turn_version": 2
+    },
+    {
+      "answering_route": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "79141375-1135-4c0e-aa57-de67ae2f65d5"
+        },
+        "inbound_event_id": "d6a8efa6-23e3-43cf-aaf7-9837a46d0c37",
+        "native_email_authority": null,
+        "provider_conversation_id": "inbound-d6a8efa6-23e3-43cf-aaf7-9837a46d0c37",
+        "route": {
+          "account_id": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "channel": "email",
+          "connection_ref": "7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "inbound_channel": "email",
+          "provider": "unipile",
+          "recipient_email": "ae22806c-ad6c-4b61-8752-65351132d226@prospect.test",
+          "rerouted": true,
+          "subject": "Re: Original subject"
+        },
+        "sender_account_ref": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+        "sender_id": "7a067ad1-6a10-4ad4-8d0e-bbabf6b371a4",
+        "turn_id": "d6a8efa6-23e3-43cf-aaf7-9837a46d0c37"
+      },
+      "body": "Happy to help.\n\nTarget, Lifty",
+      "context": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "79141375-1135-4c0e-aa57-de67ae2f65d5"
+        },
+        "inbound_event_ref": "d6a8efa6-23e3-43cf-aaf7-9837a46d0c37"
+      },
+      "draft_batch_id": "handoff/5557/d6a8efa6-23e3-43cf-aaf7-9837a46d0c37/1",
+      "draft_event_ref": "6e324762-e9d8-45a6-94df-c07c73eea546",
+      "kind": "current_reply",
+      "lead_ref": "ae22806c-ad6c-4b61-8752-65351132d226",
+      "prepared": true,
+      "subject": "Re: Original subject",
+      "turn_ref": "d6a8efa6-23e3-43cf-aaf7-9837a46d0c37",
+      "turn_version": 2
+    },
+    {
+      "answering_route": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "79141375-1135-4c0e-aa57-de67ae2f65d5"
+        },
+        "inbound_event_id": "7f57ab91-7c96-4139-8265-e68a9f32160d",
+        "native_email_authority": null,
+        "provider_conversation_id": "inbound-7f57ab91-7c96-4139-8265-e68a9f32160d",
+        "route": {
+          "account_id": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "channel": "email",
+          "connection_ref": "7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+          "inbound_channel": "email",
+          "provider": "unipile",
+          "recipient_email": "da192467-37b5-44e5-9080-f66c0ea9d9e5@prospect.test",
+          "rerouted": true,
+          "subject": "Re: Original subject"
+        },
+        "sender_account_ref": "account-7b81989f-fd2f-4c3c-bc96-66c5be1a8018",
+        "sender_id": "7a067ad1-6a10-4ad4-8d0e-bbabf6b371a4",
+        "turn_id": "7f57ab91-7c96-4139-8265-e68a9f32160d"
+      },
+      "body": "Happy to help.\n\nTarget, Lifty",
+      "context": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "79141375-1135-4c0e-aa57-de67ae2f65d5"
+        },
+        "inbound_event_ref": "7f57ab91-7c96-4139-8265-e68a9f32160d"
+      },
+      "draft_batch_id": "handoff/5557/7f57ab91-7c96-4139-8265-e68a9f32160d/1",
+      "draft_event_ref": "69363ea7-fff6-4cd1-b0cc-db8b88b37372",
+      "kind": "current_reply",
+      "lead_ref": "da192467-37b5-44e5-9080-f66c0ea9d9e5",
+      "prepared": true,
+      "subject": "Re: Original subject",
+      "turn_ref": "7f57ab91-7c96-4139-8265-e68a9f32160d",
+      "turn_version": 2
+    }
+  ],
+  "scope_sha256": "7e4097fe012bc5df81b817033f01c18fda978b3c9d322817a881d4049eeba70b",
+  "settings_revision": 1,
+  "settings_sha256": "92b07a6094f1247a2ac482da8b6d256c3c3a19f105261a4a6ab490e8d0d25cde",
+  "source_sender_id": "79141375-1135-4c0e-aa57-de67ae2f65d5",
+  "state": "preparing",
+  "transferred_count": 0,
+  "untouched_transferred_count": 0,
+  "waiting_count": 6,
+  "workspace_id": "9ed4d270-06e8-47c3-ac41-2f9b638485f4"
+}

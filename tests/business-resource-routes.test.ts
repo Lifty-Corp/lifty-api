@@ -1657,7 +1657,7 @@ describe("summary keeps independent tenant-scoped state", () => {
     const identity = vi.fn(async () => ({ status: 200 as const, body: sendersFixture }));
     const h = harness(undefined, null, { ...summaryReads, identityOperation: identity });
     const result = await (await h.request("/v1/workspace/summary", "GET", undefined, { "x-lifty-workspace": "example" })).json();
-    expect(result.senders).toEqual({ status: "available", value: sendersFixture.senders });
+    expect(result.senders).toMatchObject({ status: "available", value: sendersFixture.senders });
     expect(identity).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ userId: "founder" }), "senders.get", { path: {}, query: {}, body: undefined });
   });
   it("rejects aggregate writes and missing authorization", async () => {

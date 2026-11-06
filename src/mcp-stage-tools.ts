@@ -32,14 +32,16 @@ const openWorld = new Set(["sample-review.post", "research-schedule.activate", "
   "campaigns.review_settings_patch", "campaigns.message_review_post", "campaigns.reply_review_post", "campaigns.lead_stop_post",
   "sending-accounts.resume", "sending-accounts.resume_campaigns", "sending-accounts.declare", "sending-accounts.warmup_start", "sending-accounts.warmup_resume", "sending-accounts.placement_start", "notifications.test",
   // Draining starts the target's runs; turning on lets the person's accounts take new Journeys.
-  "senders.turn_off", "senders.turn_on",
+  "senders.turn_off", "senders.turn_on", "senders.resume", "senders.handoff_approve",
   // Removing Lifty's access at the account provider.
   "sending-accounts.disconnect", "senders.delete"]);
 // Creating a resource changes nothing that exists.
 const nonDestructive = new Set(["business.post", "senders.post", "journeys.post", "campaigns.post"]);
 // Writes that commit synchronously, with no authorization link or receipt.
 const synchronousStages = new Set(["business", "targeting", "research-criteria", "commercial-voice", "setup", "research-schedule", "journeys", "campaigns"]);
-const synchronousOperations = new Set(["sending-accounts.resume_campaigns", "sending-accounts.declare", "crm.preferences_patch", "customer-exclusions.import", "notifications.patch"]);
+const synchronousOperations = new Set(["sending-accounts.resume_campaigns", "sending-accounts.declare", "crm.preferences_patch", "customer-exclusions.import", "notifications.patch",
+  "senders.pause", "senders.resume", "senders.settings_patch", "senders.handoff_approve", "senders.handoff_cancel", "senders.handoff_settings_revise",
+  "senders.handoff_reply_revise", "senders.stop_set", "senders.stop_release", "senders.stop_review"]);
 const pendingOperations = new Set(["campaigns.reply_review_post", "campaigns.message_rewrite_post", "campaigns.lead_stop_post"]);
 // Live CRM reads can replace credentials or connection health synchronously
 // under the existing authorization; they do not start a new business write.
