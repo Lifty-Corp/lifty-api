@@ -36,9 +36,10 @@ type Reads = Parameters<typeof getNextStep>[0] & Pick<AppDependencies, "listAdmi
 export async function readAdminOnboarding(dependencies: Reads, session: AuthSession) {
   const workspaces = await dependencies.listAdminWorkspaces(session);
   const positions: unknown[] = new Array(workspaces.length);
-  // A few at a time: each next_step is several reads against the same database.
+  // Twelve at a time: each next_step is about nine reads, and their cost is the
+  // round trips rather than the database or this process.
   let next = 0;
-  await Promise.all(Array.from({ length: Math.min(4, workspaces.length) }, async () => {
+  await Promise.all(Array.from({ length: Math.min(12, workspaces.length) }, async () => {
     while (next < workspaces.length) {
       const index = next++;
       const workspace = workspaces[index]!;
