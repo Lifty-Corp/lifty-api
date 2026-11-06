@@ -58,7 +58,7 @@ describe("generated MCP stage operations", () => {
     // ids stay out of it, because a report names its own.
     // LIF-1771 adds the Senders controls: pause and resume, handoffs, workspace
     // settings, the transfer scope, LIFT stops, recovery incidents and reply
-    // counts (about 26,000).
+    // counts (about 27,000 with the sample-changed wording).
     expect(JSON.stringify(tools).length).toBeLessThan(240_000);
     expect(tools.find(tool => tool.name === "crm_mapping_sources")!.annotations.readOnlyHint).toBe(true);
     expect(tools.find(tool => tool.name === "sending_accounts_deliverability")!.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
