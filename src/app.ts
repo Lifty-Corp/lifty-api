@@ -1,3 +1,5 @@
+import { NotificationTimingConfigurationSchema, SetNotificationTimingRequestSchema, type NotificationTimingConfiguration, type SetNotificationTimingRequest } from "./notification-timing.js";
+import { NotificationTypeCodeSchema } from "./contracts.js";
 import { connectionProfileAllows } from "./runtime-profile.js";
 import { SetNotificationControlsRequestSchema, SetNotificationPreferencesRequestSchema, type SetNotificationControlsRequest, type SetNotificationPreferencesRequest } from "./contracts.js";
 import { historicalEmailResult, historicalOperation, HistoricalEmailResultSchema } from "./historical-outreach.js";
@@ -63,6 +65,8 @@ import { connectorUnavailable, executeIdentityOperation, type IdentityInput, typ
 import { createAccountConnectRouter } from "./account-connect-routes.js";
 import type { AccountConnection } from "./account-connection.js";
 import { WarmupStartResult, WarmupStatus, WarmupWorkspaceRequest, type WarmupStartResult as WarmupStart, type WarmupStatus as WarmupStatusValue } from "./email-warmup-contracts.js";
+import { EmailDnsRequest, EmailDnsStatus, type EmailDnsInput, type EmailDnsStatus as EmailDnsStatusValue } from "./email-dns-contracts.js";
+import { createEmailDnsOperations } from "./email-dns.js";
 import { ConnectionPlacementStatus, PlacementStartRequest, PlacementStatusRequest, type PlacementStartInput, type PlacementStatusInput } from "./email-connection-placement.js";
 import { DeliverabilityQuery, DeliverabilityQueryParams, DeliverabilityResponse, type DeliverabilityQuery as DeliverabilityQueryValue, type DeliverabilityResponse as DeliverabilityResponseValue } from "./email-deliverability-contracts.js";
 
@@ -72,7 +76,7 @@ const MAX_REQUEST_BYTES = 132 * 1024;
 const MAX_CREATE_WORKSPACE_BYTES = 16 * 1024;
 // One shared per-user budget for expensive provisioning, run and provider operations.
 const rateLimitedPaths = new Set([
-  "/v1/workspace/business", "/v1/workspace/setup", "/v1/workspace/sample-review", "/v1/integrations/hubspot/company-mapping", "/v1/email/warmup/start",
+  "/v1/workspace/business", "/v1/workspace/setup", "/v1/workspace/sample-review", "/v1/integrations/hubspot/company-mapping", "/v1/email/warmup/start", "/v1/email/dns/recheck",
   "/v1/workspace/customer-exclusions/import",
   "/v1/workspace/crm", "/v1/workspace/notifications", "/v1/workspace/senders", "/v1/workspace/sending-accounts/connect",
   "/v1/workspace/crm/mapping/apply", "/v1/workspace/crm/mapping/property_create", "/v1/workspace/crm/mapping/sync", "/v1/integrations/hubspot/sync", "/v1/integrations/attio/sync", "/v1/workspace/crm/sync",
@@ -112,6 +116,8 @@ export interface AppDependencies {
   getEmailWarmup(session: AuthSession, workspace: string, connectionRef?: string): Promise<WarmupStatusValue>;
   startEmailWarmup(session: AuthSession, workspace: string, connectionRef?: string): Promise<WarmupStart>;
   changeEmailWarmup(session: AuthSession, workspace: string, operation: "pause" | "resume" | "remove", connectionRef?: string): Promise<WarmupStatusValue>;
+  getEmailDns(session: AuthSession, input: EmailDnsInput): Promise<EmailDnsStatusValue>;
+  recheckEmailDns(session: AuthSession, input: EmailDnsInput): Promise<EmailDnsStatusValue>;
   getEmailDeliverability(session: AuthSession, query: DeliverabilityQueryValue): Promise<DeliverabilityResponseValue>;
   getEmailPlacement(session: AuthSession, input: PlacementStatusInput): Promise<ConnectionPlacementStatus>;
   startEmailPlacement(session: AuthSession, input: PlacementStartInput): Promise<ConnectionPlacementStatus>;
@@ -157,6 +163,8 @@ export interface AppDependencies {
   enqueueIntegrationRevocation: EnqueueIntegrationRevocation;
   /** Notification configuration in the notifications schema (LIF-1464). */
   getNotificationConfig(session: AuthSession): Promise<NotificationConfig>;
+  getNotificationTiming(session: AuthSession, typeCode: string): Promise<NotificationTimingConfiguration>;
+  setNotificationTiming(session: AuthSession, input: SetNotificationTimingRequest): Promise<NotificationTimingConfiguration>;
   setNotificationControls(session: AuthSession, input: SetNotificationControlsRequest): Promise<NotificationConfig>;
   setNotificationPreferences(session: AuthSession, input: SetNotificationPreferencesRequest): Promise<NotificationConfig>;
   companyMapping: CompanyMappingOperation;
@@ -170,7 +178,7 @@ export interface AppDependencies {
     session: AuthSession,
     input: SetNotificationRouteRequest,
   ): Promise<NotificationDestination>;
-  /** Queues one test message to a saved Slack destination. */
+  /** Queues one test message to a saved Slack or current-owner email destination. */
   sendNotificationTest(
     session: AuthSession,
     destinationRef: string,
@@ -376,6 +384,13 @@ function registerOpenApi(app: OpenAPIHono<AppEnvironment>): void {
       request:{body:{required:true,content:{"application/json":{schema:WarmupWorkspaceRequest}}}},
       responses:{200:JsonResponse(WarmupStatus),400:JsonResponse(ErrorResponseSchema),401:JsonResponse(ErrorResponseSchema),403:JsonResponse(ErrorResponseSchema),409:JsonResponse(ErrorResponseSchema),502:JsonResponse(ErrorResponseSchema),503:JsonResponse(ErrorResponseSchema)}});
   }
+  app.openAPIRegistry.registerPath({method:"get",path:"/v1/email/dns",operationId:"getEmailDns",security:[{bearerAuth:[]}],
+    description:"LIF-1255: the open DNS issue for one email account's domain, how to fix each failing record for that mailbox provider, and the latest recheck. Read-only.",
+    request:{query:EmailDnsRequest},responses:{200:JsonResponse(EmailDnsStatus),400:JsonResponse(ErrorResponseSchema),401:JsonResponse(ErrorResponseSchema),403:JsonResponse(ErrorResponseSchema),409:JsonResponse(ErrorResponseSchema),502:JsonResponse(ErrorResponseSchema)}});
+  app.openAPIRegistry.registerPath({method:"post",path:"/v1/email/dns/recheck",operationId:"recheckEmailDns",security:[{bearerAuth:[]}],
+    description:"LIF-1255: record one request for a fresh DNS check after the founder fixes the records. Returns at once; the outcome follows within 30 minutes. A repeated call reuses the open request.",
+    request:{body:{required:true,content:{"application/json":{schema:EmailDnsRequest}}}},
+    responses:{200:JsonResponse(EmailDnsStatus),400:JsonResponse(ErrorResponseSchema),401:JsonResponse(ErrorResponseSchema),403:JsonResponse(ErrorResponseSchema),409:JsonResponse(ErrorResponseSchema),413:JsonResponse(ErrorResponseSchema),429:JsonResponse(ErrorResponseSchema),502:JsonResponse(ErrorResponseSchema)}});
   app.openAPIRegistry.registerPath({
     method: "post",
     path: "/v1/workspaces/{workspace_ref}/integrations/slack/connect-link",
@@ -729,8 +744,12 @@ function providerUnavailable(context: Context<AppEnvironment>, provider: Provide
   );
 }
 
+const emailDns = createEmailDnsOperations();
+
 const defaultDependencies: AppDependencies = {
   getConnectionAttempt,
+  getEmailDns: emailDns.status,
+  recheckEmailDns: emailDns.recheck,
   getEmailWarmup: async () => { throw new PublicError({ status: 503, code: "EMAIL_WARMUP_NOT_CONFIGURED", message: "Mailbox warmup is not available on this LIFTY server yet." }); },
   startEmailWarmup: async () => { throw new PublicError({ status: 503, code: "EMAIL_WARMUP_NOT_CONFIGURED", message: "Mailbox warmup is not available on this LIFTY server yet. Nothing was changed." }); },
   changeEmailWarmup: async () => { throw new PublicError({ status: 503, code: "EMAIL_WARMUP_NOT_CONFIGURED", message: "Mailbox warmup is not available on this LIFTY server yet. Nothing was changed." }); },
@@ -789,6 +808,8 @@ const defaultDependencies: AppDependencies = {
   enqueueIntegrationRevocation: async () => {
     throw new Error("enqueueIntegrationRevocation is not configured");
   },
+  getNotificationTiming: async () => { throw new Error("getNotificationTiming is not configured"); },
+  setNotificationTiming: async () => { throw new Error("setNotificationTiming is not configured"); },
   setNotificationControls: async () => { throw new Error("setNotificationControls is not configured"); },
   setNotificationPreferences: async () => { throw new Error("setNotificationPreferences is not configured"); },
   getNotificationConfig: async () => {
@@ -1382,14 +1403,26 @@ export function createApp(
     return context.json(NotificationDestinationSchema.parse(result));
   });
 
-  for (const [path, schema, operation] of [
-    ["controls", SetNotificationControlsRequestSchema, (session: AuthSession, input: unknown) => dependencies.setNotificationControls(session, SetNotificationControlsRequestSchema.parse(input))],
-    ["preferences", SetNotificationPreferencesRequestSchema, (session: AuthSession, input: unknown) => dependencies.setNotificationPreferences(session, SetNotificationPreferencesRequestSchema.parse(input))],
+  app.openAPIRegistry.registerPath({ method: "get", path: "/v1/notifications/timing/{type_code}",
+    operationId: "getNotificationTiming", security: [{ bearerAuth: [] }],
+    request: { params: z.object({ type_code: NotificationTypeCodeSchema }) },
+    responses: { 200: JsonResponse(NotificationTimingConfigurationSchema), 400: JsonResponse(ErrorResponseSchema), 401: JsonResponse(ErrorResponseSchema), 403: JsonResponse(ErrorResponseSchema) },
+  });
+  app.get("/v1/notifications/timing/:type_code", async context => {
+    const code = NotificationTypeCodeSchema.safeParse(context.req.param("type_code"));
+    if (!code.success) return errorJson(context, 400, "INVALID_REQUEST", "Choose a notification type.");
+    return context.json(NotificationTimingConfigurationSchema.parse(await dependencies.getNotificationTiming(context.get("authSession"), code.data)));
+  });
+
+  for (const [path, schema, response, operation] of [
+    ["controls", SetNotificationControlsRequestSchema, NotificationConfigSchema, (session: AuthSession, input: unknown) => dependencies.setNotificationControls(session, SetNotificationControlsRequestSchema.parse(input))],
+    ["preferences", SetNotificationPreferencesRequestSchema, NotificationConfigSchema, (session: AuthSession, input: unknown) => dependencies.setNotificationPreferences(session, SetNotificationPreferencesRequestSchema.parse(input))],
+    ["timing", SetNotificationTimingRequestSchema, NotificationTimingConfigurationSchema, (session: AuthSession, input: unknown) => dependencies.setNotificationTiming(session, SetNotificationTimingRequestSchema.parse(input))],
   ] as const) {
     app.openAPIRegistry.registerPath({ method: "put", path: `/v1/notifications/${path}`,
-      operationId: path === "controls" ? "setNotificationControls" : "setNotificationPreferences", security: [{ bearerAuth: [] }],
+      operationId: path === "controls" ? "setNotificationControls" : path === "timing" ? "setNotificationTiming" : "setNotificationPreferences", security: [{ bearerAuth: [] }],
       request: { body: { required: true, content: { "application/json": { schema } } } },
-      responses: { 200: JsonResponse(NotificationConfigSchema), 400: JsonResponse(ErrorResponseSchema),
+      responses: { 200: JsonResponse(response), 400: JsonResponse(ErrorResponseSchema),
         401: JsonResponse(ErrorResponseSchema), 403: JsonResponse(ErrorResponseSchema), 409: JsonResponse(ErrorResponseSchema) },
     });
     app.put(`/v1/notifications/${path}`, async context => {
@@ -1399,7 +1432,7 @@ export function createApp(
       try { value = JSON.parse(body.text); } catch { value = null; }
       const parsed = schema.safeParse(value);
       if (!parsed.success) return errorJson(context, 400, "INVALID_REQUEST", "Notification settings are invalid.");
-      return context.json(NotificationConfigSchema.parse(await operation(context.get("authSession"), parsed.data)));
+      return context.json(response.parse(await operation(context.get("authSession"), parsed.data)));
     });
   }
 
@@ -1536,6 +1569,23 @@ export function createApp(
     const target: [string, string?] = parsed.data.connection_ref === undefined
       ? [parsed.data.workspace] : [parsed.data.workspace, parsed.data.connection_ref];
     return context.json(WarmupStatus.parse(await dependencies.getEmailWarmup(context.get("authSession"), ...target)));
+  });
+  // LIF-1255: the database authorizes the member, workspace and exact account.
+  app.get("/v1/email/dns", async (context) => {
+    context.header("cache-control", "no-store");
+    const parsed = EmailDnsRequest.safeParse(context.req.query());
+    if (!parsed.success) return errorJson(context, 400, "INVALID_REQUEST", "Choose a workspace and an email account.");
+    return context.json(EmailDnsStatus.parse(await dependencies.getEmailDns(context.get("authSession"), parsed.data)));
+  });
+  app.post("/v1/email/dns/recheck", async (context) => {
+    context.header("cache-control", "no-store");
+    const raw = await readRequestTextWithinLimit(context.req.raw, 4096);
+    if (!raw.ok) return errorJson(context, 413, "INVALID_REQUEST", "DNS recheck request is too large.");
+    let body: unknown;
+    try { body = JSON.parse(raw.text); } catch { return errorJson(context, 400, "INVALID_REQUEST", "Choose a workspace and an email account."); }
+    const parsed = EmailDnsRequest.safeParse(body);
+    if (!parsed.success) return errorJson(context, 400, "INVALID_REQUEST", "Choose a workspace and an email account.");
+    return context.json(EmailDnsStatus.parse(await dependencies.recheckEmailDns(context.get("authSession"), parsed.data)));
   });
   // LIF-1042: the database authorizes scope, filters and cursor with the
   // caller's session; provider reports are read only for authorized tests.

@@ -18,7 +18,7 @@ describe("runtime context discovery and connection handoff", () => {
   it("publishes the Identity catalog and connection-scoped warmup operations", () => {
     const context = getAgentContext("sending-accounts")!,
       operations = context.operations!;
-    expect(Object.fromEntries(Object.entries(operations).filter(([key]) => !/^(warmup_|placement_|deliverability)/.test(key))
+    expect(Object.fromEntries(Object.entries(operations).filter(([key]) => !/^(warmup_|placement_|deliverability|dns_)/.test(key))
       .map(([key, operation]) => [key, `${operation.method} ${operation.route}`]))).toEqual({
       context: "GET /v1/context/sending-accounts",
       get: "GET /v1/workspace/sending-accounts",
@@ -35,6 +35,8 @@ describe("runtime context discovery and connection handoff", () => {
       incidents_get: "GET /v1/workspace/recovery-incidents",
       action: "GET /v1/workspace/sending-accounts/{id}/action",
     });
+    expect(`${operations.dns_status!.method} ${operations.dns_status!.route}`).toBe("GET /v1/email/dns");
+    expect(`${operations.dns_recheck!.method} ${operations.dns_recheck!.route}`).toBe("POST /v1/email/dns/recheck");
     expect(operations.connect!.request.body).toMatchObject({ required: ["sender_id", "channel"], additionalProperties: false });
     expect(Object.keys(operations.disconnect!.responses)).toEqual(expect.arrayContaining(["200", "202"]));
     expect(Object.fromEntries(Object.entries(getAgentContext("senders")!.operations!).map(([key, operation]) => [key, `${operation.method} ${operation.route}`]))).toEqual({

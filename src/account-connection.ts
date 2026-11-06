@@ -190,6 +190,11 @@ export function createAccountConnection(settings: AccountConnectionSettings) {
       return snapshot(channel, "fail", { attempt_id: attempt.id, reason: "identity_mismatch" });
     }
     if (!verified) return current;
+    // The connection profile's completion owner is strict and has no DNS notices.
+    if (settings.connectionOnly && "mailbox_provider" in verified) {
+      const { mailbox_provider: _, ...proof } = verified;
+      return snapshot(channel, "complete", { attempt_id: attempt.id, verified: proof });
+    }
     return snapshot(channel, "complete", { attempt_id: attempt.id, verified });
   }
   // Remove Lifty's access to one disconnected account; true only with provider evidence.

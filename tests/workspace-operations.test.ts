@@ -169,7 +169,6 @@ describe("notification configuration operations", () => {
   it("queues a test only for this workspace's Slack destination while Slack is usable", async () => {
     const refusals: Array<[string, NotificationsDatabaseOptions, { status: number; code: string }]> = [
       ["64300000-0000-4000-a000-000000000099", {}, { status: 404, code: "DESTINATION_NOT_FOUND" }],
-      [emailRef, {}, { status: 409, code: "DESTINATION_NOT_TESTABLE" }],
       [slackRef, { slack: { provider: "slack", status: "not_connected" } }, { status: 409, code: "SLACK_NOT_CONNECTED" }],
       [slackRef, { slack: { ...connectedSlack, reconnect_required: true } }, { status: 409, code: "SLACK_RECONNECT_REQUIRED" }],
     ];
@@ -184,6 +183,17 @@ describe("notification configuration operations", () => {
     const result = await sendNotificationTest(session(notificationsDatabase({ destinations: [ownerEmail(), { ...slackChannel(), active: false }] })), slackRef, enqueue);
     expect(enqueue).toHaveBeenCalledExactlyOnceWith({ workspaceId: workspaceRef, destinationId: slackRef, requestId: result.request_ref });
     expect(result).toEqual({ destination_ref: slackRef, request_ref: expect.stringMatching(/^[0-9a-f-]{36}$/), status: "queued" });
+  });
+
+  it("tests only the current owner's email without reading a Slack grant", async () => {
+    const database = notificationsDatabase({ errors: { "public.get_lifty_slack_connection": { code: "42501" } } });
+    const enqueue = vi.fn(async (_request: NotificationTestRequest) => ({ id: "run_email" }));
+    const result = await sendNotificationTest(session(database), emailRef, enqueue);
+    expect(enqueue).toHaveBeenCalledExactlyOnceWith({ workspaceId: workspaceRef, destinationId: emailRef, requestId: result.request_ref });
+    expect(database.calls.some(call => call.name === "get_lifty_slack_connection")).toBe(false);
+    const invalid = notificationsDatabase({ destinations: [{ ...ownerEmail(), address: "other@example.com" }] });
+    await expect(sendNotificationTest(session(invalid), emailRef, enqueue)).rejects.toMatchObject({ status: 404 });
+    expect(enqueue).toHaveBeenCalledTimes(1);
   });
 
   it("reports a missing Slack grant as a setup step, not a transient failure", async () => {

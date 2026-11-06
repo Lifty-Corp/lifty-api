@@ -288,7 +288,8 @@ export const CampaignDraftSchema = z.object({ expected_version: Version, revisio
 export const ExactRevisionSchema = z.object({ revision_ref: Ref, digest: Digest }).strict();
 export const PublishSchema = ExactRevisionSchema.extend({ expected_version: Version }).strict();
 export const ActivateSchema = PublishSchema;
-export const CampaignPauseSchema = z.object({ expected_version: Version }).strict();
+// A LIFT admin's reason reaches the founder as written. A founder's own pause sends no notice.
+export const CampaignPauseSchema = z.object({ expected_version: Version, reason: z.string().trim().min(1).max(200).optional() }).strict();
 const MemberApproval = z.object({ actor_ref: Ref, approved_at: Timestamp }).strict();
 const SlackIdentity = z.string().min(1);
 // LIF-1760: a nonmember approved this Campaign revision in Slack. actor_ref is

@@ -296,6 +296,11 @@ with a healthy check from the last 24 hours. Paused days do not count.
 
 Routes, all bound to the caller's session and an explicit workspace:
 
+- `GET /v1/email/dns?workspace=<slug-or-id>&connection_ref=<id>` returns the open
+  DNS issue for that account's domain, provider-correct fixes and the latest
+  recheck. `POST /v1/email/dns/recheck` with the same fields records one fresh
+  check after the founder fixes the records; the database authorizes the member,
+  workspace and exact account.
 - `GET /v1/email/warmup?workspace=<slug-or-id>` returns state, active days
   N of 21, today's warmup volume and ramp target, SPF/DMARC/MX, last check
   time, a plain-words blocking reason and `recommended_go_live`.
