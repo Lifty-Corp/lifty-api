@@ -1,14 +1,14 @@
 {
   "applied": true,
   "cause": "disconnected",
-  "connection_ref": "95e08c20-9bbc-4f8d-97d6-2400c3619de6",
+  "connection_ref": "2cad055e-3189-4e19-8f6a-727de1d692ed",
   "counts": {
     "move_inbox": 2
   },
   "failed": 0,
   "generation": 2,
   "handoff_ref": null,
-  "incident_ref": "f32567eb-d1f9-4f00-9cc6-1940d29e112b",
+  "incident_ref": "bb855a8e-92f1-4ffd-840c-85180c05b516",
   "mode": "apply",
   "more": false,
   "moved": 2,
@@ -17,11 +17,11 @@
   "prepared": 0,
   "severity": "severe",
   "target": {
-    "connection_ref": "3851ca9b-caf0-4b14-9a76-abffa0ad345b",
+    "connection_ref": "e412ea7e-5fc9-48a7-8d2c-5c693069dfb3",
     "kind": "same_person_inbox"
   },
   "total": 2,
   "truncated": false,
   "waiting": 0,
-  "workspace_id": "01ee96e7-0c80-4ea0-bcf4-e02383f6091a"
+  "workspace_id": "20a95ad6-8b26-43dc-8230-45ad197bf412"
 }

@@ -1,14 +1,14 @@
 {
   "drain": {
-    "drain_to_sender_id": "8816f84b-61af-41f2-a488-f064dc496238",
+    "drain_to_sender_id": "dad344fa-70ca-4ae5-a27c-e479163b119f",
     "errors": [],
-    "handoff_ref": "1978",
+    "handoff_ref": "5520",
     "mode": "continue",
     "outcomes": {
       "waiting_sample_approval": 1
     },
     "remaining": 1,
-    "sender_id": "f99a77d3-8800-4838-ae23-9e03fa4f4a26"
+    "sender_id": "abd8ef1b-783f-4e06-a5ae-2a195de43cb7"
   },
   "sender": {
     "accounts": [
@@ -16,15 +16,15 @@
         "access_removal": null,
         "access_revoked_at": null,
         "channel": "linkedin",
-        "checked_at": "2026-11-05T18:29:04.005243+00:00",
-        "connected_at": "2026-10-06T18:29:04.005243+00:00",
+        "checked_at": "2026-11-06T01:51:18.252187+00:00",
+        "connected_at": "2026-10-07T01:51:18.252187+00:00",
         "declaration": null,
         "disconnect_pause": {
           "can_resume": false,
           "count": 0
         },
         "disconnected_at": null,
-        "id": "4225fd88-07c2-4cb9-9ccf-14222f44f77c",
+        "id": "15a383cb-0770-4c5c-b1b1-a998c8e21db1",
         "identity": null,
         "limits": {
           "invitations_per_7_days": 25,
@@ -38,12 +38,12 @@
           "also": [],
           "category": "intentional",
           "cause": "sender_off",
-          "since": "2026-11-05T18:29:04.042227+00:00",
+          "since": "2026-11-06T01:51:18.302744+00:00",
           "since_estimated": false,
           "status": "paused",
           "waiting_journeys": 0
         },
-        "sender_id": "f99a77d3-8800-4838-ae23-9e03fa4f4a26",
+        "sender_id": "abd8ef1b-783f-4e06-a5ae-2a195de43cb7",
         "sending": {
           "allowed": false,
           "reason": "blocked",
@@ -60,11 +60,11 @@
         "access_removal": null,
         "access_revoked_at": null,
         "channel": "email",
-        "checked_at": "2026-11-05T18:29:04.004765+00:00",
-        "connected_at": "2026-10-06T18:29:04.004765+00:00",
+        "checked_at": "2026-11-06T01:51:18.251394+00:00",
+        "connected_at": "2026-10-07T01:51:18.251394+00:00",
         "declaration": {
-          "declared_at": "2026-11-05T18:29:04.004766+00:00",
-          "declared_by": "e4f93067-afb1-48a2-b26c-fb31c8bb39e8",
+          "declared_at": "2026-11-06T01:51:18.251394+00:00",
+          "declared_by": "994d5cf5-5f11-403a-8f77-428c3a2e8152",
           "mailbox_use": "habitual"
         },
         "disconnect_pause": {
@@ -72,8 +72,8 @@
           "count": 0
         },
         "disconnected_at": null,
-        "id": "fb21424e-32b6-4680-92c6-709921efcdb6",
-        "identity": "fb21424e-32b6-4680-92c6-709921efcdb6@lif1771.test",
+        "id": "ad24e69b-33af-4129-968a-2a05a3ccae44",
+        "identity": "ad24e69b-33af-4129-968a-2a05a3ccae44@lif1771.test",
         "limits": {
           "emails_per_day": 10
         },
@@ -84,12 +84,12 @@
           "also": [],
           "category": "intentional",
           "cause": "sender_off",
-          "since": "2026-11-05T18:29:04.042227+00:00",
+          "since": "2026-11-06T01:51:18.302744+00:00",
           "since_estimated": false,
           "status": "paused",
           "waiting_journeys": 0
         },
-        "sender_id": "f99a77d3-8800-4838-ae23-9e03fa4f4a26",
+        "sender_id": "abd8ef1b-783f-4e06-a5ae-2a195de43cb7",
         "sending": {
           "allowed": false,
           "reason": "blocked",
@@ -104,18 +104,18 @@
       }
     ],
     "booking_url": null,
-    "id": "f99a77d3-8800-4838-ae23-9e03fa4f4a26",
+    "id": "abd8ef1b-783f-4e06-a5ae-2a195de43cb7",
     "name": "Source",
     "sending": {
       "drain_mode": "continue",
-      "drain_to_sender_id": "8816f84b-61af-41f2-a488-f064dc496238",
+      "drain_to_sender_id": "dad344fa-70ca-4ae5-a27c-e479163b119f",
       "leads_remaining": 1,
-      "off_at": "2026-11-05T18:29:04.042227+00:00",
+      "off_at": "2026-11-06T01:51:18.302744+00:00",
       "pending_transfer": {
-        "handoff_ref": "1978",
+        "handoff_ref": "5520",
         "leads_awaiting_transfer": 1,
-        "retired_at": "2026-11-05T18:29:04.042227+00:00",
-        "target_sender_id": "8816f84b-61af-41f2-a488-f064dc496238"
+        "retired_at": "2026-11-06T01:51:18.302744+00:00",
+        "target_sender_id": "dad344fa-70ca-4ae5-a27c-e479163b119f"
       },
       "reason": "Left",
       "state": "off"
@@ -126,6 +126,6 @@
   "workspace": {
     "name": "Synthetic handoff",
     "state": "ready_for_connections",
-    "workspace_ref": "8c08350b-5e8a-4157-9d89-5c289984ec42"
+    "workspace_ref": "dbc7228e-3c9e-4f0a-8007-71b652ebc7f6"
   }
 }

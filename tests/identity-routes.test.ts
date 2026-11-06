@@ -534,22 +534,22 @@ describe("participation causes", () => {
   it("reads a member's Lifty stop with its plain reason, review date and estimated since", async () => {
     const { participation } = await read(receipt("participation.stop"));
     const { since, stop: { review_by: reviewBy } } = receipt("participation.stop");
-    expect(participation.next_step).toEqual({ label: "Paused by Lifty · deliverability review · we review it by Nov 12", owner: "lifty",
+    expect(participation.next_step).toEqual({ label: "Paused by Lifty · deliverability review · we review it by Nov 13", owner: "lifty",
       action: "lifty_review", since, since_estimated: false, review_by: reviewBy });
     expect(participation).toMatchObject({ status: "paused", cause: "paused_by_lift", category: "intentional", waiting_journeys: 0 });
     expect((await read({ ...receipt("participation.stop"), since_estimated: true })).participation.next_step.since_estimated).toBe(true);
   });
 
   it.each([
-    ["deliverability_review", "Paused by Lifty · deliverability review · we review it by Nov 12"],
-    ["account_safety", "Paused by Lifty · account safety · we review it by Nov 12"],
-    ["provider_risk", "Paused by Lifty · account safety · we review it by Nov 12"],
-    ["setup", "Paused by Lifty · setup · we review it by Nov 12"],
-    ["cutover", "Paused by Lifty · setup · we review it by Nov 12"],
-    ["recorded_before_lif1710", "Paused by Lifty · setup · we review it by Nov 12"],
-    ["client_request", "Paused by Lifty · at your request · we review it by Nov 12"],
-    ["maintenance", "Paused by Lifty · maintenance · we review it by Nov 12"],
-    ["other", "Paused by Lifty · we review it by Nov 12"],
+    ["deliverability_review", "Paused by Lifty · deliverability review · we review it by Nov 13"],
+    ["account_safety", "Paused by Lifty · account safety · we review it by Nov 13"],
+    ["provider_risk", "Paused by Lifty · account safety · we review it by Nov 13"],
+    ["setup", "Paused by Lifty · setup · we review it by Nov 13"],
+    ["cutover", "Paused by Lifty · setup · we review it by Nov 13"],
+    ["recorded_before_lif1710", "Paused by Lifty · setup · we review it by Nov 13"],
+    ["client_request", "Paused by Lifty · at your request · we review it by Nov 13"],
+    ["maintenance", "Paused by Lifty · maintenance · we review it by Nov 13"],
+    ["other", "Paused by Lifty · we review it by Nov 13"],
   ])("words a stop for %s", async (reason, label) => {
     expect((await read(stopped({ reason }))).participation.next_step.label).toBe(label);
   });

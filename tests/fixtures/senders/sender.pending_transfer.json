@@ -5,55 +5,12 @@
         {
           "access_removal": null,
           "access_revoked_at": null,
-          "channel": "linkedin",
-          "checked_at": "2026-11-05T18:29:04.01289+00:00",
-          "connected_at": "2026-10-06T18:29:04.01289+00:00",
-          "declaration": null,
-          "disconnect_pause": {
-            "can_resume": false,
-            "count": 0
-          },
-          "disconnected_at": null,
-          "id": "5f99be73-c659-41bd-bba7-b4ea59891d08",
-          "identity": null,
-          "limits": {
-            "invitations_per_7_days": 25,
-            "invitations_per_day": 5,
-            "messages_per_day": 0
-          },
-          "observation": {
-            "state": "verified"
-          },
-          "participation": {
-            "also": [],
-            "category": null,
-            "cause": "active_journeys",
-            "since": null,
-            "since_estimated": false,
-            "status": "sending"
-          },
-          "sender_id": "8816f84b-61af-41f2-a488-f064dc496238",
-          "sending": {
-            "allowed": true,
-            "reason": null,
-            "scope": null
-          },
-          "sends": {
-            "last_7_days": 0,
-            "today": 0
-          },
-          "state": "active",
-          "status": "connected"
-        },
-        {
-          "access_removal": null,
-          "access_revoked_at": null,
           "channel": "email",
-          "checked_at": "2026-11-05T18:29:04.012243+00:00",
-          "connected_at": "2026-10-06T18:29:04.012243+00:00",
+          "checked_at": "2026-11-06T01:51:18.26416+00:00",
+          "connected_at": "2026-10-07T01:51:18.26416+00:00",
           "declaration": {
-            "declared_at": "2026-11-05T18:29:04.012245+00:00",
-            "declared_by": "e4f93067-afb1-48a2-b26c-fb31c8bb39e8",
+            "declared_at": "2026-11-06T01:51:18.26416+00:00",
+            "declared_by": "994d5cf5-5f11-403a-8f77-428c3a2e8152",
             "mailbox_use": "habitual"
           },
           "disconnect_pause": {
@@ -61,8 +18,8 @@
             "count": 0
           },
           "disconnected_at": null,
-          "id": "b8ef9730-f751-40f2-9a22-8bb01e9fbc0c",
-          "identity": "b8ef9730-f751-40f2-9a22-8bb01e9fbc0c@lif1771.test",
+          "id": "9e904824-d910-43e5-9821-6bd4d9279af3",
+          "identity": "9e904824-d910-43e5-9821-6bd4d9279af3@lif1771.test",
           "limits": {
             "emails_per_day": 10
           },
@@ -71,66 +28,14 @@
           },
           "participation": {
             "also": [],
-            "category": null,
-            "cause": "active_journeys",
-            "since": null,
-            "since_estimated": false,
-            "status": "sending"
-          },
-          "sender_id": "8816f84b-61af-41f2-a488-f064dc496238",
-          "sending": {
-            "allowed": true,
-            "reason": null,
-            "scope": null
-          },
-          "sends": {
-            "last_7_days": 0,
-            "today": 0
-          },
-          "state": "active",
-          "status": "connected"
-        }
-      ],
-      "booking_url": null,
-      "id": "8816f84b-61af-41f2-a488-f064dc496238",
-      "name": "Target",
-      "signature": "Target, Lifty",
-      "version": 1
-    },
-    {
-      "accounts": [
-        {
-          "access_removal": null,
-          "access_revoked_at": null,
-          "channel": "linkedin",
-          "checked_at": "2026-11-05T18:29:04.019797+00:00",
-          "connected_at": "2026-10-06T18:29:04.019797+00:00",
-          "declaration": null,
-          "disconnect_pause": {
-            "can_resume": false,
-            "count": 0
-          },
-          "disconnected_at": null,
-          "id": "058e42f5-e77d-4254-be23-19abca58ec1b",
-          "identity": null,
-          "limits": {
-            "invitations_per_7_days": 25,
-            "invitations_per_day": 5,
-            "messages_per_day": 0
-          },
-          "observation": {
-            "state": "verified"
-          },
-          "participation": {
-            "also": [],
             "category": "intentional",
             "cause": "sender_off",
-            "since": "2026-11-05T18:29:04.030923+00:00",
+            "since": "2026-11-06T01:51:18.274755+00:00",
             "since_estimated": false,
             "status": "paused",
             "waiting_journeys": 0
           },
-          "sender_id": "92b0a76e-8509-4113-b8df-efdd0bc2ffec",
+          "sender_id": "889d3859-27f6-4885-8aa5-e15a6c702ddc",
           "sending": {
             "allowed": false,
             "reason": "blocked",
@@ -146,23 +51,21 @@
         {
           "access_removal": null,
           "access_revoked_at": null,
-          "channel": "email",
-          "checked_at": "2026-11-05T18:29:04.019304+00:00",
-          "connected_at": "2026-10-06T18:29:04.019304+00:00",
-          "declaration": {
-            "declared_at": "2026-11-05T18:29:04.019305+00:00",
-            "declared_by": "e4f93067-afb1-48a2-b26c-fb31c8bb39e8",
-            "mailbox_use": "habitual"
-          },
+          "channel": "linkedin",
+          "checked_at": "2026-11-06T01:51:18.264547+00:00",
+          "connected_at": "2026-10-07T01:51:18.264547+00:00",
+          "declaration": null,
           "disconnect_pause": {
             "can_resume": false,
             "count": 0
           },
           "disconnected_at": null,
-          "id": "f7a16d99-7f53-4f06-a43f-66108ff927c2",
-          "identity": "f7a16d99-7f53-4f06-a43f-66108ff927c2@lif1771.test",
+          "id": "a3759868-c0fa-4149-8601-134480f9d04a",
+          "identity": null,
           "limits": {
-            "emails_per_day": 10
+            "invitations_per_7_days": 25,
+            "invitations_per_day": 5,
+            "messages_per_day": 0
           },
           "observation": {
             "state": "verified"
@@ -171,12 +74,12 @@
             "also": [],
             "category": "intentional",
             "cause": "sender_off",
-            "since": "2026-11-05T18:29:04.030923+00:00",
+            "since": "2026-11-06T01:51:18.274755+00:00",
             "since_estimated": false,
             "status": "paused",
             "waiting_journeys": 0
           },
-          "sender_id": "92b0a76e-8509-4113-b8df-efdd0bc2ffec",
+          "sender_id": "889d3859-27f6-4885-8aa5-e15a6c702ddc",
           "sending": {
             "allowed": false,
             "reason": "blocked",
@@ -191,18 +94,18 @@
         }
       ],
       "booking_url": null,
-      "id": "92b0a76e-8509-4113-b8df-efdd0bc2ffec",
+      "id": "889d3859-27f6-4885-8aa5-e15a6c702ddc",
       "name": "Third",
       "sending": {
         "drain_mode": "unused_channels",
-        "drain_to_sender_id": "8816f84b-61af-41f2-a488-f064dc496238",
+        "drain_to_sender_id": "dad344fa-70ca-4ae5-a27c-e479163b119f",
         "leads_remaining": 0,
-        "off_at": "2026-11-05T18:29:04.030923+00:00",
+        "off_at": "2026-11-06T01:51:18.274755+00:00",
         "pending_transfer": {
           "handoff_ref": null,
           "leads_awaiting_transfer": 0,
-          "retired_at": "2026-11-05T18:29:04.030923+00:00",
-          "target_sender_id": "8816f84b-61af-41f2-a488-f064dc496238"
+          "retired_at": "2026-11-06T01:51:18.274755+00:00",
+          "target_sender_id": "dad344fa-70ca-4ae5-a27c-e479163b119f"
         },
         "reason": "Left",
         "state": "off"
@@ -216,15 +119,15 @@
           "access_removal": null,
           "access_revoked_at": null,
           "channel": "linkedin",
-          "checked_at": "2026-11-05T18:29:04.005243+00:00",
-          "connected_at": "2026-10-06T18:29:04.005243+00:00",
+          "checked_at": "2026-11-06T01:51:18.252187+00:00",
+          "connected_at": "2026-10-07T01:51:18.252187+00:00",
           "declaration": null,
           "disconnect_pause": {
             "can_resume": false,
             "count": 0
           },
           "disconnected_at": null,
-          "id": "4225fd88-07c2-4cb9-9ccf-14222f44f77c",
+          "id": "15a383cb-0770-4c5c-b1b1-a998c8e21db1",
           "identity": null,
           "limits": {
             "invitations_per_7_days": 25,
@@ -238,12 +141,12 @@
             "also": [],
             "category": "intentional",
             "cause": "sender_off",
-            "since": "2026-11-05T18:29:04.042227+00:00",
+            "since": "2026-11-06T01:51:18.302744+00:00",
             "since_estimated": false,
             "status": "paused",
             "waiting_journeys": 0
           },
-          "sender_id": "f99a77d3-8800-4838-ae23-9e03fa4f4a26",
+          "sender_id": "abd8ef1b-783f-4e06-a5ae-2a195de43cb7",
           "sending": {
             "allowed": false,
             "reason": "blocked",
@@ -260,11 +163,11 @@
           "access_removal": null,
           "access_revoked_at": null,
           "channel": "email",
-          "checked_at": "2026-11-05T18:29:04.004765+00:00",
-          "connected_at": "2026-10-06T18:29:04.004765+00:00",
+          "checked_at": "2026-11-06T01:51:18.251394+00:00",
+          "connected_at": "2026-10-07T01:51:18.251394+00:00",
           "declaration": {
-            "declared_at": "2026-11-05T18:29:04.004766+00:00",
-            "declared_by": "e4f93067-afb1-48a2-b26c-fb31c8bb39e8",
+            "declared_at": "2026-11-06T01:51:18.251394+00:00",
+            "declared_by": "994d5cf5-5f11-403a-8f77-428c3a2e8152",
             "mailbox_use": "habitual"
           },
           "disconnect_pause": {
@@ -272,8 +175,8 @@
             "count": 0
           },
           "disconnected_at": null,
-          "id": "fb21424e-32b6-4680-92c6-709921efcdb6",
-          "identity": "fb21424e-32b6-4680-92c6-709921efcdb6@lif1771.test",
+          "id": "ad24e69b-33af-4129-968a-2a05a3ccae44",
+          "identity": "ad24e69b-33af-4129-968a-2a05a3ccae44@lif1771.test",
           "limits": {
             "emails_per_day": 10
           },
@@ -284,12 +187,12 @@
             "also": [],
             "category": "intentional",
             "cause": "sender_off",
-            "since": "2026-11-05T18:29:04.042227+00:00",
+            "since": "2026-11-06T01:51:18.302744+00:00",
             "since_estimated": false,
             "status": "paused",
             "waiting_journeys": 0
           },
-          "sender_id": "f99a77d3-8800-4838-ae23-9e03fa4f4a26",
+          "sender_id": "abd8ef1b-783f-4e06-a5ae-2a195de43cb7",
           "sending": {
             "allowed": false,
             "reason": "blocked",
@@ -304,29 +207,126 @@
         }
       ],
       "booking_url": null,
-      "id": "f99a77d3-8800-4838-ae23-9e03fa4f4a26",
+      "id": "abd8ef1b-783f-4e06-a5ae-2a195de43cb7",
       "name": "Source",
       "sending": {
         "drain_mode": "continue",
-        "drain_to_sender_id": "8816f84b-61af-41f2-a488-f064dc496238",
+        "drain_to_sender_id": "dad344fa-70ca-4ae5-a27c-e479163b119f",
         "leads_remaining": 1,
-        "off_at": "2026-11-05T18:29:04.042227+00:00",
+        "off_at": "2026-11-06T01:51:18.302744+00:00",
         "pending_transfer": {
-          "handoff_ref": "1978",
+          "handoff_ref": "5520",
           "leads_awaiting_transfer": 1,
-          "retired_at": "2026-11-05T18:29:04.042227+00:00",
-          "target_sender_id": "8816f84b-61af-41f2-a488-f064dc496238"
+          "retired_at": "2026-11-06T01:51:18.302744+00:00",
+          "target_sender_id": "dad344fa-70ca-4ae5-a27c-e479163b119f"
         },
         "reason": "Left",
         "state": "off"
       },
       "signature": "Source, Lifty",
       "version": 3
+    },
+    {
+      "accounts": [
+        {
+          "access_removal": null,
+          "access_revoked_at": null,
+          "channel": "linkedin",
+          "checked_at": "2026-11-06T01:51:18.258566+00:00",
+          "connected_at": "2026-10-07T01:51:18.258566+00:00",
+          "declaration": null,
+          "disconnect_pause": {
+            "can_resume": false,
+            "count": 0
+          },
+          "disconnected_at": null,
+          "id": "1d0172fa-0a01-4789-bcaf-15d5a3a30a13",
+          "identity": null,
+          "limits": {
+            "invitations_per_7_days": 25,
+            "invitations_per_day": 5,
+            "messages_per_day": 0
+          },
+          "observation": {
+            "state": "verified"
+          },
+          "participation": {
+            "also": [],
+            "category": null,
+            "cause": "active_journeys",
+            "since": null,
+            "since_estimated": false,
+            "status": "sending"
+          },
+          "sender_id": "dad344fa-70ca-4ae5-a27c-e479163b119f",
+          "sending": {
+            "allowed": true,
+            "reason": null,
+            "scope": null
+          },
+          "sends": {
+            "last_7_days": 0,
+            "today": 0
+          },
+          "state": "active",
+          "status": "connected"
+        },
+        {
+          "access_removal": null,
+          "access_revoked_at": null,
+          "channel": "email",
+          "checked_at": "2026-11-06T01:51:18.258207+00:00",
+          "connected_at": "2026-10-07T01:51:18.258207+00:00",
+          "declaration": {
+            "declared_at": "2026-11-06T01:51:18.258207+00:00",
+            "declared_by": "994d5cf5-5f11-403a-8f77-428c3a2e8152",
+            "mailbox_use": "habitual"
+          },
+          "disconnect_pause": {
+            "can_resume": false,
+            "count": 0
+          },
+          "disconnected_at": null,
+          "id": "e545d0f8-a05f-4143-87d4-918e69a24b43",
+          "identity": "e545d0f8-a05f-4143-87d4-918e69a24b43@lif1771.test",
+          "limits": {
+            "emails_per_day": 10
+          },
+          "observation": {
+            "state": "verified"
+          },
+          "participation": {
+            "also": [],
+            "category": null,
+            "cause": "active_journeys",
+            "since": null,
+            "since_estimated": false,
+            "status": "sending"
+          },
+          "sender_id": "dad344fa-70ca-4ae5-a27c-e479163b119f",
+          "sending": {
+            "allowed": true,
+            "reason": null,
+            "scope": null
+          },
+          "sends": {
+            "last_7_days": 0,
+            "today": 0
+          },
+          "state": "active",
+          "status": "connected"
+        }
+      ],
+      "booking_url": null,
+      "id": "dad344fa-70ca-4ae5-a27c-e479163b119f",
+      "name": "Target",
+      "signature": "Target, Lifty",
+      "version": 1
     }
   ],
   "workspace": {
     "name": "Synthetic handoff",
     "state": "ready_for_connections",
-    "workspace_ref": "8c08350b-5e8a-4157-9d89-5c289984ec42"
+    "workspace_ref": "dbc7228e-3c9e-4f0a-8007-71b652ebc7f6"
   }
 }

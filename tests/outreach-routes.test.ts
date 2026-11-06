@@ -76,7 +76,7 @@ describe("blocked people on activation", () => {
 
     it("carries since, the review date and the waiting count of the chosen account", async () => {
       vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-05T18:00:00Z") });
-      expect(await entry(stop)).toMatchObject({ cause: "paused_by_lift", label: "Lee · Paused by Lifty · deliverability review · we review it by Nov 12", clears_on: null,
+      expect(await entry(stop)).toMatchObject({ cause: "paused_by_lift", label: "Lee · Paused by Lifty · deliverability review · we review it by Nov 13", clears_on: null,
         since: stop.since, review_by: stop.stop.review_by, waiting_journeys: 3 });
     });
 

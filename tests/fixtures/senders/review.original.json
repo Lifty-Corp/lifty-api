@@ -2,30 +2,30 @@
   "next_after": null,
   "turns": [
     {
-      "account_id": "e731fa75-da84-4a26-a240-27938dd56d29",
-      "answering_sender_id": "45e1c75e-e7e5-4456-96ad-96421f1abedf",
+      "account_id": "503d6b1c-7c6e-4046-a8ad-20930e2373e4",
+      "answering_sender_id": "9391e510-cc3b-427d-ba54-85ddda37504a",
       "campaign_ref": null,
       "channel": "email",
-      "created_at": "2026-11-05T18:29:02.188523+00:00",
+      "created_at": "2026-11-06T01:51:15.923641+00:00",
       "draft": "",
       "follow_up_due_at": null,
       "history": [],
       "history_complete": true,
-      "inbound_at": "2026-11-05T18:29:05.022331+00:00",
+      "inbound_at": "2026-11-06T01:51:19.549178+00:00",
       "inbound_text": "Can you explain the next step?",
-      "lead_email": "82814a63-f268-4df9-a72e-2f2032d9cf16@prospect.test",
-      "lead_linkedin_url": "https://www.linkedin.com/in/82814a63-f268-4df9-a72e-2f2032d9cf16",
+      "lead_email": "b175d973-9442-4851-a5be-5cd89b6e1e99@prospect.test",
+      "lead_linkedin_url": "https://www.linkedin.com/in/b175d973-9442-4851-a5be-5cd89b6e1e99",
       "lead_name": "Lead Fixture",
-      "lead_ref": "82814a63-f268-4df9-a72e-2f2032d9cf16",
-      "original_sender_id": "45e933c1-cad1-4a73-8d58-34c3fc147122",
+      "lead_ref": "b175d973-9442-4851-a5be-5cd89b6e1e99",
+      "original_sender_id": "c82b3f1d-c81f-46ea-bbbc-2f83b9f22bc6",
       "original_sender_name": "Source",
       "route_unavailable": false,
-      "sender_id": "45e1c75e-e7e5-4456-96ad-96421f1abedf",
+      "sender_id": "9391e510-cc3b-427d-ba54-85ddda37504a",
       "sender_name": "Target",
       "sent_at": null,
-      "source_digest": "bdcf449963f920903aacdc18fcc3c9fd3892fc2c89d8c0c05fb0aff3d387f49b",
+      "source_digest": "366f24c9bb7950ba44faae9ca64a4c2b9101aedacf529ae98e5339ddb2e3cd58",
       "state": "pending",
-      "turn_ref": "b2d36873-8836-4f3e-9547-a0d64859210a",
+      "turn_ref": "ce8d6d7d-ebd8-444c-a805-dde215369208",
       "version": 0,
       "view": {
         "actions": [
@@ -43,7 +43,7 @@
         "overdueAt": null,
         "sentAt": null,
         "status": "awaiting_action",
-        "turnId": "b2d36873-8836-4f3e-9547-a0d64859210a",
+        "turnId": "ce8d6d7d-ebd8-444c-a805-dde215369208",
         "validUntil": null,
         "version": 0
       }
@@ -52,6 +52,6 @@
   "workspace": {
     "name": "Synthetic handoff",
     "state": "ready_for_connections",
-    "workspace_ref": "47da6dbe-c9af-4768-b391-b25d8a543440"
+    "workspace_ref": "1593993c-26d6-4626-a2d2-f35e9fe04421"
   }
 }

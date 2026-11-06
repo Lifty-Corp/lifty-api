@@ -1,23 +1,23 @@
 {
   "stops": [
     {
-      "account_id": "7c37da5c-aaa5-4111-88c9-9638b3268157",
+      "account_id": "cea9c3a7-1bc3-4b7a-81fe-4b10fe882e63",
       "channel": "email",
       "note": "Bounce spike",
       "origin": "person",
       "reason": "setup",
-      "review_by": "2026-11-08T18:29:03.772566+00:00",
+      "review_by": "2026-11-09T01:51:17.720096+00:00",
       "scope": "account",
-      "scope_key": "bc964427-9276-4ec2-9571-5d4ced16ee71:email:sender:fa74a79c-6567-4168-a339-303f6c06807a:connection:7c37da5c-aaa5-4111-88c9-9638b3268157",
-      "sender_id": "fa74a79c-6567-4168-a339-303f6c06807a",
-      "set_by": "7b278fd0-cad2-4967-8933-e4974faefffd",
-      "since": "2026-11-05T18:29:03.758928+00:00",
+      "scope_key": "691f7c5d-5491-4594-9d50-3409bdd25789:email:sender:f7f99d78-fff9-4d34-a9ae-9fad21131eff:connection:cea9c3a7-1bc3-4b7a-81fe-4b10fe882e63",
+      "sender_id": "f7f99d78-fff9-4d34-a9ae-9fad21131eff",
+      "set_by": "1b4fe8e8-e06e-4b38-836e-b61661ba5c91",
+      "since": "2026-11-06T01:51:17.663283+00:00",
       "since_estimated": false
     }
   ],
   "workspace": {
     "name": "Synthetic handoff",
     "state": "ready_for_connections",
-    "workspace_ref": "bc964427-9276-4ec2-9571-5d4ced16ee71"
+    "workspace_ref": "691f7c5d-5491-4594-9d50-3409bdd25789"
   }
 }

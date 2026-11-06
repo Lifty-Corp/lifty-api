@@ -5,11 +5,11 @@
         "access_removal": null,
         "access_revoked_at": null,
         "channel": "email",
-        "checked_at": "2026-11-05T18:29:03.938086+00:00",
-        "connected_at": "2026-10-06T18:29:03.938086+00:00",
+        "checked_at": "2026-11-06T01:51:17.970838+00:00",
+        "connected_at": "2026-10-07T01:51:17.970838+00:00",
         "declaration": {
-          "declared_at": "2026-11-05T18:29:03.938086+00:00",
-          "declared_by": "cdbe0c52-57d5-4ac4-9340-1fff3e7edbac",
+          "declared_at": "2026-11-06T01:51:17.970838+00:00",
+          "declared_by": "183ef51d-43fd-4fa8-ad67-d254b3391e72",
           "mailbox_use": "habitual"
         },
         "disconnect_pause": {
@@ -17,8 +17,8 @@
           "count": 0
         },
         "disconnected_at": null,
-        "id": "13784ddd-9c42-4b39-a4f7-dd6212c8c91d",
-        "identity": "13784ddd-9c42-4b39-a4f7-dd6212c8c91d@lif1771.test",
+        "id": "1fcac570-11c5-45e8-9a26-ef6aa2f355eb",
+        "identity": "1fcac570-11c5-45e8-9a26-ef6aa2f355eb@lif1771.test",
         "limits": {
           "emails_per_day": 10
         },
@@ -30,18 +30,18 @@
             {
               "category": "intentional",
               "cause": "paused_by_member",
-              "since": "2026-11-05T18:29:03.963072+00:00",
+              "since": "2026-11-06T01:51:18.132399+00:00",
               "status": "paused"
             }
           ],
           "category": "intentional",
           "cause": "sender_paused",
-          "since": "2026-11-05T18:29:03.968929+00:00",
+          "since": "2026-11-06T01:51:18.158145+00:00",
           "since_estimated": false,
           "status": "paused",
           "waiting_journeys": 0
         },
-        "sender_id": "fdf424fc-15fa-4bb5-9507-b984c2064166",
+        "sender_id": "acd32140-a7a9-4bd3-8467-3dfc4ef4112e",
         "sending": {
           "allowed": false,
           "reason": "blocked",
@@ -57,42 +57,37 @@
       {
         "access_removal": null,
         "access_revoked_at": null,
-        "channel": "linkedin",
-        "checked_at": "2026-11-05T18:29:03.917028+00:00",
-        "connected_at": "2026-10-06T18:29:03.917028+00:00",
-        "declaration": null,
+        "channel": "email",
+        "checked_at": "2026-11-06T01:51:17.951965+00:00",
+        "connected_at": "2026-10-07T01:51:17.951965+00:00",
+        "declaration": {
+          "declared_at": "2026-11-06T01:51:17.951965+00:00",
+          "declared_by": "183ef51d-43fd-4fa8-ad67-d254b3391e72",
+          "mailbox_use": "habitual"
+        },
         "disconnect_pause": {
           "can_resume": false,
           "count": 0
         },
         "disconnected_at": null,
-        "id": "333c8e9f-3c7a-4fdb-815f-a1e46bb345ac",
-        "identity": null,
+        "id": "8350eaf9-edcc-40a8-bccc-3f1a2e0d7c08",
+        "identity": "8350eaf9-edcc-40a8-bccc-3f1a2e0d7c08@lif1771.test",
         "limits": {
-          "invitations_per_7_days": 25,
-          "invitations_per_day": 5,
-          "messages_per_day": 0
+          "emails_per_day": 10
         },
         "observation": {
           "state": "verified"
         },
         "participation": {
-          "also": [
-            {
-              "category": "long",
-              "cause": "paused_by_lift",
-              "since": "2026-11-05T18:29:03.962536+00:00",
-              "status": "paused"
-            }
-          ],
+          "also": [],
           "category": "intentional",
           "cause": "sender_paused",
-          "since": "2026-11-05T18:29:03.968929+00:00",
+          "since": "2026-11-06T01:51:18.158145+00:00",
           "since_estimated": false,
           "status": "paused",
           "waiting_journeys": 0
         },
-        "sender_id": "fdf424fc-15fa-4bb5-9507-b984c2064166",
+        "sender_id": "acd32140-a7a9-4bd3-8467-3dfc4ef4112e",
         "sending": {
           "allowed": false,
           "reason": "blocked",
@@ -108,37 +103,42 @@
       {
         "access_removal": null,
         "access_revoked_at": null,
-        "channel": "email",
-        "checked_at": "2026-11-05T18:29:03.91652+00:00",
-        "connected_at": "2026-10-06T18:29:03.91652+00:00",
-        "declaration": {
-          "declared_at": "2026-11-05T18:29:03.916521+00:00",
-          "declared_by": "cdbe0c52-57d5-4ac4-9340-1fff3e7edbac",
-          "mailbox_use": "habitual"
-        },
+        "channel": "linkedin",
+        "checked_at": "2026-11-06T01:51:17.952408+00:00",
+        "connected_at": "2026-10-07T01:51:17.952408+00:00",
+        "declaration": null,
         "disconnect_pause": {
           "can_resume": false,
           "count": 0
         },
         "disconnected_at": null,
-        "id": "44adbbc4-09cc-485c-93a7-827e495f32cc",
-        "identity": "44adbbc4-09cc-485c-93a7-827e495f32cc@lif1771.test",
+        "id": "e5748be5-c57f-4c23-930e-94ca96e9ee38",
+        "identity": null,
         "limits": {
-          "emails_per_day": 10
+          "invitations_per_7_days": 25,
+          "invitations_per_day": 5,
+          "messages_per_day": 0
         },
         "observation": {
           "state": "verified"
         },
         "participation": {
-          "also": [],
+          "also": [
+            {
+              "category": "long",
+              "cause": "paused_by_lift",
+              "since": "2026-11-06T01:51:18.131334+00:00",
+              "status": "paused"
+            }
+          ],
           "category": "intentional",
           "cause": "sender_paused",
-          "since": "2026-11-05T18:29:03.968929+00:00",
+          "since": "2026-11-06T01:51:18.158145+00:00",
           "since_estimated": false,
           "status": "paused",
           "waiting_journeys": 0
         },
-        "sender_id": "fdf424fc-15fa-4bb5-9507-b984c2064166",
+        "sender_id": "acd32140-a7a9-4bd3-8467-3dfc4ef4112e",
         "sending": {
           "allowed": false,
           "reason": "blocked",
@@ -153,10 +153,10 @@
       }
     ],
     "booking_url": null,
-    "id": "fdf424fc-15fa-4bb5-9507-b984c2064166",
+    "id": "acd32140-a7a9-4bd3-8467-3dfc4ef4112e",
     "name": "Source",
     "sending": {
-      "paused_at": "2026-11-05T18:29:03.968929+00:00",
+      "paused_at": "2026-11-06T01:51:18.158145+00:00",
       "reason": "Leave",
       "state": "paused"
     },
@@ -166,6 +166,6 @@
   "workspace": {
     "name": "Synthetic handoff",
     "state": "ready_for_connections",
-    "workspace_ref": "c17aaa72-ced4-4492-9603-5916f07ef0a7"
+    "workspace_ref": "8371ddc0-358e-4415-b093-af1177110487"
   }
 }

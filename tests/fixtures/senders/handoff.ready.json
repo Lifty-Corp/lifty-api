@@ -5,10 +5,10 @@
   "cohort_count": 1,
   "configured_sample_size": 5,
   "confirmation_action": "approve_sample_and_transfer",
-  "context_sha256": "3dbd1daa39e8692c21c040e0792c5e99b636353c6f64e2d30003cf4c6431b689",
+  "context_sha256": "cad09d999df9e006c58cb4587def431bfb8f3ba41a078db4545812dbc6d02dcb",
   "contract": "sender-handoff-approval.v2",
   "current_reply_count": 0,
-  "drain_ref": "2025",
+  "drain_ref": "5619",
   "generation_settings": {
     "instructions": ""
   },
@@ -17,13 +17,13 @@
     {
       "dispatch_reason": "message_review_pending",
       "kind": "proactive",
-      "lead_ref": "0ad3b392-1f27-4997-897a-7a5d7b197fad",
-      "owner": "37a4f47b-a50e-4502-b1e3-fc3e4d0183ba",
+      "lead_ref": "5a4ffbac-4687-44d6-894a-b08ad4fb4ecf",
+      "owner": "6e54cb6d-1cf2-478d-900f-a7a038dc2943",
       "prepared": true,
       "reason": null,
       "route": null,
-      "run_ref": "8f142574-175d-42e0-bf8d-6fe560d9c103",
-      "state_token": "02a47ab99d09527a8d8ac9896a15d84a53ee775d616af34184e4dce7a1e8f3d4",
+      "run_ref": "177749ad-67a7-46f0-b401-79b7da0f4d50",
+      "state_token": "d5913f8b3b74b9192647dbc8b0c4c813c0b5ca77ac36519956483cb567497ee6",
       "turn_ref": null,
       "turn_version": null
     }
@@ -37,21 +37,21 @@
     "display_name": "Target",
     "pinned_signature": "Target, Lifty",
     "pinned_version": 1,
-    "sender_id": "09732c3d-e915-43f1-b16e-c33d2d4962c1",
+    "sender_id": "0cb84749-69b7-4f91-b87e-600f61c8fbfc",
     "signature": "Target, Lifty",
     "version": 1
   },
-  "revision": "44a0c68ebdaf5913d10d94592bf5c2b2748ce89d71aef8a0178596359f936842",
+  "revision": "1a283769a19b3f4b7679412f48953eb5f0054db6e00bfa1c02e5ef7f101b5e9a",
   "sample_complete": true,
   "sample_count": 1,
   "samples": [
     {
       "answering_route": {
-        "account_id": "account-11826641-578c-41bb-a995-c7b94c8e929d",
+        "account_id": "account-8642357e-35a0-4839-8144-76ae0230bbb7",
         "channel": "email",
-        "connection_ref": "11826641-578c-41bb-a995-c7b94c8e929d",
-        "mailbox_email": "11826641-578c-41bb-a995-c7b94c8e929d@lif1771.test",
-        "sender_id": "09732c3d-e915-43f1-b16e-c33d2d4962c1"
+        "connection_ref": "8642357e-35a0-4839-8144-76ae0230bbb7",
+        "mailbox_email": "8642357e-35a0-4839-8144-76ae0230bbb7@lif1771.test",
+        "sender_id": "0cb84749-69b7-4f91-b87e-600f61c8fbfc"
       },
       "body": "Target handoff fixture\n\nTarget, Lifty",
       "context": {
@@ -109,35 +109,35 @@
           ]
         },
         "contract": "sender-email-handoff.v1",
-        "first_due_at": "2026-11-05T18:29:12.506313+00:00",
+        "first_due_at": "2026-11-06T01:51:38.160671+00:00",
         "handoff_from": {
           "display_name": "Source",
-          "sender_id": "37a4f47b-a50e-4502-b1e3-fc3e4d0183ba"
+          "sender_id": "6e54cb6d-1cf2-478d-900f-a7a038dc2943"
         },
         "history": [
           {
-            "accepted_at": "2026-11-02T18:29:12.431557+00:00",
-            "connection_ref": "2ca62ce5-a03c-4882-9eed-c10b4eecfbdf",
-            "execution_ref": "6c7c83ec-0fdb-4bef-87db-141483b9f135",
+            "accepted_at": "2026-11-03T01:51:38.104559+00:00",
+            "connection_ref": "a7373aff-255a-4915-bd32-07a4b0439293",
+            "execution_ref": "6351e391-d30a-4cfd-acc1-cd52a8240a5d",
             "original_position": 1,
             "position": 1,
-            "provider_id": "e13feba5-29ee-4c15-8cc6-100e53438e6a",
-            "run_ref": "2de215ba-59ef-4fbf-8062-9f73c6e4bf79",
-            "step_ref": "9b95d18c-ce56-4857-bb7b-b4d748f51551",
+            "provider_id": "33ddb411-8c12-4f7a-a763-9db7d4526c7c",
+            "run_ref": "fd2fa2c3-4d29-47ae-9b59-2e583cd251e6",
+            "step_ref": "2bcb5a8a-6292-46fd-ae8c-3120abbe361c",
             "subject": "Original subject",
             "text": "Original email 1"
           }
         ],
         "kind": "continue",
         "last_accepted_email": {
-          "accepted_at": "2026-11-02T18:29:12.431557+00:00",
-          "connection_ref": "2ca62ce5-a03c-4882-9eed-c10b4eecfbdf",
-          "provider_id": "e13feba5-29ee-4c15-8cc6-100e53438e6a",
-          "step_ref": "9b95d18c-ce56-4857-bb7b-b4d748f51551",
+          "accepted_at": "2026-11-03T01:51:38.104559+00:00",
+          "connection_ref": "a7373aff-255a-4915-bd32-07a4b0439293",
+          "provider_id": "33ddb411-8c12-4f7a-a763-9db7d4526c7c",
+          "step_ref": "2bcb5a8a-6292-46fd-ae8c-3120abbe361c",
           "subject": "Original subject",
           "text": "Original email 1"
         },
-        "last_proactive_touch_at": "2026-11-02T18:29:12.431557+00:00",
+        "last_proactive_touch_at": "2026-11-03T01:51:38.104559+00:00",
         "original_next_position": 2,
         "original_positions": [
           2,
@@ -149,30 +149,30 @@
           "lane": null,
           "opener": null
         },
-        "source_campaign_ref": "623c72f3-8fe3-4091-a69e-bb57b35ceb75",
-        "source_email_version_ref": "d583aca1-8a6d-43e0-94a9-f09628d0665e",
-        "source_executable_version_ref": "1132d9e3-7b8a-494d-8ca7-612caf5eb42b",
-        "source_execution_ref": "6c7c83ec-0fdb-4bef-87db-141483b9f135",
-        "source_revision_ref": "c508d573-8a13-4005-976b-98b2a1351277",
-        "source_run_ref": "2de215ba-59ef-4fbf-8062-9f73c6e4bf79"
+        "source_campaign_ref": "925c0e9d-b07e-48e2-99c5-fe039455749e",
+        "source_email_version_ref": "4b99b4a6-6527-47a2-a2d5-41816477e214",
+        "source_executable_version_ref": "1af77439-087f-4e13-a36c-0fbaf5def255",
+        "source_execution_ref": "6351e391-d30a-4cfd-acc1-cd52a8240a5d",
+        "source_revision_ref": "a8569b3c-c0cf-44c7-8167-16268015245f",
+        "source_run_ref": "fd2fa2c3-4d29-47ae-9b59-2e583cd251e6"
       },
-      "email_version_ref": "09cbb50d-b0c9-4f9e-a287-08fcec8215a7",
+      "email_version_ref": "c2bd5fb9-ee56-4344-ab67-e056e43f3acb",
       "kind": "continue",
-      "lead_ref": "0ad3b392-1f27-4997-897a-7a5d7b197fad",
-      "message_ref": "c04728ab-6519-4f95-aa40-c0a502d7f303",
+      "lead_ref": "5a4ffbac-4687-44d6-894a-b08ad4fb4ecf",
+      "message_ref": "115edd87-a5cf-4c19-b9d5-c098c74ff93f",
       "prepared": true,
-      "run_ref": "8f142574-175d-42e0-bf8d-6fe560d9c103",
-      "source_run_ref": "2de215ba-59ef-4fbf-8062-9f73c6e4bf79",
+      "run_ref": "177749ad-67a7-46f0-b401-79b7da0f4d50",
+      "source_run_ref": "fd2fa2c3-4d29-47ae-9b59-2e583cd251e6",
       "subject": "Re: Original subject"
     }
   ],
-  "scope_sha256": "73f265279f17f3e95e5dc74f2d54f2478d3cbb5e63cbba808aac946368083ee7",
+  "scope_sha256": "f2dc546afd29696ff2d968c912f0b706cf3cba0282947382f71ab60ceb465dd5",
   "settings_revision": 1,
-  "settings_sha256": "899020b4f00a61f5243301e290ebeb22639d56cdf42ca8d949be24c71e9a3df4",
-  "source_sender_id": "37a4f47b-a50e-4502-b1e3-fc3e4d0183ba",
+  "settings_sha256": "b249a314fd57ad2ff661425c481be2a9b53b14d9a9e3f05a47c6e56001582846",
+  "source_sender_id": "6e54cb6d-1cf2-478d-900f-a7a038dc2943",
   "state": "preparing",
   "transferred_count": 0,
   "untouched_transferred_count": 0,
   "waiting_count": 1,
-  "workspace_id": "a8f6d1d6-8408-4df7-8f0d-3aed0aab6993"
+  "workspace_id": "7760e398-8941-4044-ab99-89ed59021121"
 }

@@ -285,7 +285,9 @@ describe("Review by sender", () => {
   const route = "/v1/workspace/reply-turns";
   const page = receipt("review.page");
   const routed = page.turns.find((turn: { route_unavailable: boolean }) => !turn.route_unavailable);
-  const unrouted = page.turns.find((turn: { route_unavailable: boolean }) => turn.route_unavailable);
+  // `review.page` stops at two rows ordered by a random id, so only the whole queue always holds the unroutable one.
+  const queued = receipt("review.page.all");
+  const unrouted = queued.turns.find((turn: { route_unavailable: boolean }) => turn.route_unavailable);
   const answering = routed.answering_sender_id;
   const queue = (result: (name: string, args: Record<string, unknown>) => unknown) => {
     const rpc = vi.fn(async (name: string, args: Record<string, unknown>) => {
@@ -307,7 +309,7 @@ describe("Review by sender", () => {
   });
 
   it("keeps the answering sender, an unavailable route and the original sender apart", async () => {
-    const turns = (await (await queue(() => page).request(route)).json()).turns as { turn_ref: string }[];
+    const turns = (await (await queue(() => queued).request(route)).json()).turns as { turn_ref: string }[];
     const read = (ref: string) => turns.find(turn => turn.turn_ref === ref);
     expect(read(routed.turn_ref)).toMatchObject({ answering_sender_id: answering, route_unavailable: false, original_sender_id: answering, original_sender_name: "Target" });
     expect(read(unrouted.turn_ref)).toMatchObject({ answering_sender_id: answering, route_unavailable: true, sender_id: null, original_sender_id: null, original_sender_name: null,

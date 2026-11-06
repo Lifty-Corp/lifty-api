@@ -1,23 +1,24 @@
 {
   "incidents": [
     {
-      "account_id": "95e08c20-9bbc-4f8d-97d6-2400c3619de6",
+      "account_id": "2cad055e-3189-4e19-8f6a-727de1d692ed",
       "cause": "disconnected",
       "channel": "email",
       "counts": null,
-      "due_at": "2026-11-05T18:28:05.224278+00:00",
+      "due_at": "2026-11-06T01:50:19.885697+00:00",
+      "handoff_pending": false,
       "handoff_ref": null,
-      "incident_ref": "f32567eb-d1f9-4f00-9cc6-1940d29e112b",
+      "incident_ref": "bb855a8e-92f1-4ffd-840c-85180c05b516",
       "moved": null,
-      "sender_id": "e9655457-8250-4e88-8649-f2b4adb58b88",
+      "sender_id": "9df20203-6055-486b-be67-82ca7b2f8607",
       "severity": "severe",
-      "since": "2026-11-05T18:29:05.222723+00:00",
+      "since": "2026-11-06T01:51:19.88434+00:00",
       "state": "open"
     }
   ],
   "workspace": {
     "name": "Synthetic handoff",
     "state": "ready_for_connections",
-    "workspace_ref": "01ee96e7-0c80-4ea0-bcf4-e02383f6091a"
+    "workspace_ref": "20a95ad6-8b26-43dc-8230-45ad197bf412"
   }
 }

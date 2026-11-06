@@ -136,7 +136,10 @@ one when that person has no other healthy inbox.
    with `action`, `confirm:true`, both sender ids and the `revision` and hashes
    you just read. One approval covers the sample and each remaining first
    message, never a future reply. A `HANDOFF_*_STALE` refusal means read again and
-   show what changed; `HANDOFF_SAMPLE_INCOMPLETE` means wait.
+   show what changed; `HANDOFF_SAMPLE_INCOMPLETE` means wait. Read
+   `authorization.state` in the answer: only `authorized` means approved. When a
+   sample conversation left, the call succeeds with `waiting_sample_approval`, the
+   new sample and no owner moved. Show that sample and ask again.
 
 Approved and queued are not sent. Never say a message went out from a handoff
 read: messages go on their schedule under the usual checks. `senders_handoff_cancel`

@@ -340,7 +340,7 @@ describe("member verdict and next step (LIF-1603)", () => {
   // in the same words Senders shows. The health detail below it does not change.
   it("takes its top line from participation and keeps the health detail", () => {
     const stopped = verdict("send_paused:account", noCampaigns, { participation: { ...receipt("participation.stop"), waiting_journeys: 3 } });
-    expect(stopped.status).toMatchObject({ code: "paused", label: "Paused by Lifty · deliverability review · we review it by Nov 12" });
+    expect(stopped.status).toMatchObject({ code: "paused", label: "Paused by Lifty · deliverability review · we review it by Nov 13" });
     expect(stopped.status.description).toMatch(/3 Journeys waiting/);
     expect(stopped.next_step).toMatchObject({ code: "lifty_review", owner: "lifty" });
     const clear = verdict(null, noCampaigns);

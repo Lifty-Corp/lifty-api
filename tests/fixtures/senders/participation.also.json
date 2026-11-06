@@ -3,13 +3,13 @@
     {
       "category": "intentional",
       "cause": "paused_by_member",
-      "since": "2026-11-05T18:29:03.87121+00:00",
+      "since": "2026-11-06T01:51:17.864707+00:00",
       "status": "paused"
     }
   ],
   "category": "fixable_by_client",
   "cause": "needs_reconnect",
-  "since": "2026-11-05T18:29:03.875979+00:00",
+  "since": "2026-11-06T01:51:17.893635+00:00",
   "since_estimated": false,
   "status": "not_connected",
   "waiting_journeys": 0
