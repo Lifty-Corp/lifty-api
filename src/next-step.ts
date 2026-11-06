@@ -613,7 +613,7 @@ export async function getNextStep(
       "linkedin_connected",
       [
         `${connectedAll.length === 1 ? `${connected.sender}'s LinkedIn is connected` : `LinkedIn is connected for ${names(connectedAll)}`}. Read ${tool("notifications", "get")}; unless Slack is already connected, ask once where alerts should go: Slack or email. Email needs no setup. Slack: ${tool("notifications", "post")}, show its link, verify that attempt, then choose a channel. Declining never blocks.`,
-        `Read ${tool("commercial-voice", "get")}. If tone and rules are empty, ask how the founder writes before the first draft and save it with ${tool("commercial-voice", "patch")}; voice is shared by every channel and campaign.`,
+        `Read ${tool("commercial-voice", "get")}. If tone and rules are empty, ask how the founder writes before the first draft. If they state no outreach language, ask which language prospects read and, where it has one, formal or informal address. Save both with ${tool("commercial-voice", "patch")}; voice is shared by every channel and campaign.`,
         `Build the LinkedIn templates: read ${tool("journeys", "get")}, create the Journey for qualified (Tier A and B) leads with ${tool("journeys", "post")} and its LinkedIn Campaign with ${tool("campaigns", "post")}. Every person with a connected account takes part, so ask no sender question. Preview real leads with ${tool("campaigns", "tests_post")} before asking for approval.`,
         previewSteps,
         activationAsk,
