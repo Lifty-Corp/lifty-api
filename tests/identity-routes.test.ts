@@ -1039,7 +1039,7 @@ describe("authentic receipts", () => {
     "handoff.view": controls.HandoffSchema, "handoff.ready": controls.HandoffSchema, "handoff.held": controls.HandoffSchema, "handoff.approve": controls.HandoffSchema,
     "handoff.cancel": controls.HandoffSchema, "recovery.handoff.reply": controls.HandoffSchema,
     "recovery.incidents": controls.RecoveryIncidentsSchema,
-    "review.page": ReplyTurnsSchema, "review.original": ReplyTurnsSchema, "review.counts": ReplyTurnCountsSchema, "review.counts.sender": ReplyTurnCountsSchema,
+    "review.page": ReplyTurnsSchema, "review.page.all": ReplyTurnsSchema, "review.original": ReplyTurnsSchema, "review.counts": ReplyTurnCountsSchema, "review.counts.sender": ReplyTurnCountsSchema,
   };
   it.each(Object.keys(parsers))("%s", name => {
     expect(parsers[name]!.safeParse(receipt(name)).error?.issues).toBeUndefined();
