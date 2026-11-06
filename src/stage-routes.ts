@@ -1,7 +1,7 @@
 import { outreachEntries, validateOutreachInput } from "./outreach-operations.js";
 import { businessEntries, validateBusinessRequest } from "./business-operations.js";
 import { researchEntries, validateResearchInput } from "./research-operations.js";
-import { identityEntries, validateIdentityInput } from "./identity-operations.js";
+import { handoffRepliesRequest, identityEntries, validateIdentityInput } from "./identity-operations.js";
 import { linkedinEntries } from "./linkedin-operations.js";
 import { reportEntries } from "./report-operations.js";
 import { crmPreferencesEntries } from "./crm-preferences.js";
@@ -154,6 +154,12 @@ export function registerStageRoutes(app: OpenAPIHono<AppEnvironment>, dependenci
         ? validateIdentityInput(definition.request, await readBody(context, definition.invalid.status === 422 ? definition.invalid.code : undefined), definition.invalid)
         : undefined;
       const result = await dependencies.identityOperation(context.get("authSession"), key, { path, query, body }, context.req.raw.signal);
+      // A failed request never fails the member's action: the scheduled drain
+      // asks for the same drafts within the hour.
+      const replies = handoffRepliesRequest(key, result.body);
+      if (replies) await dependencies.enqueueHandoffReplies(replies).catch(error => dependencies.log({ level: "warn", event: "handoff_replies_enqueue_failed",
+        request_id: context.get("requestId"), method: context.req.method, path: context.req.path,
+        error_code: error instanceof PublicError ? error.code : "HANDOFF_REPLIES_ENQUEUE_FAILED", status: error instanceof PublicError ? error.status : 502 }));
       return context.json(result.body as Record<string, unknown>, result.status);
     });
     app.openAPIRegistry.registerPath({ method: definition.method.toLowerCase() as "get" | "post" | "patch", path: definition.route, security: [{ bearerAuth: [] }],

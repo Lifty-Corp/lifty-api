@@ -53,6 +53,44 @@ describe("actual unapproved campaign message corrections", () => {
     expect((await post.request("POST", "/revisions", { request_ref: email.message_ref, source_digest: email.source_digest,
       expected_review_status: "pending", changes: { steps: [{ position: 2, text: "Corrected follow-up" }] } })).status).toBe(201);
   });
+  it("corrects an approved message until its send starts, and keeps it approved", async () => {
+    const corrected = { ...fixtures.message_revision, message: { ...fixtures.message_revision.message, review_status: "approved" } };
+    const h = harness(corrected);
+    const approvedBody = { ...body, expected_review_status: "approved" };
+    expect((await h.request("POST", "/revisions", approvedBody)).status).toBe(201);
+    expect(h.rpc).toHaveBeenLastCalledWith("revise_lifty_campaign_message", { p_workspace_id: null, p_message_id: source.message_ref, p_payload: approvedBody });
+    const started = vi.fn(async () => ({ data: null, error: Object.assign(new Error("OUTREACH_SEND_STARTED"), { code: "PT409" }) }));
+    const app = createApp({ authenticate: async () => ({ ok: true, session: { userId: "founder", client: { rpc: started } } }), log: () => {} });
+    const refused = await app.request(`/v1/workspace/campaign-messages/${source.message_ref}/revisions`, {
+      method: "POST", headers: { authorization: "Bearer test", "x-lifty-client-contract": STAGE_CLIENT_CONTRACT, "content-type": "application/json" }, body: JSON.stringify(approvedBody),
+    });
+    expect(refused.status).toBe(409);
+    expect(JSON.stringify(await refused.json())).toContain("started sending");
+  });
+  it("skips an approved message and never lets it be approved or retried again", async () => {
+    const receipt = reviewFixtures.skip;
+    const skip = { action: "skip", source_digest: receipt.message.source_digest, expected_review_status: "approved", reason: "Typo in the company name." };
+    expect((await harness(receipt, receipt.message.message_ref).request("POST", "/review", skip)).status).toBe(200);
+    const h = harness(receipt, receipt.message.message_ref);
+    for (const action of ["approve", "retry"]) {
+      const { reason: _reason, ...decision } = skip;
+      expect((await h.request("POST", "/review", { ...decision, action })).status).toBe(422);
+    }
+    expect(h.rpc).not.toHaveBeenCalled();
+  });
+  it("lists approved messages that can still change", async () => {
+    const rpc = vi.fn(async () => ({ data: { ...reviewFixtures.queue, messages: [] }, error: null }));
+    const app = createApp({ authenticate: async () => ({ ok: true, session: { userId: "founder", client: { rpc } } }), log: () => {} });
+    const read = (query: string) => app.request(`/v1/workspace/campaign-reviews?${query}`, {
+      headers: { authorization: "Bearer test", "x-lifty-client-contract": STAGE_CLIENT_CONTRACT },
+    });
+    expect((await read("review_status=approved&unsent=true")).status).toBe(200);
+    expect(rpc).toHaveBeenLastCalledWith("get_lifty_campaign_reviews", { p_workspace_id: null,
+      p_query: { review_status: "approved", unsent: true } });
+    rpc.mockClear();
+    expect((await read("review_status=approved&unsent=false")).status).toBe(400);
+    expect(rpc).not.toHaveBeenCalled();
+  });
   it("parses actual SQL LinkedIn and email source/replacement receipts", () => {
     for (const receipt of Object.values(fixtures)) expect(CampaignMessageResultSchema.safeParse(receipt)).toMatchObject({ success: true });
     expect(CampaignReviewsSchema.safeParse(reviewFixtures.queue)).toMatchObject({ success: true });

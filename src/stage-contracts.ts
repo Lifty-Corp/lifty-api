@@ -182,7 +182,7 @@ export const stageOperations: Record<string, Record<string, StageOperation>> = {
     client_mapping_apply: operation("POST", "/v1/integrations/hubspot/company-mapping", "Apply a bounded company mapping plan to the workspace named in the plan, using its current mapping and schema versions. No tokens, arbitrary mappings or connected flag updates.", CompanyMappingReceiptSchema, CompanyPlanSchema),
   },
   senders: {
-    context: stageContext("senders", "Read the public guide for senders: who a sender is, roster-first lookup by id, name, signature and booking link rules, turning a person off or on, and soft delete. No workspace data."),
+    context: stageContext("senders", "Read the public guide for senders: who a sender is, roster-first lookup by id, name, signature and booking link rules, pausing, retiring and turning a person on, handoffs, assignment settings and soft delete. No workspace data."),
     ...identityCatalog.senders!,
   },
   "sending-accounts": {

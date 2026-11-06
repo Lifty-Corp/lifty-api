@@ -1,0 +1,15 @@
+{
+  "also": [
+    {
+      "category": "transient",
+      "cause": "unverified",
+      "since": "2026-11-05T22:51:26.395772+00:00",
+      "status": "not_connected"
+    }
+  ],
+  "category": null,
+  "cause": "active_journeys",
+  "since": null,
+  "since_estimated": false,
+  "status": "sending"
+}

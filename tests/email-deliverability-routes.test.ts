@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { receipt } from "./senders-fixtures.js";
 import { describe, expect, it } from "vitest";
 import { createEmailDeliverabilityOperations, presentDeliverability } from "../src/email-deliverability.js";
 import { DeliverabilitySource, type PlacementDetail, type SourceTest } from "../src/email-deliverability-contracts.js";
@@ -75,8 +76,13 @@ describe("deliverability read operation", () => {
     const h = harness({ data, accounts });
     const response = await h.ops.read(h.session, { workspace: "fixture-a" });
     expect(response.mailboxes[0]!.account).toMatchObject({ status: "connected", observation: "verified", outreach: { code: "paused" } });
-    // A LIFT pause is operator-side: the account reports it, the member verdict doesn't (LIF-1603).
-    expect(response.mailboxes[0]!.status.code).not.toBe("paused");
+    // LIF-1771: a Lifty stop leads the verdict, in the words Senders shows.
+    account.participation = receipt("participation.stop");
+    const stopped = harness({ data, accounts });
+    expect((await stopped.ops.read(stopped.session, { workspace: "fixture-a" })).mailboxes[0]).toMatchObject({
+      status: { code: "paused", label: expect.stringMatching(/^Paused by Lifty · deliverability review · /) }, next_step: { code: "lifty_review", owner: "lifty" },
+    });
+    account.participation = { status: "sending", cause: "active_journeys" };
     account.state = "paused";
     const off = harness({ data, accounts });
     expect((await off.ops.read(off.session, { workspace: "fixture-a" })).mailboxes[0]).toMatchObject({

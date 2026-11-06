@@ -1,0 +1,119 @@
+{
+  "authorization": {
+    "state": "waiting_sample_approval"
+  },
+  "cohort_count": 1,
+  "configured_sample_size": 5,
+  "confirmation_action": "approve_sample_and_transfer",
+  "context_sha256": "ca98fc47071403373b1187a796e1ed32a5d7dae0009db900f2fe9fecefd80df0",
+  "contract": "sender-handoff-approval.v2",
+  "current_reply_count": 1,
+  "drain_ref": "5550",
+  "generation_settings": {
+    "instructions": ""
+  },
+  "held_for_human": 0,
+  "members": [
+    {
+      "dispatch_reason": "preparation_pending",
+      "kind": "current_reply",
+      "lead_ref": "2983f5e6-1386-4345-bf9a-df6a95a65bce",
+      "owner": "b24c4fc6-f2b8-4415-a496-41c9c07fb52d",
+      "prepared": false,
+      "reason": null,
+      "route": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "b24c4fc6-f2b8-4415-a496-41c9c07fb52d"
+        },
+        "inbound_event_id": "7ee6e737-0d3d-477b-960e-8020b76bb608",
+        "native_email_authority": null,
+        "provider_conversation_id": "inbound-7ee6e737-0d3d-477b-960e-8020b76bb608",
+        "route": {
+          "account_id": "account-8008f23a-822c-465e-acb3-07512db9a24f",
+          "channel": "email",
+          "connection_ref": "8008f23a-822c-465e-acb3-07512db9a24f",
+          "inbound_channel": "email",
+          "provider": "unipile",
+          "recipient_email": "2983f5e6-1386-4345-bf9a-df6a95a65bce@prospect.test",
+          "rerouted": true,
+          "subject": "Re: Original subject"
+        },
+        "sender_account_ref": "account-8008f23a-822c-465e-acb3-07512db9a24f",
+        "sender_id": "3b6c50a1-b2e1-4530-ad34-1ab5f12d65a0",
+        "turn_id": "7ee6e737-0d3d-477b-960e-8020b76bb608"
+      },
+      "run_ref": null,
+      "state_token": "061915e2a6408888fadb1fd52192a36abf6d35afe34100f1ef8d2feef3cd79e0",
+      "turn_ref": "7ee6e737-0d3d-477b-960e-8020b76bb608",
+      "turn_version": 0
+    }
+  ],
+  "prepared_count": 0,
+  "preparing_count": 1,
+  "queued_count": 0,
+  "remainder_count": 0,
+  "replacement": {
+    "available": true,
+    "display_name": "Third",
+    "pinned_signature": "Third, Lifty",
+    "pinned_version": 1,
+    "sender_id": "3b6c50a1-b2e1-4530-ad34-1ab5f12d65a0",
+    "signature": "Third, Lifty",
+    "version": 1
+  },
+  "revision": "e18b1e4bf1b5de11ff8636422ed92daa3ceb55b44b4203b2a9932adb75414aac",
+  "sample_complete": false,
+  "sample_count": 1,
+  "samples": [
+    {
+      "answering_route": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "b24c4fc6-f2b8-4415-a496-41c9c07fb52d"
+        },
+        "inbound_event_id": "7ee6e737-0d3d-477b-960e-8020b76bb608",
+        "native_email_authority": null,
+        "provider_conversation_id": "inbound-7ee6e737-0d3d-477b-960e-8020b76bb608",
+        "route": {
+          "account_id": "account-8008f23a-822c-465e-acb3-07512db9a24f",
+          "channel": "email",
+          "connection_ref": "8008f23a-822c-465e-acb3-07512db9a24f",
+          "inbound_channel": "email",
+          "provider": "unipile",
+          "recipient_email": "2983f5e6-1386-4345-bf9a-df6a95a65bce@prospect.test",
+          "rerouted": true,
+          "subject": "Re: Original subject"
+        },
+        "sender_account_ref": "account-8008f23a-822c-465e-acb3-07512db9a24f",
+        "sender_id": "3b6c50a1-b2e1-4530-ad34-1ab5f12d65a0",
+        "turn_id": "7ee6e737-0d3d-477b-960e-8020b76bb608"
+      },
+      "body": null,
+      "context": {
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "b24c4fc6-f2b8-4415-a496-41c9c07fb52d"
+        },
+        "inbound_event_ref": "7ee6e737-0d3d-477b-960e-8020b76bb608"
+      },
+      "draft_batch_id": null,
+      "draft_event_ref": null,
+      "kind": "current_reply",
+      "lead_ref": "2983f5e6-1386-4345-bf9a-df6a95a65bce",
+      "prepared": false,
+      "subject": "Re: Original subject",
+      "turn_ref": "7ee6e737-0d3d-477b-960e-8020b76bb608",
+      "turn_version": 0
+    }
+  ],
+  "scope_sha256": "575d573418eeda31ea0ca7c5abd8dca98202d277b8aed89d1dda9bed4e6f84db",
+  "settings_revision": 1,
+  "settings_sha256": "c3f0388ea5b36f72929731e42b9109ec858206d3394c9158f4bb09cd7ca10c33",
+  "source_sender_id": "b24c4fc6-f2b8-4415-a496-41c9c07fb52d",
+  "state": "preparing",
+  "transferred_count": 0,
+  "untouched_transferred_count": 0,
+  "waiting_count": 1,
+  "workspace_id": "ab44c627-57c3-41fa-8865-f3739e18bf71"
+}

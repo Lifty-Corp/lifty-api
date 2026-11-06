@@ -24,14 +24,10 @@ behind Lifty’s connection pages.
   waits for a fresh check.
 - `declaration`: what the person confirmed on Lifty's connect page.
 - `sends`: sends today and over the last seven days.
-- `participation`: whether the account takes
-  part in new Journeys now, as `status` and its `cause`: `sending`;
-  `waiting_for_first_lead` (no lead has reached its channel yet);
-  `no_active_campaign` (it sends once a campaign on its channel is active);
-  `paused`, where `waiting_journeys` started Journeys wait for it;
-  `not_connected`; or `email_not_ready` (such as `signature_missing`: the
-  person needs a signature). Report the status with its cause; never call an
-  account "not in a campaign".
+- `participation`: whether the account takes part in new Journeys now. Show
+  `next_step.label` with `waiting_journeys`, then each `also[].next_step.label`
+  below it; never word a cause yourself. `owner` says who acts. `lifty` means
+  nothing to do: only LIFT releases `paused_by_lift`, so never offer to resume it.
 
 Reads never check or change a provider. A failed read is unknown: retry it;
 never report an account as disconnected or missing from a failed read.
@@ -111,8 +107,8 @@ explicit `workspace` and, as `connection_ref`, the email account's `id` from
 `sending_accounts_get`. With one email account, `connection_ref` can be
 omitted; with several it is required and the operation returns
 `EMAIL_MAILBOX_SELECTION_REQUIRED` without it. GET inputs belong in query;
-POST inputs belong in body. Every workspace uses the same operations, and each
-mailbox has its own warmup: starting one never stops another.
+POST inputs belong in body. Each mailbox has its own warmup: starting one never
+stops another.
 
 Warmup needs the owner's second sign-in. As soon as a mailbox connects,
 whatever its use, call `warmup_start` once and show the returned setup link in

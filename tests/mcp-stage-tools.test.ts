@@ -56,7 +56,10 @@ describe("generated MCP stage operations", () => {
     // adds search lane and research field lane rules (about 900 characters).
     // LIF-1571 adds the three report reads (about 4,800 characters); the metric
     // ids stay out of it, because a report names its own.
-    expect(JSON.stringify(tools).length).toBeLessThan(214_000);
+    // LIF-1771 adds the Senders controls: pause and resume, handoffs, workspace
+    // settings, the transfer scope, LIFT stops, recovery incidents and reply
+    // counts (about 26,000).
+    expect(JSON.stringify(tools).length).toBeLessThan(240_000);
     expect(tools.find(tool => tool.name === "crm_mapping_sources")!.annotations.readOnlyHint).toBe(true);
     expect(tools.find(tool => tool.name === "sending_accounts_deliverability")!.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
     expect(tools.find(tool => tool.name === "sending_accounts_disconnect")!.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: true });

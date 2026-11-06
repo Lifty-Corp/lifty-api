@@ -6,6 +6,8 @@ import { identityOperationDefinitions, validateIdentityInput, type IdentityDefin
 import * as c from "./outreach-contracts.js";
 import { memberReviewOperationDefinitions, memberReviewReceiptMatches } from "./member-review-operations.js";
 import { testFailureMessage, type TestFailure } from "./campaign-test-failure.js";
+import { capacityReadout } from "./outreach-capacity.js";
+import { blockedLabel, canSend } from "./participation.js";
 
 const Empty = z.object({}).strict();
 export type OutreachInput = IdentityInput;
@@ -64,9 +66,9 @@ function reviewDefinition(read: boolean): Definition {
     path: read ? Empty : c.CampaignMessagePathSchema, query: read ? c.CampaignReviewsQuerySchema : Empty,
     request: read ? null : c.CampaignMessageReviewSchema, response: read ? c.CampaignReviewsSchema : c.CampaignMessageResultSchema,
     invalid, success: 200, cli: { operation: read ? "reviews_get" : "message_review_post" },
-    args: input => read ? { p_query: input.query } : { p_message_id: input.path.message_ref, p_payload: input.body },
-    description: read ? "Read the selected workspace's saved Campaign review queue, including the exact person, account and action. Paginated, read-only; failed reads stay unavailable. Members and operators use the same workflow."
-      : "Review one exact saved LinkedIn or email message using source_digest and expected_review_status. Approve schedules only the reviewed bytes; it never activates a Campaign. Skip closes only this channel's branch, without global suppression. Retry re-checks the account and sender and atomically approves the same bytes only after confirming that no begun, unknown or confirmed send could be replayed.",
+    args: input => read ? { p_query: { ...input.query, ...(input.query.unsent ? { unsent: true } : {}) } } : { p_message_id: input.path.message_ref, p_payload: input.body },
+    description: read ? "Read the selected workspace's saved Campaign review queue, including the exact person, account and action. review_status=approved with unsent=true lists what can still change. Paginated, read-only; failed reads stay unavailable. Members and operators use the same workflow."
+      : "Review one exact saved LinkedIn or email message using source_digest and expected_review_status. Approve schedules only the reviewed bytes; it never activates a Campaign. Skip closes only this channel's branch, without global suppression; it also applies to an approved, unsent message. Retry re-checks the account and sender and atomically approves the same bytes only after confirming that no begun, unknown or confirmed send could be replayed.",
   };
 }
 export const outreachOperationDefinitions = {
@@ -94,7 +96,7 @@ export const outreachOperationDefinitions = {
     post: definition("campaigns", "post", "POST", c.CampaignCreateSchema, c.CampaignResultSchema, "Save an inactive unapproved channel Campaign draft in a Journey: start rules (journey_start, sent/unaccepted relative to another Campaign, or Email after linkedin_first_dm_skipped), steps, templates or generated-writing instructions, delays and schedule. It names no senders: new Journeys go round-robin to every person with an account on a Journey channel that was not disconnected (email also needs their signature), and each lead keeps one person. Never sends."),
     draft_patch: definition("campaigns", "draft_patch", "PATCH", c.CampaignDraftSchema, c.CampaignResultSchema, "Save supplied policy changes as a new unapproved immutable draft using expected_version and the current draft revision_ref. Omitted profile_version and voice_version use current confirmed Business revisions. Active approved work continues; pause, readiness and incident holds and started Journeys are unchanged."),
     publish: definition("campaigns", "publish", "POST", c.PublishSchema, c.CampaignResultSchema, "Approve one exact revision/digest; records actor/time. It never activates, resumes or sends."),
-    activate: definition("campaigns", "activate", "POST", c.ActivateSchema, c.CampaignActivationResultSchema, "Select one exact approved revision for new Journey starts and set active intent, or resume paused work under its retained revisions. A dependent Campaign joins the executable version once its preceding Campaign is activated. The existing scheduled runtime may contact external recipients, including retained pending work, subject to account, readiness and incident gates. The receipt confirms saved intent and selection, not compilation or delivery. Refused with OUTREACH_CUSTOMER_LIST_NOT_CURRENT when starting or changing intent or revision while the connected CRM's customer list is missing or stale; unchanged active selections are no-ops, and a disconnected CRM retains its saved list. customer_list records the accepted decision."),
+    activate: definition("campaigns", "activate", "POST", c.ActivateSchema, c.CampaignActivationResultSchema, "Select one exact approved revision for new Journey starts and set active intent, or resume paused work under its retained revisions. A dependent Campaign joins the executable version once its preceding Campaign is activated. The existing scheduled runtime may contact external recipients, including retained pending work, subject to account, readiness and incident gates. The receipt confirms saved intent and selection, not compilation or delivery. blocked_people names each person whose email cannot send yet, with the cause and when it clears; tell the founder, because activation proceeds anyway. Null means Lifty could not read it, not that nobody is blocked. Refused with OUTREACH_CUSTOMER_LIST_NOT_CURRENT when starting or changing intent or revision while the connected CRM's customer list is missing or stale; unchanged active selections are no-ops, and a disconnected CRM retains its saved list. customer_list records the accepted decision."),
     pause: definition("campaigns", "pause", "POST", c.CampaignPauseSchema, c.CampaignResultSchema, "Pause every automatic step of this Campaign in every started Journey, including follow-ups. Pending work and history remain; begun or unknown effects reconcile. Other channels continue where their start rules permit. Does not claim provider stop confirmation."),
   },
 };
@@ -125,13 +127,51 @@ async function refuseTypedSenderNames(session: AuthSession, key: string, body: u
   validateOutreachInput(z.unknown().superRefine((_, context) => c.typedSenderNameIssues(steps, names, context, path)), body, invalid);
 }
 
+// LIF-1771: each person with a mailbox whose email cannot send yet, read from
+// participation after the activation committed. A person retired on purpose
+// and a person with no mailbox are not blocked. Warming names its ready date
+// from the capacity readout; any failed read says so and never fails activation.
+async function blockedPeople(session: AuthSession, channel: string, workspaceRef: string): Promise<z.infer<typeof c.BlockedPersonSchema>[] | null> {
+  if (channel !== "email") return [];
+  const read = identityOperationDefinitions.senders.get;
+  let senders;
+  try {
+    const roster = read.response.safeParse(await call(session, read.rpc, read.args()));
+    if (!roster.success) return null;
+    senders = roster.data.senders;
+  } catch { return null; }
+  const blocked = senders.flatMap(sender => {
+    const mailboxes = sender.accounts.filter(account => account.channel === "email");
+    if (!mailboxes.length || sender.sending?.state === "off" || mailboxes.some(account => canSend(account.participation))) return [];
+    const live = mailboxes.filter(account => account.status !== "disconnected");
+    return [{ sender, mailboxes: live.length ? live : mailboxes }];
+  });
+  let capacity: ReturnType<typeof capacityReadout> = { status: "unavailable", workspace_ref: workspaceRef };
+  if (blocked.some(({ mailboxes }) => mailboxes.some(account => account.participation.cause === "warming"))) {
+    try { capacity = capacityReadout(workspaceRef, await call(session, "get_lifty_outreach_capacity_readout", { p_workspace_id: workspaceRef })); } catch { /* the date stays unknown */ }
+  }
+  const people = capacity.status === "available" ? capacity.email.people : [];
+  return blocked.map(({ sender, mailboxes }) => {
+    const readyOn = (identity: string | null) => people.find(person => person.sender_ref === sender.id)?.inboxes
+      .find(inbox => inbox.mailbox.toLowerCase() === identity?.toLowerCase())?.ready_on ?? null;
+    // The soonest to clear speaks for the person.
+    const warming = mailboxes.filter(account => account.participation.cause === "warming")
+      .map(account => ({ account, on: readyOn(account.identity) })).sort((a, b) => (a.on ?? "9999").localeCompare(b.on ?? "9999"));
+    const chosen = warming[0]?.account ?? mailboxes[0]!;
+    const clearsOn = warming[0]?.on ?? null;
+    const { cause, next_step: step, waiting_journeys: waiting } = chosen.participation;
+    return { sender_id: sender.id, name: sender.name, cause, label: blockedLabel(sender.name, step!.label, clearsOn), clears_on: clearsOn,
+      owner: step!.owner, action: step!.action, since: step!.since, review_by: step!.review_by, waiting_journeys: waiting ?? null };
+  });
+}
+
 export async function executeOutreachOperation(session: AuthSession, key: string, input: OutreachInput): Promise<unknown> {
   const entry = outreachEntries().find(item => item.key === key);
   if (!entry) throw new Error("Unknown Outreach operation");
   const { definition } = entry;
   await refuseTypedSenderNames(session, key, input.body);
   const data = await call(session, definition.rpc, definition.args(input));
-  const parsed = definition.response.safeParse(data);
+  const parsed = (key === "campaigns.activate" ? c.CampaignActivationReceiptSchema : definition.response).safeParse(data);
   if (!parsed.success) throw new PublicError({ status: 502, ...unavailable });
   const reviewMatch = memberReviewReceiptMatches(entry.action, input, parsed.data);
   if (reviewMatch !== undefined) {
@@ -164,7 +204,8 @@ export async function executeOutreachOperation(session: AuthSession, key: string
     const receipt = c.CampaignReviewsSchema.parse(parsed.data);
     const query = input.query as z.infer<typeof c.CampaignReviewsQuerySchema>;
     if (receipt.messages.length > (query.limit ?? 100) || receipt.messages.some(message => message.direction !== "outbound" ||
-      (query.channel && message.channel !== query.channel) || (query.review_status && message.review_status !== query.review_status)))
+      (query.channel && message.channel !== query.channel) || (query.review_status && message.review_status !== query.review_status)
+      || (query.unsent && message.sent_at !== null)))
       throw new PublicError({ status: 502, ...unavailable });
     return receipt;
   }
@@ -211,7 +252,7 @@ export async function executeOutreachOperation(session: AuthSession, key: string
       throw new PublicError({ status: 502, ...unavailable });
   }
   if (key === "campaigns.activate") {
-    const receipt = c.CampaignActivationResultSchema.parse(parsed.data);
+    const receipt = c.CampaignActivationReceiptSchema.parse(parsed.data);
     const revision = receipt.campaign.active_revision;
     const included = receipt.journey.executable_version?.campaigns.find(pin => pin.campaign_ref === input.path.campaign_ref);
     if (receipt.campaign.state !== "active" || !revision?.approval || revision.revision_ref !== body?.revision_ref || revision.digest !== body?.digest
@@ -227,7 +268,11 @@ export async function executeOutreachOperation(session: AuthSession, key: string
     // Publish may approve an older revision; warn about the one it approved.
     const published = entry.action === "publish" ? campaign.revisions.find(revision => revision.revision_ref === body?.revision_ref) : undefined;
     const slots = c.slotsSpecWarnings(published ?? campaign.draft_revision);
-    if (slots) return { ...(parsed.data as object), slots_spec_warnings: slots };
+    const receipt = key === "campaigns.activate"
+      ? { ...(parsed.data as object), blocked_people: await blockedPeople(session, campaign.channel, (parsed.data as { workspace: { workspace_ref: string } }).workspace.workspace_ref) }
+      : parsed.data as object;
+    if (slots) return { ...receipt, slots_spec_warnings: slots };
+    return receipt;
   }
   return parsed.data;
 }
