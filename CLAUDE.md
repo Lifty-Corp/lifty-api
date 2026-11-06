@@ -42,7 +42,8 @@ steps from the files that differ from the merge-base with `origin/develop`
 and untracked files:
 
 - Code, deploy tooling and Markdown under `src/` (packaged agent context) run
-  the HubSpot policy check and tests, the typecheck and the whole vitest suite.
+  the pillars check, the HubSpot policy check and tests, the typecheck and the
+  whole vitest suite.
   The build runs when its inputs change (`scripts/copy-context-assets.mjs`,
   context assets, `Dockerfile`), the deploy-pilot Python tests when the pilot
   files change.
@@ -62,6 +63,17 @@ proofs the diff still needs. Reuse a passing result for unchanged inputs
 instead of rerunning it before each commit. See
 [shared contract maintenance](contracts/hubspot-grant-policy.md) before changing
 the policy or distributing it to other repositories.
+
+## Engineering pillars
+
+Rules: [Engineering pillars](https://linear.app/lifty-corp/document/lead-gen-system-engineering-pillars-d387e90e3f29). `npm run verify` runs the check; `pillars.exceptions.json` lists what is frozen and only shrinks. Copy the model file, and do not add an exception to get past a failure.
+
+| Pillar | Model | Check |
+|---|---|---|
+| validation | `src/attio-oauth.ts` | No cast or `any` on response JSON; request bodies are size-limited and reach a zod parse |
+| providers | `src/crm-mapping/transport.ts` | Every raw call has a signal and uses the injected transport; one client per provider host; `enqueueRevocationWithRetry` is the only retry |
+
+The loose-schema rule covers new schemas for provider JSON. Lifty RPC results and Jobs receipts stay strict (see Database dependencies).
 
 ## Release
 

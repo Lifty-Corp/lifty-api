@@ -53,13 +53,14 @@ const INVENTORY_TEST = "tests/connection-confirmation.test.ts";
 const isDocs = (file) => !file.startsWith("src/") && (file.endsWith(".md") || file.startsWith("docs/"));
 // Dependency, compiler, test-runner, CI or verify changes: impact unknown.
 const FULL_INPUTS = /^(package(-lock)?\.json|tsconfig[^/]*\.json|vite(st)?\.(config|workspace)\.[^/]+|scripts\/verify\.mjs|\.github\/.+)$/;
-const MAPPED = /^(src|tests|scripts|contracts|config|copy-rehearsal|\.do)\/|^(Dockerfile|\.dockerignore|\.env\.example|\.gitignore)$/;
+const MAPPED = /^(src|tests|scripts|contracts|config|copy-rehearsal|\.do)\/|^(Dockerfile|\.dockerignore|\.env\.example|\.gitignore|pillars\.exceptions\.json)$/;
 const BUILD_INPUTS = /^(scripts\/copy-context-assets\.mjs|src\/agent-context\/.+|src\/favicon\.ico|src\/lifty-orbit-icon\.png|Dockerfile|\.dockerignore)$/;
 const PILOT_INPUTS = /^(scripts\/(deploy-pilot\.py|test_deploy_pilot\.py|prepare-pilot\.mjs)|\.do\/.+)$/;
 // Mirrors deploy.yml paths-ignore.
 const DEPLOY_IGNORED = /^(AGENTS\.md|CLAUDE\.md|README\.md|RUNBOOK\.md|docs\/.+)$/;
 
 const step = (name, command, ...commandArgs) => ({ name, command, args: commandArgs });
+const PILLARS = step("Engineering pillars", "node", "scripts/check-pillars.mjs", "--base", base);
 const POLICY = [step("HubSpot policy check", "npm", "run", "policy:check"), step("HubSpot policy tests", "npm", "run", "test:policy")];
 const TYPECHECK = step("Typecheck", "npm", "run", "typecheck");
 // The whole suite runs in about 20 s locally and 50 s on CI, and several
@@ -75,13 +76,13 @@ let tier;
 let steps;
 if (full || !changed || trigger) {
   tier = full ? "full tier (requested)" : `full tier (impact unknown: ${changed ? `${trigger} changed` : `no merge-base with ${base}`})`;
-  steps = [...POLICY, TYPECHECK, TESTS, BUILD, PILOT];
+  steps = [PILLARS, ...POLICY, TYPECHECK, TESTS, BUILD, PILOT];
 } else if (changed.every(isDocs)) {
   tier = changed.length ? "docs-only change: prose, link and diff checks apply" : `no changes against ${base}`;
   steps = [INVENTORY];
 } else {
   tier = "light tier";
-  steps = [...POLICY, TYPECHECK, TESTS];
+  steps = [PILLARS, ...POLICY, TYPECHECK, TESTS];
   if (changed.some((file) => BUILD_INPUTS.test(file))) steps.push(BUILD);
   if (changed.some((file) => PILOT_INPUTS.test(file))) steps.push(PILOT);
 }
