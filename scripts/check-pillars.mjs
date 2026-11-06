@@ -13,6 +13,7 @@ const EXCEPTIONS_FILE = "pillars.exceptions.json";
 // [{ path, line, message }], with paths relative to the repository root.
 const PILLARS = {
   validation: { model: "src/attio-oauth.ts", check: findValidationViolations },
+  providers: { model: "src/crm-mapping/transport.ts", check: findProviderViolations },
 };
 
 // Generated code belongs to its sync script and its shared contract.
@@ -50,6 +51,55 @@ function findValidationViolations() {
       if (!new RegExp(`\\.(?:safeParse|parse)\\(${body}\\b`).test(handler)) {
         report(index, "A request body reaches its handler without a zod parse.");
       }
+    }
+  }
+  return violations;
+}
+
+// A call on the global fetch or on an injected `typeof fetch`. Named wrappers
+// such as providerFetch or timeoutFetch already set the deadline.
+const RAW_TRANSPORT = /(?<![\w.])(?:fetch|fetchImpl|fetcher|fetchImplementation)\(|\?\? fetch\)\(|connectionFetch\([\w.]+\)\(/g;
+const GLOBAL_FETCH = /(?<![\w.])fetch\(/g;
+// Database RPCs are not providers. A second file naming one of these hosts is a second client.
+const PROVIDER_CLIENTS = [
+  { name: "HubSpot", host: /api\.hubapi\.com/g, client: "src/crm-mapping/transport.ts" },
+  { name: "Attio", host: /api\.attio\.com/g, client: "src/crm-mapping/transport.ts" },
+  { name: "Unipile", host: /api\.unipile\.com/g, client: "src/unipile-v2-provider.ts" },
+  { name: "Mailivery", host: /app\.mailivery\.io/g, client: "src/warmup-setup.ts" },
+  { name: "Slack", host: /slack\.com\/api/g, client: "src/slack-oauth.ts" },
+  { name: "Google", host: /\.googleapis\.com/g, client: "src/warmup-setup.ts" },
+  { name: "Trigger.dev", host: /\/api\/v1\/tasks\//g, client: "src/trigger-client.ts" },
+];
+const RETRY_NAME = /\b(?:function|const)\s+(?:\w+(?:retry|backoff)\w*|(?:retry|backoff)\w+)\b/gi;
+// The one retry: a Trigger enqueue whose idempotency key makes a repeat safe.
+const RETRY_HELPER = "src/app.ts";
+
+// The argument text of the call that opens at `open`.
+function callText(text, open) {
+  let depth = 0;
+  for (let index = open; index < text.length; index++) {
+    if (text[index] === "(") depth++;
+    if (text[index] === ")" && --depth === 0) return text.slice(open, index);
+  }
+  return text.slice(open);
+}
+
+function findProviderViolations() {
+  const violations = [];
+  for (const { path, text } of sourceFiles()) {
+    const report = (index, message) => violations.push({ path, line: lineOf(text, index), message });
+    for (const { 0: call, index } of text.matchAll(RAW_TRANSPORT)) {
+      if (!/\bsignal\b/.test(callText(text, index + call.length - 1))) report(index, "This outbound call has no timeout.");
+    }
+    if (!BROWSER_SCRIPTS.has(path)) {
+      for (const { index } of text.matchAll(GLOBAL_FETCH)) report(index, "Call the injected transport, not the global fetch.");
+    }
+    for (const { name, host, client } of PROVIDER_CLIENTS) {
+      if (path === client) continue;
+      for (const { index } of text.matchAll(host)) report(index, `${name} already has a client in ${client}.`);
+    }
+    if (path !== RETRY_HELPER) {
+      for (const { index } of text.matchAll(RETRY_NAME)) report(index, "Provider calls fail loud here; the only retry is enqueueRevocationWithRetry.");
     }
   }
   return violations;

@@ -16,5 +16,23 @@
       "count": 1,
       "reason": "Slack notification channel read, owned by the notifications work (LIF-1803)."
     }
+  },
+  "providers": {
+    "src/attio-oauth.ts": {
+      "count": 1,
+      "reason": "The install exchange runs before any stored credential exists, and the transport in crm-mapping needs one. Merging them needs a design decision."
+    },
+    "src/company-mapping/runtime.ts": {
+      "count": 2,
+      "reason": "Company mapping keeps its own HubSpot transport with its own error codes (HUBSPOT_SCHEMA_*, COMPANY_MAPPING_TIMEOUT). Merging it with crm-mapping changes those responses, so it needs a decision."
+    },
+    "src/google-mailbox-proof.ts": {
+      "count": 1,
+      "reason": "A second Google key set with its own 5 s timeout and cache settings. Sharing the warmup key set would change both."
+    },
+    "src/hubspot-oauth.ts": {
+      "count": 2,
+      "reason": "The install exchange runs before any stored credential exists, and the transport in crm-mapping needs one. Merging them needs a design decision."
+    }
   }
 }

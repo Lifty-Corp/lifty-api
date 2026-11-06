@@ -18,6 +18,8 @@ const WARMUP_VERIFY_TIMEOUT_MS = 5000;
 const HANDOFF_REPLIES_TASK_ID = "lifty-sender-handoff-replies";
 const HANDOFF_REPLIES_TIMEOUT_MS = 5000;
 const IDEMPOTENCY_TTL = "1h";
+// Requests that must answer sooner pass a shorter signal through their fetchImpl.
+const TRIGGER_TIMEOUT_MS = 15_000;
 const TriggerRun = z.looseObject({ id: z.string().min(1) });
 
 export interface TriggerClientSettings {
@@ -41,6 +43,7 @@ async function triggerTask(
   try {
     response = await fetchImpl(`${baseUrl}/api/v1/tasks/${taskId}/trigger`, {
       method: "POST",
+      signal: AbortSignal.timeout(TRIGGER_TIMEOUT_MS),
       headers: {
         Authorization: `Bearer ${settings.secretKey}`,
         "Content-Type": "application/json",
