@@ -1,1 +1,20 @@
-{}
+{
+  "validation": {
+    "src/agent-context.ts": {
+      "count": 1,
+      "reason": "Round-trips this module's own JSON Schema text. No outside input reaches it, and key order is part of the published revision."
+    },
+    "src/app.ts": {
+      "count": 1,
+      "reason": "The company-mapping route hands the body to parsePlan inside the operation, after its read-only gate. Parsing in the route would swap the 422 and 503 order."
+    },
+    "src/slack-oauth.ts": {
+      "count": 1,
+      "reason": "The Slack callback branches on these error markers, so a schema changes which refusal a null auth.test body gets. Needs a decision."
+    },
+    "src/workspace-operations.ts": {
+      "count": 1,
+      "reason": "Slack notification channel read, owned by the notifications work (LIF-1803)."
+    }
+  }
+}

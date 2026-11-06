@@ -3,7 +3,7 @@
 // check. pillars.exceptions.json freezes the violations that already exist: the
 // list can only shrink, so new code follows the rule and old code migrates.
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 
 const RULES_URL =
   "https://linear.app/lifty-corp/document/lead-gen-system-engineering-pillars-d387e90e3f29";
@@ -12,8 +12,48 @@ const EXCEPTIONS_FILE = "pillars.exceptions.json";
 // Repository checks. `check` returns the current violations as
 // [{ path, line, message }], with paths relative to the repository root.
 const PILLARS = {
-  // validation: { model: "src/path/to/model.ts", check: findValidationViolations },
+  validation: { model: "src/attio-oauth.ts", check: findValidationViolations },
 };
+
+// Generated code belongs to its sync script and its shared contract.
+function sourceFiles() {
+  return readdirSync("src", { recursive: true })
+    .map((file) => `src/${file}`)
+    .filter((path) => path.endsWith(".ts") && !path.startsWith("src/generated/"))
+    .sort()
+    .map((path) => ({ path, text: readFileSync(path, "utf8") }));
+}
+
+const lineOf = (text, index) => text.slice(0, index).split("\n").length;
+
+// Inline scripts the browser runs: they hold no server transport or schema.
+const BROWSER_SCRIPTS = new Set(["src/auth-browser.ts", "src/cli-auth-page.ts", "src/connection-confirmation.ts"]);
+
+const CAST_JSON = /(?:\.json\(\)|JSON\.parse\()[^;\n]*\s+as\s+(?!unknown\b)/g;
+const UNTYPED_JSON = /(?:const|let)\s+\w+\s*=\s*await\s+[\w.?]+\.json\(\)/g;
+const UNBOUNDED_BODY = /\.req\.(?:json|text|formData|parseBody)\(/g;
+const BODY_TEXT_PARSE = /(\w+)\s*=\s*JSON\.parse\(\w+\.text\)/g;
+
+function findValidationViolations() {
+  const violations = [];
+  for (const { path, text } of sourceFiles()) {
+    const report = (index, message) => violations.push({ path, line: lineOf(text, index), message });
+    for (const { index } of text.matchAll(CAST_JSON)) report(index, "JSON is cast instead of parsed with zod.");
+    if (!BROWSER_SCRIPTS.has(path)) {
+      for (const { index } of text.matchAll(UNTYPED_JSON)) report(index, "Response JSON is used as `any` instead of parsed with zod.");
+    }
+    for (const { index } of text.matchAll(UNBOUNDED_BODY)) {
+      report(index, "Read a request body with readRequestTextWithinLimit, then parse it with zod.");
+    }
+    for (const { 1: body, index } of text.matchAll(BODY_TEXT_PARSE)) {
+      const handler = text.slice(index).split("\n").slice(0, 6).join("\n");
+      if (!new RegExp(`\\.(?:safeParse|parse)\\(${body}\\b`).test(handler)) {
+        report(index, "A request body reaches its handler without a zod parse.");
+      }
+    }
+  }
+  return violations;
+}
 
 function git(...args) {
   return execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });

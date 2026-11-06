@@ -41,6 +41,13 @@ export const CONNECTION_REFUSAL_CODES: Readonly<Record<string, string>> = {
   scope_mismatch: "permission_missing", crm_provider_conflict: "crm_provider_conflict",
 };
 
+const RpcFailureBody = z.looseObject({ message: z.string() });
+/** The refusal text of a failed database RPC, or "" when its body does not carry one. */
+export async function rpcFailureMessage(response: Response): Promise<string> {
+  const body = RpcFailureBody.safeParse(await response.json().catch(() => null));
+  return body.success ? body.data.message : "";
+}
+
 /** OAuth callbacks prove the intent with its decrypted token, never a public UUID. */
 export async function recordOAuthFailure(input: {
   provider: ConnectionProvider; intentToken: string; status: "denied" | "failed"; code: string;

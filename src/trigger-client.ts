@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { PublicError } from "./errors.js";
 import { connectionFetch } from "./connection-confirmation.js";
 
@@ -17,6 +18,7 @@ const WARMUP_VERIFY_TIMEOUT_MS = 5000;
 const HANDOFF_REPLIES_TASK_ID = "lifty-sender-handoff-replies";
 const HANDOFF_REPLIES_TIMEOUT_MS = 5000;
 const IDEMPOTENCY_TTL = "1h";
+const TriggerRun = z.looseObject({ id: z.string().min(1) });
 
 export interface TriggerClientSettings {
   apiUrl: string;
@@ -55,13 +57,11 @@ async function triggerTask(
     throw enqueueFailed(new Error(`Trigger.dev responded ${response.status}`));
   }
 
-  const body = (await response.json().catch(() => null)) as
-    | { id?: unknown }
-    | null;
-  if (!body || typeof body.id !== "string" || body.id.length === 0) {
+  const run = TriggerRun.safeParse(await response.json().catch(() => null));
+  if (!run.success) {
     throw enqueueFailed(new Error("Trigger.dev returned no run id"));
   }
-  return { id: body.id };
+  return { id: run.data.id };
 }
 
 export type EnqueueFirstRun = (runId: string, attempt?: number) => Promise<{ id: string }>;
