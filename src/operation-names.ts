@@ -3,6 +3,7 @@ export const notificationPatchToolNames = {
   route: "notifications_route_set",
   controls: "notifications_controls_set",
   preferences: "notifications_preferences_set",
+  timing: "notifications_timing_set",
 } as const;
 
 // Compound HTTP/CLI operations can expose separate, fixed MCP capabilities.

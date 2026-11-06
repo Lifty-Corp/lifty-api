@@ -1,3 +1,5 @@
+import { NotificationTimingConfigurationSchema, SetNotificationTimingRequestSchema } from "./notification-timing.js";
+import { NotificationTypeCodeSchema } from "./contracts.js";
 import { SetNotificationControlsRequestSchema, SetNotificationPreferencesRequestSchema } from "./contracts.js";
 import { outreachOperationDefinitions } from "./outreach-operations.js";
 import { businessOperationDefinitions } from "./business-operations.js";
@@ -24,6 +26,7 @@ import { CompanyMappingContextSchema, CompanyMappingReceiptSchema } from "./comp
 import { CompanyPlanSchema } from "./company-mapping/contract.js";
 import { WarmupWorkspaceRequest, WarmupStatus, WarmupStartResult } from "./email-warmup-contracts.js";
 import { ConnectionPlacementStatus, PlacementStartRequest, PlacementStatusRequest } from "./email-connection-placement.js";
+import { EmailDnsRequest, EmailDnsStatus } from "./email-dns-contracts.js";
 import { DeliverabilityQueryParams, DeliverabilityResponse } from "./email-deliverability-contracts.js";
 
 const JsonSchema = z.record(z.string(), z.unknown());
@@ -67,6 +70,7 @@ export const NotificationStagePatchSchema = z.discriminatedUnion("operation", [
   z.object({ operation: z.literal("destination"), values: UpsertNotificationDestinationRequestSchema }).strict(),
   z.object({ operation: z.literal("route"), values: SetNotificationRouteRequestSchema }).strict(),
   z.object({ operation: z.literal("controls"), values: SetNotificationControlsRequestSchema }).strict(),
+  z.object({ operation: z.literal("timing"), values: SetNotificationTimingRequestSchema }).strict(),
   z.object({ operation: z.literal("preferences"), values: SetNotificationPreferencesRequestSchema }).strict(),
 ]);
 
@@ -191,6 +195,8 @@ export const stageOperations: Record<string, Record<string, StageOperation>> = {
     warmup_start: operation("POST","/v1/email/warmup/start","Start warmup for a verified mailbox (connection_ref = sending account id, required when the workspace has several email accounts) through Lifty's setup link for Google or Microsoft, the owner's second sign-in after connecting; no password fallback. connect_url is null when this mailbox's warmup is already set up, and a new call replaces an unused link. A dedicated mailbox needs a healthy check after 21 active warmup days before it can send. Starting warmup never pauses or resumes campaigns.",WarmupStartResult,WarmupWorkspaceRequest),
     placement_status: operation("GET","/v1/email/placement","Read the latest Mailivery placement test for one warmed mailbox (connection_ref when the workspace has several), whether a new one can be requested, and whether its result gates sending. Read-only.",ConnectionPlacementStatus,null,PlacementStatusRequest),
     placement_start: operation("POST","/v1/email/placement/start","Queue one Mailivery placement test for a warmed mailbox only after the user explicitly agrees: Mailivery sends the given subject/body from that mailbox to roughly 20-40 of its seed inboxes and uses one test credit. Use the first email of the real sequence. A retried start returns the open test. The result never releases a mailbox or starts campaigns.",ConnectionPlacementStatus,PlacementStartRequest),
+    dns_status: operation("GET","/v1/email/dns","Read the open DNS issue for one email account: failing records, the fix for each and any pending check. connection_ref is the sending account id. Repeat only the steps returned; never invent a DKIM value. Read-only.",EmailDnsStatus,null,EmailDnsRequest),
+    dns_recheck: operation("POST","/v1/email/dns/recheck","Ask Lifty to recheck this account's DNS after the founder fixes it. Lifty confirms within 30 minutes and only passing evidence closes the issue, so say it is being checked, not fixed. Changes no DNS, sender or campaign.",EmailDnsStatus,EmailDnsRequest),
     ...Object.fromEntries((["pause","resume","remove"] as const).map(action=>[`warmup_${action}`,operation("POST",`/v1/email/warmup/${action}`,`${action[0]!.toUpperCase()+action.slice(1)} warmup for the explicit workspace and mailbox (connection_ref = sending account id). Warmup pause, resume and remove never pause or resume outreach campaigns.`,WarmupStatus,WarmupWorkspaceRequest)])),
   },
   ...outreachCatalog,
@@ -199,11 +205,12 @@ export const stageOperations: Record<string, Record<string, StageOperation>> = {
     ...linkedinCatalog.linkedin!,
   },
   notifications: {
+    timing: operation("GET", "/v1/notifications/timing/{type_code}", "Read effective delivery timing, editable capability, inherited defaults and versions for one type in the selected workspace. Read before saving; only editable types support delay or calendar schedules.", NotificationTimingConfigurationSchema, null, Empty, z.object({ type_code: NotificationTypeCodeSchema }).strict()),
     get: operation("GET", stageRoute("notifications"), "Without attempt_ref read the notification types with the channels each can use, the destinations (each saved Slack channel and the workspace owner's email) with the types each receives, and Slack state. With it verify only that exact Slack authorization attempt.", z.union([NotificationConfigSchema, ConnectionAttemptStatusSchema]), null, ConnectionAttemptQuerySchema),
     post: operation("POST", stageRoute("notifications"), "Start Slack connection/reconnection and immediately return the workspace consent link and exact attempt reference. Supersedes earlier unused pending Slack consent links for this workspace. Does not replace the existing Slack grant, change notification destinations or post a message. Show the returned link; connection requires user consent and verification of that exact attempt.", AuthorizationRequiredSchema, Empty),
-    patch: operation("PATCH", stageRoute("notifications"), "Save a Slack channel as a destination (operation destination; needs connected Slack; a new destination receives every default-on type Slack can show), or subscribe or unsubscribe one destination, a Slack channel or the owner email, to one notification type (operation route). Returns the saved destination. Use operation controls for workspace enablement and independent source/destination restrictions, or preferences for a type’s complete Slack/email/both/Off choice. Global restrictions always apply. This cannot authorize Slack, send a test or change outreach.", z.union([NotificationDestinationSchema, NotificationConfigSchema]), NotificationStagePatchSchema),
+    patch: operation("PATCH", stageRoute("notifications"), "Save a Slack channel as a destination (operation destination; needs connected Slack; a new destination receives every default-on type Slack can show), or subscribe or unsubscribe one destination, a Slack channel or the owner email, to one notification type (operation route). Returns the saved destination. Use operation controls for workspace enablement and independent source/destination restrictions, or preferences for a type’s complete Slack/email/both/Off choice. Use timing for immediate, delayed or calendar delivery of future requests, with expected_version from the current workspace timing. Null timing restores inheritance. Operational health alerts still arrive immediately. Global restrictions always apply. This cannot authorize Slack, send a test or change outreach.", z.union([NotificationDestinationSchema, NotificationConfigSchema, NotificationTimingConfigurationSchema]), NotificationStagePatchSchema),
     channels: operation("GET", "/v1/notifications/slack/channels", "Read Slack channels currently available to Lifty before choosing a destination.", SlackNotificationChannelsSchema),
-    test: operation("POST", "/v1/notifications/destinations/{destination_ref}/test", "Send one test message to a saved Slack destination, active or not; needs connected Slack. Posts a visible message in that channel and returns the accepted request_ref, not proof of delivery. The owner email destination cannot be tested. Does not change subscriptions or authorize outreach.", NotificationTestResultSchema, Empty, Empty, z.object({ destination_ref: z.uuid() }).strict()),
+    test: operation("POST", "/v1/notifications/destinations/{destination_ref}/test", "Send one test message to a saved Slack or current-owner email destination, active or not. Slack requires a connected grant. Posts a visible message to that destination and returns the accepted request_ref, not proof of delivery. Does not change subscriptions or authorize outreach.", NotificationTestResultSchema, Empty, Empty, z.object({ destination_ref: z.uuid() }).strict()),
     disconnect: operation("POST", "/v1/workspace/notifications/disconnect", "Disconnect Slack from the current workspace. Slack notifications stop until Slack is reconnected; saved destinations and their subscriptions are not deleted.", DisconnectResponseSchema, Empty),
   },
 };

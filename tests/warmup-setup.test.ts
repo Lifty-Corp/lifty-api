@@ -9,13 +9,17 @@ const record = { email: "founder@example.test", workspace_ref: "22222222-2222-42
   sender_ref: "33333333-3333-4333-8333-333333333333", expires_at: "2026-10-01T00:00:00Z",
   state: "claimed", method:"google" as const, policy, first_name: "Ada", last_name: "Lovelace" };
 function harness(email = record.email, providerFailure = false, tokenOverrides:Record<string,unknown> = {}, recordOverrides:Partial<WarmupSetupRecord> = {}, cleanupFailure = false,
-  verifyWarmup?: (senderRef:string, attempt:string)=>Promise<unknown>) {
+  verifyWarmup?: (senderRef:string, attempt:string)=>Promise<unknown>, creation:unknown={success:true}, ackFailures=0) {
   const writes: {operation: string; payload: Record<string, unknown>}[] = [];
   let claimed = false, dispatched = false;
   const rpc = vi.fn(async (operation: string, payload: Record<string, unknown>) => {
     writes.push({operation, payload});
     if (operation === "claim") { if (claimed) throw new Error("replay"); claimed = true; }
     if (operation === "dispatch") { if (dispatched) throw new Error("duplicate"); dispatched = true; }
+    if(operation==="start_ack") {
+      if(ackFailures-->0)throw new Error("receipt response lost");
+      return {recorded:true};
+    }
     return {...record, ...recordOverrides};
   });
   const requests: {url: string; body: unknown}[] = [];
@@ -24,7 +28,7 @@ function harness(email = record.email, providerFailure = false, tokenOverrides:R
     if (String(url).includes("oauth2.googleapis.com")) return Response.json({access_token: "ACCESS-PRIVATE",
       refresh_token: "REFRESH-PRIVATE", id_token: "ID-PRIVATE", scope: "openid email https://mail.google.com/", token_type: "Bearer", ...tokenOverrides});
     if (providerFailure) throw new Error("REFRESH-PRIVATE network detail");
-    const response=Response.json({success:true});
+    const response=Response.json(creation);
     if(cleanupFailure)response.body!.cancel=async()=>{throw new Error("body cleanup failed");};
     return response;
   };
@@ -39,6 +43,31 @@ describe("warmup setup OAuth handoff", () => {
     const h=harness(record.email,false,{}, {},true);
     await expect(h.setup.callback(secret,browser,"code")).resolves.toBeUndefined();
     expect(h.requests.filter(r=>r.url.includes("mailivery"))).toHaveLength(1);
+  });
+  it("retains the typed active Google creation acknowledgement before Jobs, retrying the same occurrence",async()=>{
+    const h=harness(record.email,false,{}, {},false,undefined,
+      {success:true,status:200,code:"CAMPAIGN_CREATED",data:{id:125,email:record.email,status_code:"active"}},1);
+    const before=Date.now();
+    await h.setup.callback(secret,browser,"code");
+    const receipts=h.writes.filter(x=>x.operation==="start_ack");
+    expect(receipts).toHaveLength(2);
+    expect(receipts[0]).toEqual(receipts[1]);
+    expect(receipts[0]!.payload).toMatchObject({campaign:"125",email:record.email,code:"CAMPAIGN_CREATED",status_code:"active",
+      oauth_hash:hashSetupSecret(secret),browser_hash:hashSetupSecret(browser)});
+    expect(Date.parse(String(receipts[0]!.payload.acknowledged_at))).toBeGreaterThanOrEqual(before);
+    expect(h.requests.filter(x=>x.url.includes("mailivery"))).toHaveLength(1);
+    expect(JSON.stringify(receipts)).not.toMatch(/PRIVATE|google-code|dashboard_url/);
+  });
+  it.each([
+    {success:true},
+    {success:true,status:200,code:"CAMPAIGN_FETCHED",data:{id:125,email:record.email,status_code:"active"}},
+    {success:true,status:200,code:"CAMPAIGN_CREATED",data:{id:125,email:"foreign@example.test",status_code:"active"}},
+    {success:true,status:200,code:"CAMPAIGN_CREATED",data:{id:125,email:record.email,status_code:"pending"}},
+    {success:true,status:200,code:"CAMPAIGN_CREATED",data:{id:"125",email:record.email,status_code:"active"}},
+  ])("generic, foreign or non-active creation responses do not manufacture a start: %j",async creation=>{
+    const h=harness(record.email,false,{}, {},false,undefined,creation);
+    await h.setup.callback(secret,browser,"code");
+    expect(h.writes.filter(x=>x.operation==="start_ack")).toHaveLength(0);
   });
   it("checks PKCE, offline access, nonce and exact mailbox hint on Google's consent URL", async()=>{
     const h=harness();

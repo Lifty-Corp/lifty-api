@@ -288,7 +288,8 @@ export const CampaignDraftSchema = z.object({ expected_version: Version, revisio
 export const ExactRevisionSchema = z.object({ revision_ref: Ref, digest: Digest }).strict();
 export const PublishSchema = ExactRevisionSchema.extend({ expected_version: Version }).strict();
 export const ActivateSchema = PublishSchema;
-export const CampaignPauseSchema = z.object({ expected_version: Version }).strict();
+// A LIFT admin's reason reaches the founder as written. A founder's own pause sends no notice.
+export const CampaignPauseSchema = z.object({ expected_version: Version, reason: z.string().trim().min(1).max(200).optional() }).strict();
 const Approval = z.object({ actor_ref: Ref, approved_at: Timestamp }).strict();
 const revision = <T extends z.ZodType>(content: T) => ExactRevisionSchema.extend({ content, created_at: Timestamp, approval: Approval.nullable() }).strict();
 export const JourneyRevisionSchema = revision(JourneyPolicySchema);

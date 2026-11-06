@@ -1,3 +1,4 @@
+import { NotificationTimingConfigurationSchema, SetNotificationTimingRequestSchema, type NotificationTimingConfiguration, type SetNotificationTimingRequest } from "./notification-timing.js";
 import { NotificationControlsSchema, SetNotificationControlsRequestSchema, SetNotificationPreferencesRequestSchema, type SetNotificationControlsRequest, type SetNotificationPreferencesRequest } from "./contracts.js";
 import { z } from "zod";
 import type { AuthSession } from "./app.js";
@@ -567,7 +568,7 @@ export async function setNotificationRoute(
 }
 
 /** Asks the notifications service to post one test message to a saved Slack
- * destination, active or not. Each call is its own request: request_ref keys
+ * or current-owner email destination, active or not. Each call is its own request: request_ref keys
  * the Trigger run, so a retried acceptance never posts twice. */
 export async function sendNotificationTest(
   session: AuthSession,
@@ -575,13 +576,11 @@ export async function sendNotificationTest(
   enqueue: EnqueueNotificationTest,
 ): Promise<NotificationTestResult> {
   const workspaceRef = await notificationWorkspace(session);
-  const { configuration, slack } = await readConfigurationAndSlack(session, workspaceRef);
+  const configuration = await readNotificationConfiguration(session, workspaceRef);
   const destination = configuration.destinations.find(item => item.destination_ref === destinationRef);
   if (!destination) throw destinationNotFound();
-  if (destination.channel !== "slack") {
-    throw new PublicError({ status: 409, code: "DESTINATION_NOT_TESTABLE", message: "Only Slack destinations can receive a test message." });
-  }
-  requireUsableSlack(slack);
+  if (destination.channel === "slack") requireUsableSlack(await readSlackStatus(session));
+  else if (destination.address !== null || destination.name !== null) throw destinationNotFound();
   const requestRef = crypto.randomUUID();
   await enqueue({ workspaceId: workspaceRef, destinationId: destination.destination_ref, requestId: requestRef });
   return NotificationTestResultSchema.parse({ destination_ref: destination.destination_ref, request_ref: requestRef, status: "queued" });
@@ -609,4 +608,31 @@ export async function setNotificationPreferences(session: AuthSession, input: Se
   });
   if (error) throw notificationsRpcError(error, "notifications.set_preferences");
   return getNotificationConfig(session);
+}
+
+
+function validatedTiming(data: unknown, workspaceRef: string, typeCode: string): NotificationTimingConfiguration {
+  const parsed = NotificationTimingConfigurationSchema.safeParse(data);
+  if (!parsed.success || parsed.data.workspaceId !== workspaceRef || parsed.data.typeCode !== typeCode) {
+    throw new PublicError({ status: 502, code: "NOTIFICATION_TIMING_INVALID", message: "Notification timing could not be confirmed. Read it again before saving." });
+  }
+  return parsed.data;
+}
+
+export async function getNotificationTiming(session: AuthSession, typeCode: string): Promise<NotificationTimingConfiguration> {
+  const code = NotificationTypeCodeSchema.parse(typeCode);
+  const workspaceRef = await notificationWorkspace(session);
+  const { data, error } = await notificationsClient(session).rpc<unknown>("get_timing", { p_workspace_id: workspaceRef, p_type_code: code });
+  if (error) throw notificationsRpcError(error, "notifications.get_timing");
+  return validatedTiming(data, workspaceRef, code);
+}
+
+export async function setNotificationTiming(session: AuthSession, input: SetNotificationTimingRequest): Promise<NotificationTimingConfiguration> {
+  const value = SetNotificationTimingRequestSchema.parse(input);
+  const workspaceRef = await notificationWorkspace(session);
+  const { data, error } = await notificationsClient(session).rpc<unknown>("set_timing", {
+    p_workspace_id: workspaceRef, p_type_code: value.notification_type, p_expected_version: value.expected_version, p_timing: value.timing,
+  });
+  if (error) throw notificationsRpcError(error, "notifications.set_timing");
+  return validatedTiming(data, workspaceRef, value.notification_type);
 }
