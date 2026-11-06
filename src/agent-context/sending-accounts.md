@@ -262,8 +262,9 @@ Use `outreach_capacity` from `deliverability`: exact per-person email additions,
 LinkedIn senders and backlog, for the whole workspace even on filtered pages.
 Absent or `unavailable` means unknown, never zero. Only recommend additions for
 an `operating` channel. Never recalculate or add two to the returned recommendation.
-All ready inboxes send; `on_deck` is the two-inbox planning margin, not standby.
-Leads stay with their person. `cap` is enforced; planning uses at most 20 daily.
+All ready inboxes send; `on_deck` is the two-inbox margin, not standby.
+Leads stay with their person. Planning uses each enforced `cap`.
+`inboxes_short` is a real gap; the rest is buffer.
 Warming `ready_on` dates are estimates. This read never starts or throttles outreach.
 
 ## Campaigns and accounts

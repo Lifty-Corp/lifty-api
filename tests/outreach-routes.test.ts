@@ -30,8 +30,8 @@ describe("blocked people on activation", () => {
   const warming = { status: "email_not_ready", cause: "warming" };
   const inbox = (address: string, ready_on: string | null) => ({ mailbox: address, status: "warming", cap: 10, planned: 0, ready_on, safety_check_stale: false });
   const capacity = (inboxes: unknown[]) => ({ workspace_ref: workspace.workspace_ref, assessed_at: "2026-11-05T12:00:00Z", window_days: 14, business_days: 10,
-    email: { operating: true, short: false, on_deck_total: 0, inboxes_to_connect: 0, people: [{ sender_ref: lee, sender_name: "Lee", inboxes, sendable_inboxes: 0, warming_inboxes: 1, capacity_per_day: 0, capacity_at_caps_per_day: 0,
-      target_rate: 0, committed_rate: 0, rate: 0, backlog: { overdue_steps: 0, waiting_journeys: 0, steps: 0 }, days_to_clear: null, clears: false, inboxes_needed: 0, on_deck: 0, inboxes_to_connect: 0 }] },
+    email: { operating: true, short: false, on_deck_total: 0, inboxes_to_connect: 0, inboxes_short: 0, plan: { leads_per_week: 0, valid_email_share: 1, emails_per_lead: 0, emails_per_week: 0, people: 1 }, people: [{ sender_ref: lee, sender_name: "Lee", inboxes, sendable_inboxes: 0, warming_inboxes: 1, capacity_per_day: 0, capacity_at_caps_per_day: 0, capacity_at_full_pace_per_day: 0,
+      target_rate: 0, committed_rate: 0, rate: 0, backlog: { overdue_steps: 0, waiting_journeys: 0, steps: 0 }, days_to_clear: null, clears: false, inboxes_needed: 0, on_deck: 0, inboxes_to_connect: 0, inboxes_short: 0 }] },
     linkedin: { operating: false, short: false, sendable_accounts: 0, invitations_per_week: 0, planned_messages_per_day: 0, invitations_needed_per_week: 0, messages_needed_per_day: 0, senders_needed: 0, senders_to_add: 0,
       backlog: { invitations: 0 }, days_to_clear: null, clears: false, limits: { reply_share: 0.2, new_sender: { invitations_per_7_days: 0, messages_per_day: 0, planned_messages_per_day: 0 } } } });
   const activated = (channel = "email") => ({ workspace, campaign: { ...campaign, channel, state: "active", active_revision: revision(policy, true) }, journey: { ...journey, executable_version: executableVersion } });
