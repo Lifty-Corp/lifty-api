@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { WorkspaceIdentitySchema } from "./business-contracts.js";
 import { TEST_FAILURE_CODES, TEST_FAILURE_STAGES } from "./campaign-test-failure.js";
+import { ParticipationAction, ParticipationOwner } from "./participation.js";
 
 const Ref = z.uuid();
 const Version = z.number().int().positive();
@@ -335,7 +336,13 @@ export const CampaignsSchema = z.object({ ...Workspace, campaigns: z.array(Campa
 const CustomerListReceiptSchema = z.object({
   state: z.enum(["fresh", "stale", "missing", "not_required"]), reason: z.string().max(100).nullable(), checked_at: z.iso.datetime({ offset: true }),
 }).strict();
-export const CampaignActivationResultSchema = CampaignResultSchema.extend({ journey: JourneySchema, customer_list: CustomerListReceiptSchema.optional() }).strict();
+export const CampaignActivationReceiptSchema = CampaignResultSchema.extend({ journey: JourneySchema, customer_list: CustomerListReceiptSchema.optional() }).strict();
+// LIF-1771: who this activation cannot reach yet, in participation's words.
+// Activation still proceeds. Null when that read failed, which is not "nobody".
+export const BlockedPersonSchema = z.object({ sender_id: Ref, name: z.string().min(1), cause: z.string().min(1), label: z.string().min(1),
+  clears_on: z.iso.date().nullable(), owner: ParticipationOwner, action: ParticipationAction,
+  since: Timestamp.nullable(), review_by: Timestamp.nullable(), waiting_journeys: z.number().int().nonnegative().nullable() }).strict();
+export const CampaignActivationResultSchema = CampaignActivationReceiptSchema.extend({ blocked_people: z.array(BlockedPersonSchema).max(1000).nullable() }).strict();
 export type JourneyPolicy = z.infer<typeof JourneyPolicySchema>;
 export type CampaignPolicy = z.infer<typeof CampaignPolicySchema>;
 
@@ -443,6 +450,7 @@ export const ReplyViewSchema = z.object({
   actions: z.array(z.enum(["approve", "edit", "suppress", "recover", "retry"])),
   draft: z.string().nullable(), approvedText: z.string().nullable(),
   decidedAt: Timestamp.nullable(), sentAt: Timestamp.nullable(), nextAttemptAt: Timestamp.nullable(), overdueAt: Timestamp.nullable(),
+  validUntil: Timestamp.nullable().optional(),
 }).strict();
 export const ReplyTurnSchema = z.object({ turn_ref: Ref, version: z.number().int().nonnegative(), lead_ref: Ref,
   channel: z.enum(["email", "linkedin"]), state: z.enum(["pending", "processing", "sending", "queued", "sent", "suppressed", "uncertain", "failed", "superseded"]),
@@ -451,10 +459,22 @@ export const ReplyTurnSchema = z.object({ turn_ref: Ref, version: z.number().int
   lead_linkedin_url: z.string().nullable(), campaign_ref: Ref.nullable(), inbound_text: z.string(), inbound_at: Timestamp,
   follow_up_due_at: Timestamp.nullable(), created_at: Timestamp, sent_at: Timestamp.nullable(),
   history: z.array(CampaignMessageSchema).max(100), history_complete: z.boolean(), view: ReplyViewSchema,
+  // LIF-1771: who answers and who wrote first are separate facts. The queue
+  // reports them; one reply read does not. route_unavailable names the lead's
+  // current person, because the original conversation cannot be used.
+  answering_sender_id: Ref.nullable().optional(), route_unavailable: z.boolean().optional(),
+  original_sender_id: Ref.nullable().optional(), original_sender_name: z.string().nullable().optional(),
 }).strict().refine(turn => turn.view.turnId === turn.turn_ref && turn.view.channel === turn.channel && turn.view.version === turn.version,
   "The reply view must describe this turn.")
   .refine(turn => turn.state !== "sent" || turn.sent_at !== null, "A sent reply requires a confirmed receipt.");
 export const ReplyTurnsSchema = z.object({ ...Workspace, turns: z.array(ReplyTurnSchema).max(100), next_after: Ref.nullable() }).strict();
+export const ReplyTurnsQuerySchema = ReviewPageQuerySchema.extend({ sender_id: Ref.optional() }).strict();
+export const ReplyTurnCountsQuerySchema = ReviewPageQuerySchema.pick({ channel: true }).extend({ sender_id: Ref.optional() }).strict();
+// Pending waits for a person; sending and uncertain stay visibly separate.
+const ReplyCounts = { total: z.number().int().nonnegative(), pending: z.number().int().nonnegative(), sending: z.number().int().nonnegative(),
+  uncertain: z.number().int().nonnegative(), route_unavailable: z.number().int().nonnegative() };
+export const ReplyTurnCountsSchema = z.object({ ...Workspace, counts: z.object({ ...ReplyCounts,
+  senders: z.array(z.object({ sender_id: Ref.nullable(), ...ReplyCounts }).strict()).max(1000) }).strict() }).strict();
 export const ReplyTurnResultSchema = z.object({ ...Workspace, turn: ReplyTurnSchema }).strict();
 export const ReplyDecisionResultSchema = z.object({ ...Workspace, turn: ReplyTurnSchema,
   outcome: z.enum(["accepted", "replayed", "stale"]), dispatch: Ref.nullable(), view: ReplyViewSchema,

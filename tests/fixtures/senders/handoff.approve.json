@@ -1,0 +1,181 @@
+{
+  "authorization": {
+    "actor_id": "9ca177ec-ef7b-4174-b2a8-486ffbc6b93b",
+    "approved_at": "2026-11-06T01:51:38.242862+00:00",
+    "revision": "1a283769a19b3f4b7679412f48953eb5f0054db6e00bfa1c02e5ef7f101b5e9a",
+    "state": "authorized"
+  },
+  "cohort_count": 1,
+  "configured_sample_size": 5,
+  "confirmation_action": "approve_sample_and_transfer",
+  "context_sha256": "f538aa4ee9df1b66d7eb5314f25690c0669ea23ac9c255edf985f450e4a37a0a",
+  "contract": "sender-handoff-approval.v2",
+  "current_reply_count": 0,
+  "drain_ref": "5619",
+  "generation_settings": {
+    "instructions": ""
+  },
+  "held_for_human": 0,
+  "members": [
+    {
+      "dispatch_reason": null,
+      "kind": "proactive",
+      "lead_ref": "5a4ffbac-4687-44d6-894a-b08ad4fb4ecf",
+      "owner": "0cb84749-69b7-4f91-b87e-600f61c8fbfc",
+      "prepared": true,
+      "reason": null,
+      "route": null,
+      "run_ref": "177749ad-67a7-46f0-b401-79b7da0f4d50",
+      "state_token": "d5913f8b3b74b9192647dbc8b0c4c813c0b5ca77ac36519956483cb567497ee6",
+      "turn_ref": null,
+      "turn_version": null
+    }
+  ],
+  "prepared_count": 1,
+  "preparing_count": 0,
+  "queued_count": 0,
+  "remainder_count": 0,
+  "replacement": {
+    "available": true,
+    "display_name": "Target",
+    "pinned_signature": "Target, Lifty",
+    "pinned_version": 1,
+    "sender_id": "0cb84749-69b7-4f91-b87e-600f61c8fbfc",
+    "signature": "Target, Lifty",
+    "version": 1
+  },
+  "revision": "1a283769a19b3f4b7679412f48953eb5f0054db6e00bfa1c02e5ef7f101b5e9a",
+  "sample_complete": true,
+  "sample_count": 1,
+  "samples": [
+    {
+      "answering_route": {
+        "account_id": "account-8642357e-35a0-4839-8144-76ae0230bbb7",
+        "channel": "email",
+        "connection_ref": "8642357e-35a0-4839-8144-76ae0230bbb7",
+        "mailbox_email": "8642357e-35a0-4839-8144-76ae0230bbb7@lif1771.test",
+        "sender_id": "0cb84749-69b7-4f91-b87e-600f61c8fbfc"
+      },
+      "body": "Target handoff fixture\n\nTarget, Lifty",
+      "context": {
+        "approved_policy": {
+          "compose_mode": "instructions",
+          "instructions": "Approved original instructions",
+          "schedule": {
+            "end": "23:59",
+            "start": "00:00",
+            "timezone": "UTC",
+            "weekdays": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ]
+          },
+          "start": [
+            {
+              "type": "linkedin_accepted"
+            }
+          ],
+          "steps": [
+            {
+              "delay": {
+                "days": 0
+              },
+              "instructions": "Original opener",
+              "position": 1
+            },
+            {
+              "delay": {
+                "days": 2
+              },
+              "instructions": "Original proof",
+              "position": 2
+            },
+            {
+              "delay": {
+                "days": 3
+              },
+              "instructions": "Original example",
+              "position": 3
+            },
+            {
+              "delay": {
+                "days": 4
+              },
+              "instructions": "Original close",
+              "position": 4
+            }
+          ]
+        },
+        "contract": "sender-email-handoff.v1",
+        "first_due_at": "2026-11-06T01:51:38.160671+00:00",
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "6e54cb6d-1cf2-478d-900f-a7a038dc2943"
+        },
+        "history": [
+          {
+            "accepted_at": "2026-11-03T01:51:38.104559+00:00",
+            "connection_ref": "a7373aff-255a-4915-bd32-07a4b0439293",
+            "execution_ref": "6351e391-d30a-4cfd-acc1-cd52a8240a5d",
+            "original_position": 1,
+            "position": 1,
+            "provider_id": "33ddb411-8c12-4f7a-a763-9db7d4526c7c",
+            "run_ref": "fd2fa2c3-4d29-47ae-9b59-2e583cd251e6",
+            "step_ref": "2bcb5a8a-6292-46fd-ae8c-3120abbe361c",
+            "subject": "Original subject",
+            "text": "Original email 1"
+          }
+        ],
+        "kind": "continue",
+        "last_accepted_email": {
+          "accepted_at": "2026-11-03T01:51:38.104559+00:00",
+          "connection_ref": "a7373aff-255a-4915-bd32-07a4b0439293",
+          "provider_id": "33ddb411-8c12-4f7a-a763-9db7d4526c7c",
+          "step_ref": "2bcb5a8a-6292-46fd-ae8c-3120abbe361c",
+          "subject": "Original subject",
+          "text": "Original email 1"
+        },
+        "last_proactive_touch_at": "2026-11-03T01:51:38.104559+00:00",
+        "original_next_position": 2,
+        "original_positions": [
+          2,
+          3,
+          4
+        ],
+        "original_total_steps": 4,
+        "selection": {
+          "lane": null,
+          "opener": null
+        },
+        "source_campaign_ref": "925c0e9d-b07e-48e2-99c5-fe039455749e",
+        "source_email_version_ref": "4b99b4a6-6527-47a2-a2d5-41816477e214",
+        "source_executable_version_ref": "1af77439-087f-4e13-a36c-0fbaf5def255",
+        "source_execution_ref": "6351e391-d30a-4cfd-acc1-cd52a8240a5d",
+        "source_revision_ref": "a8569b3c-c0cf-44c7-8167-16268015245f",
+        "source_run_ref": "fd2fa2c3-4d29-47ae-9b59-2e583cd251e6"
+      },
+      "email_version_ref": "c2bd5fb9-ee56-4344-ab67-e056e43f3acb",
+      "kind": "continue",
+      "lead_ref": "5a4ffbac-4687-44d6-894a-b08ad4fb4ecf",
+      "message_ref": "115edd87-a5cf-4c19-b9d5-c098c74ff93f",
+      "prepared": true,
+      "run_ref": "177749ad-67a7-46f0-b401-79b7da0f4d50",
+      "source_run_ref": "fd2fa2c3-4d29-47ae-9b59-2e583cd251e6",
+      "subject": "Re: Original subject"
+    }
+  ],
+  "scope_sha256": "f2dc546afd29696ff2d968c912f0b706cf3cba0282947382f71ab60ceb465dd5",
+  "settings_revision": 1,
+  "settings_sha256": "b249a314fd57ad2ff661425c481be2a9b53b14d9a9e3f05a47c6e56001582846",
+  "source_sender_id": "6e54cb6d-1cf2-478d-900f-a7a038dc2943",
+  "state": "approved",
+  "transferred_count": 1,
+  "untouched_transferred_count": 0,
+  "waiting_count": 0,
+  "workspace_id": "7760e398-8941-4044-ab99-89ed59021121"
+}

@@ -1,0 +1,178 @@
+{
+  "authorization": {
+    "state": "canceled"
+  },
+  "cohort_count": 1,
+  "configured_sample_size": 5,
+  "confirmation_action": "approve_sample_and_transfer",
+  "context_sha256": "794750c9d631949a270e02e221cf717f37f44cc90e6a04927d099b17a2ca9fc1",
+  "contract": "sender-handoff-approval.v2",
+  "current_reply_count": 0,
+  "drain_ref": "5620",
+  "generation_settings": {
+    "instructions": ""
+  },
+  "held_for_human": 0,
+  "members": [
+    {
+      "dispatch_reason": "message_review_pending",
+      "kind": "proactive",
+      "lead_ref": "51d69166-b0b0-4c8d-a758-f0ef146753ab",
+      "owner": "ac0fcbdc-dad4-4e74-bca0-f38bdc5f575a",
+      "prepared": true,
+      "reason": "target_stopped",
+      "route": null,
+      "run_ref": "e249f893-0b8c-45f2-83fd-7b4c6dd966af",
+      "state_token": "3e4865df547452394b65d679225840e1a0c54e5a817355f2e5672dedc8b32744",
+      "turn_ref": null,
+      "turn_version": null
+    }
+  ],
+  "prepared_count": 1,
+  "preparing_count": 0,
+  "queued_count": 0,
+  "remainder_count": 0,
+  "replacement": {
+    "available": true,
+    "display_name": "Target",
+    "pinned_signature": "Target, Lifty",
+    "pinned_version": 1,
+    "sender_id": "d65af097-6e49-4915-98ef-2559b06699a8",
+    "signature": "Target, Lifty",
+    "version": 1
+  },
+  "revision": "5c8bf5e8b2b5fb96e4c5d54ab746df76c06430cd645fc3d18ff4cb8d234bc5b9",
+  "sample_complete": true,
+  "sample_count": 1,
+  "samples": [
+    {
+      "answering_route": {
+        "account_id": "account-caa23799-9646-4f0c-9cc8-ade0a2589899",
+        "channel": "email",
+        "connection_ref": "caa23799-9646-4f0c-9cc8-ade0a2589899",
+        "mailbox_email": "caa23799-9646-4f0c-9cc8-ade0a2589899@lif1771.test",
+        "sender_id": "d65af097-6e49-4915-98ef-2559b06699a8"
+      },
+      "body": "Target handoff fixture\n\nTarget, Lifty",
+      "context": {
+        "approved_policy": {
+          "compose_mode": "instructions",
+          "instructions": "Approved original instructions",
+          "schedule": {
+            "end": "23:59",
+            "start": "00:00",
+            "timezone": "UTC",
+            "weekdays": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7
+            ]
+          },
+          "start": [
+            {
+              "type": "linkedin_accepted"
+            }
+          ],
+          "steps": [
+            {
+              "delay": {
+                "days": 0
+              },
+              "instructions": "Original opener",
+              "position": 1
+            },
+            {
+              "delay": {
+                "days": 2
+              },
+              "instructions": "Original proof",
+              "position": 2
+            },
+            {
+              "delay": {
+                "days": 3
+              },
+              "instructions": "Original example",
+              "position": 3
+            },
+            {
+              "delay": {
+                "days": 4
+              },
+              "instructions": "Original close",
+              "position": 4
+            }
+          ]
+        },
+        "contract": "sender-email-handoff.v1",
+        "first_due_at": "2026-11-06T01:51:38.328803+00:00",
+        "handoff_from": {
+          "display_name": "Source",
+          "sender_id": "ac0fcbdc-dad4-4e74-bca0-f38bdc5f575a"
+        },
+        "history": [
+          {
+            "accepted_at": "2026-11-03T01:51:38.272441+00:00",
+            "connection_ref": "397853c8-6639-4e1e-88be-084d8453b20a",
+            "execution_ref": "1fe7c603-7328-49e0-b2fd-19c95fd4310a",
+            "original_position": 1,
+            "position": 1,
+            "provider_id": "de839dbb-b21f-478b-b124-9a087a9c2318",
+            "run_ref": "3e9af3a8-f53e-41cd-bf1a-e443973e39b9",
+            "step_ref": "de591da6-96b4-4c90-a06b-1734b8bb221d",
+            "subject": "Original subject",
+            "text": "Original email 1"
+          }
+        ],
+        "kind": "continue",
+        "last_accepted_email": {
+          "accepted_at": "2026-11-03T01:51:38.272441+00:00",
+          "connection_ref": "397853c8-6639-4e1e-88be-084d8453b20a",
+          "provider_id": "de839dbb-b21f-478b-b124-9a087a9c2318",
+          "step_ref": "de591da6-96b4-4c90-a06b-1734b8bb221d",
+          "subject": "Original subject",
+          "text": "Original email 1"
+        },
+        "last_proactive_touch_at": "2026-11-03T01:51:38.272441+00:00",
+        "original_next_position": 2,
+        "original_positions": [
+          2,
+          3,
+          4
+        ],
+        "original_total_steps": 4,
+        "selection": {
+          "lane": null,
+          "opener": null
+        },
+        "source_campaign_ref": "4b56a64a-0418-424a-ac6d-ba5540663226",
+        "source_email_version_ref": "c08b6220-bc19-423c-bf09-bdbc5747e8cf",
+        "source_executable_version_ref": "07131489-7392-438a-b41d-ab372d568c22",
+        "source_execution_ref": "1fe7c603-7328-49e0-b2fd-19c95fd4310a",
+        "source_revision_ref": "9a478025-78bd-47bd-a6ab-9c859584352c",
+        "source_run_ref": "3e9af3a8-f53e-41cd-bf1a-e443973e39b9"
+      },
+      "email_version_ref": "8d4c953b-3d6e-4ae6-b6ac-33f46c9e3b47",
+      "kind": "continue",
+      "lead_ref": "51d69166-b0b0-4c8d-a758-f0ef146753ab",
+      "message_ref": "b1b2af43-eb03-4ec0-8b53-eed65d0c1c86",
+      "prepared": true,
+      "run_ref": "e249f893-0b8c-45f2-83fd-7b4c6dd966af",
+      "source_run_ref": "3e9af3a8-f53e-41cd-bf1a-e443973e39b9",
+      "subject": "Re: Original subject"
+    }
+  ],
+  "scope_sha256": "0d62456e34251eaa6c31ca5c4640a3744be29d26ad2b29f1dbcf42122a59e30a",
+  "settings_revision": 1,
+  "settings_sha256": "03760e8e7becf145ea75dd32b017fec81edb1abc4d6c8c0f27f775cb9ae8e430",
+  "source_sender_id": "ac0fcbdc-dad4-4e74-bca0-f38bdc5f575a",
+  "state": "canceled",
+  "transferred_count": 0,
+  "untouched_transferred_count": 0,
+  "waiting_count": 1,
+  "workspace_id": "c897d281-c726-46c0-98c8-36171228d650"
+}

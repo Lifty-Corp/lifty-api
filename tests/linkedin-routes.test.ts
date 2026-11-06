@@ -60,6 +60,14 @@ describe("LinkedIn activity route", () => {
       expect(h.calls).toEqual([]);
     });
 
+  // LIF-1771: each reads as its own reason, so the guide can name the right action.
+  it.each(["paused_by_lift", "sender_paused"])("reports %s as its own waiting reason", async reason => {
+    const stopped = { ...receipt, accounts: [{ ...receipt.accounts[0], waiting_reason: reason }] };
+    const response = await harness(() => stopped).read("");
+    expect(response.status).toBe(200);
+    expect((await response.json()).accounts[0].waiting_reason).toBe(reason);
+  });
+
   it("returns a generic not-found for an unknown, foreign or deleted sender", async () => {
     const h = harness(() => { throw dbError("PT404", "SENDER_NOT_FOUND"); });
     const response = await h.read(`?sender_id=${senderId}`);

@@ -45,7 +45,7 @@ import {
   createSupabaseAuthenticator,
   createSupabaseReadinessCheck,
 } from "./supabase-auth.js";
-import { createAcquisitionVerificationTrigger, createCrmSyncTrigger, createCrmMappingTrigger, createFirstRunTrigger, createIntegrationRevocationTrigger, createNotificationTestTrigger, createWarmupVerifyTrigger } from "./trigger-client.js";
+import { createAcquisitionVerificationTrigger, createCrmSyncTrigger, createCrmMappingTrigger, createHandoffRepliesTrigger, createFirstRunTrigger, createIntegrationRevocationTrigger, createNotificationTestTrigger, createWarmupVerifyTrigger } from "./trigger-client.js";
 import { confirmRunReview, disconnectIntegration, getCrmSyncStatus, getRunStatus, getWorkspaceStatus, getNotificationConfig, setNotificationControls, setNotificationPreferences, listSlackNotificationChannels, upsertNotificationDestination, setNotificationRoute, sendNotificationTest, startCrmSyncRun, startRun } from "./workspace-operations.js";
 
 // Module-cached so the process can flush the queue once on shutdown.
@@ -137,6 +137,7 @@ export function createProductionApp(config: ServiceConfig) {
     startCrmSyncRun,
     getCrmSyncStatus,
     enqueueCrmSync: createCrmSyncTrigger(config.trigger),
+    enqueueHandoffReplies: createHandoffRepliesTrigger(config.trigger),
     disconnectIntegration,
     enqueueIntegrationRevocation: createIntegrationRevocationTrigger(config.trigger),
     getNotificationConfig,

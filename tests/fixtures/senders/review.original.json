@@ -1,0 +1,57 @@
+{
+  "next_after": null,
+  "turns": [
+    {
+      "account_id": "503d6b1c-7c6e-4046-a8ad-20930e2373e4",
+      "answering_sender_id": "9391e510-cc3b-427d-ba54-85ddda37504a",
+      "campaign_ref": null,
+      "channel": "email",
+      "created_at": "2026-11-06T01:51:15.923641+00:00",
+      "draft": "",
+      "follow_up_due_at": null,
+      "history": [],
+      "history_complete": true,
+      "inbound_at": "2026-11-06T01:51:19.549178+00:00",
+      "inbound_text": "Can you explain the next step?",
+      "lead_email": "b175d973-9442-4851-a5be-5cd89b6e1e99@prospect.test",
+      "lead_linkedin_url": "https://www.linkedin.com/in/b175d973-9442-4851-a5be-5cd89b6e1e99",
+      "lead_name": "Lead Fixture",
+      "lead_ref": "b175d973-9442-4851-a5be-5cd89b6e1e99",
+      "original_sender_id": "c82b3f1d-c81f-46ea-bbbc-2f83b9f22bc6",
+      "original_sender_name": "Source",
+      "route_unavailable": false,
+      "sender_id": "9391e510-cc3b-427d-ba54-85ddda37504a",
+      "sender_name": "Target",
+      "sent_at": null,
+      "source_digest": "366f24c9bb7950ba44faae9ca64a4c2b9101aedacf529ae98e5339ddb2e3cd58",
+      "state": "pending",
+      "turn_ref": "ce8d6d7d-ebd8-444c-a805-dde215369208",
+      "version": 0,
+      "view": {
+        "actions": [
+          "edit",
+          "suppress"
+        ],
+        "approvedText": null,
+        "cause": null,
+        "channel": "email",
+        "decidedAt": null,
+        "detail": null,
+        "draft": null,
+        "label": "Awaiting response",
+        "nextAttemptAt": null,
+        "overdueAt": null,
+        "sentAt": null,
+        "status": "awaiting_action",
+        "turnId": "ce8d6d7d-ebd8-444c-a805-dde215369208",
+        "validUntil": null,
+        "version": 0
+      }
+    }
+  ],
+  "workspace": {
+    "name": "Synthetic handoff",
+    "state": "ready_for_connections",
+    "workspace_ref": "1593993c-26d6-4626-a2d2-f35e9fe04421"
+  }
+}
