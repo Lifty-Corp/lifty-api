@@ -7,7 +7,7 @@ import {
   type HubspotConnectionStatus,
 } from "./contracts.js";
 import { PublicError } from "./errors.js";
-import { CONNECTION_REFUSAL_CODES, recordOAuthFailure } from "./connection-attempt.js";
+import { CONNECTION_REFUSAL_CODES, recordOAuthFailure, rpcFailureMessage } from "./connection-attempt.js";
 import {
   HUBSPOT_REQUIRED_SCOPES,
   exchangeAuthorizationCode,
@@ -278,13 +278,7 @@ export function createHubspotConnectOperations(
     );
 
     if (!response.ok) {
-      let message = "";
-      try {
-        const payload = (await response.json()) as { message?: unknown };
-        message = typeof payload?.message === "string" ? payload.message : "";
-      } catch {
-        message = "";
-      }
+      const message = await rpcFailureMessage(response);
       for (const [marker, reason, status, safeMessage] of COMPLETION_FAILURES) {
         if (message.includes(marker)) {
           throw new HubspotCallbackError(reason, status, safeMessage);

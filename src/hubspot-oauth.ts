@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { connectionFetch } from "./connection-confirmation.js";
 // HubSpot OAuth mechanics for the hosted connect flow on the versioned
 // 2026-03 endpoints. App configuration belongs to config/hubspot/;
@@ -7,6 +8,9 @@ const AUTHORIZATION_ENDPOINT = "https://app.hubspot.com/oauth/authorize";
 const TOKEN_ENDPOINT = "https://api.hubapi.com/oauth/2026-03/token";
 const ACCOUNT_DETAILS_ENDPOINT =
   "https://api.hubapi.com/account-info/2026-03/details";
+
+// parseTokenGrant owns the field rules, so this only proves the body is an object.
+const ProviderObject = z.looseObject({});
 
 export const HUBSPOT_REQUIRED_SCOPES: readonly string[] = Object.freeze([
   "oauth",
@@ -112,7 +116,7 @@ export async function exchangeAuthorizationCode(options: {
     throw new Error(`HubSpot token request failed with status ${response.status}`);
   }
 
-  return parseTokenGrant((await response.json()) as Record<string, unknown>);
+  return parseTokenGrant(ProviderObject.parse(await response.json()));
 }
 
 export async function refreshAccessToken(options: {
@@ -138,7 +142,7 @@ export async function refreshAccessToken(options: {
     throw new Error(`HubSpot refresh request failed with status ${response.status}`);
   }
 
-  return parseTokenGrant((await response.json()) as Record<string, unknown>);
+  return parseTokenGrant(ProviderObject.parse(await response.json()));
 }
 
 export async function getAccountDetails(options: {
@@ -158,7 +162,7 @@ export async function getAccountDetails(options: {
     );
   }
 
-  const payload = (await response.json()) as Record<string, unknown>;
+  const payload = ProviderObject.parse(await response.json());
   const portalId = normalizeHubId(payload);
   if (!portalId || !/^[0-9]{1,20}$/.test(portalId)) {
     throw new Error("HubSpot account details did not include a portal id");

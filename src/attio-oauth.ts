@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { connectionFetch } from "./connection-confirmation.js";
 // Attio OAuth for LIFT's registered Attio app. Access tokens do not expire and
 // Attio issues no refresh token; GET /v2/self identifies the token's workspace.
@@ -6,6 +7,14 @@ const AUTHORIZATION_ENDPOINT = "https://app.attio.com/authorize";
 const TOKEN_ENDPOINT = "https://app.attio.com/oauth/token";
 const SELF_ENDPOINT = "https://api.attio.com/v2/self";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const TokenResponse = z.looseObject({ access_token: z.string().min(20).max(4096).regex(/^\S+$/) });
+const SelfResponse = z.looseObject({
+  active: z.literal(true),
+  workspace_id: z.string().trim().regex(UUID),
+  workspace_slug: z.string().trim().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/),
+  workspace_name: z.string().trim().min(1).max(255),
+  scope: z.string().catch(""),
+});
 
 /** People/Companies records, attribute schema, research notes and the
  * meeting reads that detect booked meetings (sync-attio-meetings). */
@@ -62,12 +71,9 @@ export async function exchangeAttioAuthorizationCode(options: {
     await response.text();
     throw new Error(`Attio token request failed with status ${response.status}`);
   }
-  const payload = (await response.json()) as Record<string, unknown>;
-  const token = payload.access_token;
-  if (typeof token !== "string" || token.length < 20 || token.length > 4096 || /\s/.test(token)) {
-    throw new Error("Attio token response did not include an access token");
-  }
-  return token;
+  const payload = TokenResponse.safeParse(await response.json());
+  if (!payload.success) throw new Error("Attio token response did not include an access token");
+  return payload.data.access_token;
 }
 
 export async function identifyAttioToken(options: {
@@ -83,19 +89,15 @@ export async function identifyAttioToken(options: {
     await response.text();
     throw new Error(`Attio identify request failed with status ${response.status}`);
   }
-  const payload = (await response.json()) as Record<string, unknown>;
-  const text = (key: string) => typeof payload[key] === "string" ? (payload[key] as string).trim() : "";
-  const identity = {
-    workspaceId: text("workspace_id"),
-    workspaceSlug: text("workspace_slug"),
-    workspaceName: text("workspace_name"),
-    scopes: text("scope").split(/\s+/).filter(Boolean).sort(),
+  const payload = SelfResponse.safeParse(await response.json());
+  if (!payload.success) throw new Error("Attio did not identify an active workspace token");
+  const { workspace_id, workspace_slug, workspace_name, scope } = payload.data;
+  return {
+    workspaceId: workspace_id,
+    workspaceSlug: workspace_slug,
+    workspaceName: workspace_name,
+    scopes: scope.split(/\s+/).filter(Boolean).sort(),
   };
-  if (payload.active !== true || !UUID.test(identity.workspaceId) || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/.test(identity.workspaceSlug)
-    || identity.workspaceName.length < 1 || identity.workspaceName.length > 255) {
-    throw new Error("Attio did not identify an active workspace token");
-  }
-  return identity;
 }
 
 export function missingAttioScopes(granted: readonly string[]): string[] {

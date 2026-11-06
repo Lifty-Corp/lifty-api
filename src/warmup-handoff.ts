@@ -1,4 +1,7 @@
+import { z } from "zod";
+
 export type WarmupRefusal = "mailbox_in_other_warmup" | "provider_rejected";
+const ProviderRefusal = z.looseObject({ success: z.literal(false), error: z.looseObject({ email: z.unknown() }) });
 
 /** HTTP refusal is authoritative even if its bounded, untrusted body is unreadable.
  * Only the mapped code leaves this function. Success/uncertain bodies are discarded. */
@@ -21,10 +24,9 @@ export async function warmupHandoffRefusal(response: Response): Promise<WarmupRe
       if (size > 16384) return "provider_rejected";
       chunks.push(chunk.value);
     }
-    const value: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-    if (value && typeof value === "object" && "success" in value && value.success === false
-      && "error" in value && value.error && typeof value.error === "object" && "email" in value.error) {
-      const email = value.error.email;
+    const refusal = ProviderRefusal.safeParse(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+    if (refusal.success) {
+      const email = refusal.data.error.email;
       const errors: unknown[] = Array.isArray(email) ? email : [email];
       if (errors.some(error => typeof error === "string" && error.trim().toLowerCase() === "the email has already been taken."))
         return "mailbox_in_other_warmup";
