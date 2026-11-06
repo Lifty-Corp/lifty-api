@@ -64,9 +64,19 @@
         "clears": false,
         "inboxes_needed": 2,
         "on_deck": 2,
-        "inboxes_to_connect": 2
+        "inboxes_to_connect": 2,
+        "capacity_at_full_pace_per_day": 50,
+        "inboxes_short": 1
       }
-    ]
+    ],
+    "inboxes_short": 1,
+    "plan": {
+      "leads_per_week": 100,
+      "valid_email_share": 0.6,
+      "emails_per_lead": 4,
+      "emails_per_week": 240,
+      "people": 2
+    }
   },
   "linkedin": {
     "operating": true,
