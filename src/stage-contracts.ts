@@ -26,6 +26,7 @@ import { CompanyMappingContextSchema, CompanyMappingReceiptSchema } from "./comp
 import { CompanyPlanSchema } from "./company-mapping/contract.js";
 import { WarmupWorkspaceRequest, WarmupStatus, WarmupStartResult } from "./email-warmup-contracts.js";
 import { ConnectionPlacementStatus, PlacementStartRequest, PlacementStatusRequest } from "./email-connection-placement.js";
+import { EmailDnsRequest, EmailDnsStatus } from "./email-dns-contracts.js";
 import { DeliverabilityQueryParams, DeliverabilityResponse } from "./email-deliverability-contracts.js";
 
 const JsonSchema = z.record(z.string(), z.unknown());
@@ -182,7 +183,7 @@ export const stageOperations: Record<string, Record<string, StageOperation>> = {
     client_mapping_apply: operation("POST", "/v1/integrations/hubspot/company-mapping", "Apply a bounded company mapping plan to the workspace named in the plan, using its current mapping and schema versions. No tokens, arbitrary mappings or connected flag updates.", CompanyMappingReceiptSchema, CompanyPlanSchema),
   },
   senders: {
-    context: stageContext("senders", "Read the public guide for senders: who a sender is, roster-first lookup by id, name, signature and booking link rules, turning a person off or on, and soft delete. No workspace data."),
+    context: stageContext("senders", "Read the public guide for senders: who a sender is, roster-first lookup by id, name, signature and booking link rules, pausing, retiring and turning a person on, handoffs, assignment settings and soft delete. No workspace data."),
     ...identityCatalog.senders!,
   },
   "sending-accounts": {
@@ -194,6 +195,8 @@ export const stageOperations: Record<string, Record<string, StageOperation>> = {
     warmup_start: operation("POST","/v1/email/warmup/start","Start warmup for a verified mailbox (connection_ref = sending account id, required when the workspace has several email accounts) through Lifty's setup link for Google or Microsoft, the owner's second sign-in after connecting; no password fallback. connect_url is null when this mailbox's warmup is already set up, and a new call replaces an unused link. A dedicated mailbox needs a healthy check after 21 active warmup days before it can send. Starting warmup never pauses or resumes campaigns.",WarmupStartResult,WarmupWorkspaceRequest),
     placement_status: operation("GET","/v1/email/placement","Read the latest Mailivery placement test for one warmed mailbox (connection_ref when the workspace has several), whether a new one can be requested, and whether its result gates sending. Read-only.",ConnectionPlacementStatus,null,PlacementStatusRequest),
     placement_start: operation("POST","/v1/email/placement/start","Queue one Mailivery placement test for a warmed mailbox only after the user explicitly agrees: Mailivery sends the given subject/body from that mailbox to roughly 20-40 of its seed inboxes and uses one test credit. Use the first email of the real sequence. A retried start returns the open test. The result never releases a mailbox or starts campaigns.",ConnectionPlacementStatus,PlacementStartRequest),
+    dns_status: operation("GET","/v1/email/dns","Read the open DNS issue for one email account: failing records, the fix for each and any pending check. connection_ref is the sending account id. Repeat only the steps returned; never invent a DKIM value. Read-only.",EmailDnsStatus,null,EmailDnsRequest),
+    dns_recheck: operation("POST","/v1/email/dns/recheck","Ask Lifty to recheck this account's DNS after the founder fixes it. Lifty confirms within 30 minutes and only passing evidence closes the issue, so say it is being checked, not fixed. Changes no DNS, sender or campaign.",EmailDnsStatus,EmailDnsRequest),
     ...Object.fromEntries((["pause","resume","remove"] as const).map(action=>[`warmup_${action}`,operation("POST",`/v1/email/warmup/${action}`,`${action[0]!.toUpperCase()+action.slice(1)} warmup for the explicit workspace and mailbox (connection_ref = sending account id). Warmup pause, resume and remove never pause or resume outreach campaigns.`,WarmupStatus,WarmupWorkspaceRequest)])),
   },
   ...outreachCatalog,

@@ -1,0 +1,24 @@
+{
+  "incidents": [
+    {
+      "account_id": "2cad055e-3189-4e19-8f6a-727de1d692ed",
+      "cause": "disconnected",
+      "channel": "email",
+      "counts": null,
+      "due_at": "2026-11-06T01:50:19.885697+00:00",
+      "handoff_pending": false,
+      "handoff_ref": null,
+      "incident_ref": "bb855a8e-92f1-4ffd-840c-85180c05b516",
+      "moved": null,
+      "sender_id": "9df20203-6055-486b-be67-82ca7b2f8607",
+      "severity": "severe",
+      "since": "2026-11-06T01:51:19.88434+00:00",
+      "state": "open"
+    }
+  ],
+  "workspace": {
+    "name": "Synthetic handoff",
+    "state": "ready_for_connections",
+    "workspace_ref": "20a95ad6-8b26-43dc-8230-45ad197bf412"
+  }
+}

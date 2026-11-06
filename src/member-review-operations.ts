@@ -38,7 +38,9 @@ export const memberReviewOperationDefinitions = {
   review_count_get: operation("review_count_get", "GET", "review-count", "get_lifty_member_review_count", c.ReviewCountSchema,
     "Read the selected workspace's waiting Review item count without loading message bodies."),
   replies_get: operation("replies_get", "GET", "reply-turns", "get_lifty_reply_turns", c.ReplyTurnsSchema,
-    "Read waiting replies and due requested follow-ups with their exact turn version, saved draft, original account and conversation. Shares the same reply turn as Slack; no duplicate approval store.", { query: c.ReviewPageQuerySchema }),
+    "Read waiting replies and due requested follow-ups with their exact turn version, saved draft, original account and conversation. sender_id filters by who answers: answering_sender_id. original_sender_id is who wrote first and route_unavailable means the original conversation cannot be used. Page with next_after. A foreign sender is 404. Shares the same reply turn as Slack; no duplicate approval store.", { query: c.ReplyTurnsQuerySchema }),
+  reply_counts_get: operation("reply_counts_get", "GET", "reply-turn-counts", "get_lifty_reply_turn_counts", c.ReplyTurnCountsSchema,
+    "Count the reply queue with the same filter as replies_get, in total and per answering sender, without loading messages. pending waits for a person; sending and uncertain stay separate; route_unavailable is counted too. A foreign sender is 404.", { query: c.ReplyTurnCountsQuerySchema }),
   reply_get: operation("reply_get", "GET", "reply-turns/{turn_ref}", "get_lifty_reply_turn", c.ReplyTurnResultSchema,
     "Read one exact reply turn and its confirmed, queued or uncertain delivery evidence. Unknown routing is never permission to send.", { path: c.ReplyTurnPathSchema }),
   reply_review_post: operation("reply_review_post", "POST", "reply-turns/{turn_ref}/review", "decide_reply_turn", c.ReplyDecisionResultSchema,
@@ -74,9 +76,16 @@ export function memberReviewReceiptMatches(action: string, input: IdentityInput,
         && feedback.learning_scope === (request.learning_scope ?? "message");
     }
     case "replies_get": {
-      const query = c.ReviewPageQuerySchema.parse(input.query);
+      const query = c.ReplyTurnsQuerySchema.parse(input.query);
       const { turns } = c.ReplyTurnsSchema.parse(value);
-      return turns.length <= (query.limit ?? 100) && turns.every(turn => !query.channel || turn.channel === query.channel);
+      return turns.length <= (query.limit ?? 100) && turns.every(turn => (!query.channel || turn.channel === query.channel)
+        && (!query.sender_id || turn.answering_sender_id === query.sender_id));
+    }
+    case "reply_counts_get": {
+      const query = c.ReplyTurnCountsQuerySchema.parse(input.query);
+      const { counts } = c.ReplyTurnCountsSchema.parse(value);
+      return counts.senders.every(sender => !query.sender_id || sender.sender_id === query.sender_id)
+        && counts.total === counts.senders.reduce((sum, sender) => sum + sender.total, 0);
     }
     case "reply_get": return c.ReplyTurnResultSchema.parse(value).turn.turn_ref === input.path.turn_ref;
     case "reply_review_post": {
@@ -94,7 +103,10 @@ export function memberReviewReceiptMatches(action: string, input: IdentityInput,
       const request = c.CampaignMessageRewriteSchema.parse(input.body);
       const work = receipt.rewrite_work;
       return receipt.message.message_ref === input.path.message_ref && work != null
-        && work.message_ref === input.path.message_ref && work.source_digest === request.source_digest
+        && work.message_ref === input.path.message_ref
+        // Asking to rewrite approved copy returns it to pending, which changes its digest.
+        && (request.expected_review_status === "approved" ? work.source_digest === receipt.message.source_digest && receipt.message.review_status === "pending"
+          : work.source_digest === request.source_digest)
         && receipt.message.direction === "outbound"
         && receipt.history.every(message => c.inConversation(message, receipt.message))
         && receipt.revisions.every(message => message.lead_ref === receipt.message.lead_ref

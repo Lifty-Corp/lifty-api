@@ -20,7 +20,7 @@ export type ProviderTransport = z.infer<typeof ProviderTransport>;
 export type ExpectedIdentity = { email: string } | { profile_id: string } | null;
 /** Proof for the provider RPC `complete` operation. */
 export type VerifiedAuthorization =
-  | { api_version: "v2"; application_id: string; account_scope_id: string | null; account_id: string; user_id: string; email: string }
+  | { api_version: "v2"; application_id: string; account_scope_id: string | null; account_id: string; user_id: string; email: string; mailbox_provider: "google" | "microsoft" }
   | { api_version: "v2"; application_id: string; account_scope_id: string | null; account_id: string; user_id: string; profile_id: string; profile_url?: string };
 /** The authorization proves a different mailbox/profile or binding. */
 export class IdentityMismatch extends Error {}
@@ -65,7 +65,9 @@ export function createAccountProvider(settings: AccountProviderSettings) {
           if (!identity.healthy) return null;
           const t = identity.verifiedTransport;
           return { api_version: "v2", application_id: t.application_id, account_scope_id: t.account_scope_id,
-            account_id: t.account_id, user_id: t.user_id, email: identity.email };
+            account_id: t.account_id, user_id: t.user_id, email: identity.email,
+            // Authenticated evidence; customer DNS guidance never reads it from the domain.
+            mailbox_provider: identity.type === "OUTLOOK" ? "microsoft" : "google" };
         }
         const expected = input.expected && "profile_id" in input.expected ? input.expected.profile_id : null;
         const identity = await v2.readLinkedinIdentity(input.accountId, bound, expected);

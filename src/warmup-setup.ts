@@ -230,10 +230,21 @@ export function createWarmupSetup(settings:WarmupSetupSettings, dependencies:{rp
       try {
         const response = await fetchImpl(`${settings.mailivery.baseUrl ?? "https://app.mailivery.io/api/v1"}/campaigns/google-oauth`, {
           method:"POST", redirect:"error", signal:AbortSignal.timeout(15000), headers:{authorization:`Bearer ${settings.mailivery.apiKey}`, accept:"application/json"}, body});
-        // Even 2xx is not binding evidence. Jobs verifies email, SMTP, IMAP and both tags.
-        const code=await warmupHandoffRefusal(response);
-        if(code){await refuse(payload,record,code);return;}
-        if (!response.ok) throw new Error();
+        if (!response.ok) {
+          const code=await warmupHandoffRefusal(response);
+          if(code){await refuse(payload,record,code);return;}
+          throw new Error();
+        }
+        // CAMPAIGN_CREATED + active is an acknowledgement of this new start,
+        // not binding evidence. Jobs still verifies SMTP, IMAP and both tags.
+        // Generic 2xx, adoption, consent and unreadable responses supply no date.
+        const created = await googleCreationAcknowledgement(response, record.email);
+        if(created) {
+          const receipt={...payload,campaign:String(created.id),email:created.email,
+            code:"CAMPAIGN_CREATED",status_code:"active",acknowledged_at:new Date().toISOString()};
+          const save=async()=>{z.object({recorded:z.literal(true)}).parse(await rpc("start_ack",receipt));};
+          try{await save();}catch{await save();}
+        }
       } catch { throw pending(); }
       // Jobs verifies and starts this binding now, so the page can confirm it
       // and a habitual mailbox's placement test starts. The handoff already
@@ -241,6 +252,23 @@ export function createWarmupSetup(settings:WarmupSetupSettings, dependencies:{rp
       await dependencies.verifyWarmup?.(record.sender_ref, payload.oauth_hash).catch(()=>{});
     },
   };
+}
+/** Bounded parsing of the documented creation response; provider bodies and
+ * tokens are never retained. An unknown acknowledgement keeps setup resumable. */
+async function googleCreationAcknowledgement(response:Response,email:string) {
+  const reader=response.body?.getReader();if(!reader)return null;
+  let timer:ReturnType<typeof setTimeout>|undefined;
+  try {
+    const expired=new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(new Error()),2000);});
+    const chunks:Uint8Array[]=[];let size=0;
+    while(true){const chunk=await Promise.race([reader.read(),expired]);if(chunk.done)break;
+      size+=chunk.value.byteLength;if(size>16384)return null;chunks.push(chunk.value);}
+    const result=z.object({success:z.literal(true),status:z.literal(200),code:z.literal("CAMPAIGN_CREATED"),
+      data:z.object({id:z.number().int().positive().safe(),email:z.literal(email),status_code:z.literal("active")})})
+      .safeParse(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+    return result.success?result.data.data:null;
+  }catch{return null;}
+  finally{clearTimeout(timer);void reader.cancel().catch(()=>{});reader.releaseLock();}
 }
 function validateMicrosoftConsentUrl(value:string):string {
   if(value.length>8192||/[\u0000-\u0020\u007f]/.test(value))throw pending();

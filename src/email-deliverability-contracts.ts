@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { OutreachCapacityReadout } from "./outreach-capacity.js";
+import { ParticipationSchema } from "./participation.js";
 
 // LIF-1042: one read contract for the Deliverability page and `lifty email
 // deliverability`. The database read (LIF-1041, deliverability-source.v1)
@@ -344,6 +345,8 @@ export const DeliverabilityMailbox = z.object({
     observation: z.enum(["verified", "unverified"]),
     checked_at: Timestamp.nullable(),
     outreach: state(["paused", "blocked", "enabled", "idle", "unknown"] as const),
+    // LIF-1771: the same causes Senders shows, primary first, with their words.
+    participation: ParticipationSchema,
   }).strict().nullable(),
   providers: z.object({ sending: z.array(Provider).max(5), warmup: z.array(Provider).max(5), placement: z.array(Provider).max(5) }).strict(),
   status: state(MailboxStatusCode),

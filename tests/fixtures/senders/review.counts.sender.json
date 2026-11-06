@@ -1,0 +1,24 @@
+{
+  "counts": {
+    "pending": 11,
+    "route_unavailable": 1,
+    "senders": [
+      {
+        "pending": 11,
+        "route_unavailable": 1,
+        "sender_id": "2e5476b8-60f1-44df-8a16-99439e4e0ab4",
+        "sending": 0,
+        "total": 11,
+        "uncertain": 0
+      }
+    ],
+    "sending": 0,
+    "total": 11,
+    "uncertain": 0
+  },
+  "workspace": {
+    "name": "Synthetic handoff",
+    "state": "ready_for_connections",
+    "workspace_ref": "3b049c82-e0cc-40c8-9f06-ae2b293be4f0"
+  }
+}
